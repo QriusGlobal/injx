@@ -8,6 +8,9 @@ This file is managed by Release Please and updated automatically as part of the 
 
 ## [Unreleased]
 
+### BREAKING CHANGES
+- **License Change**: Switched from dual LGPL-3.0/Commercial to Apache License 2.0 for simplicity and broader adoption
+
 ### Added
 - New `analyzer.py` module with pure dependency analysis functions for better separation of concerns
 - New `cleanup_strategy.py` module with IntEnum-based cleanup strategies for memory efficiency
