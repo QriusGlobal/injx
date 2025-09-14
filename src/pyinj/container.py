@@ -57,11 +57,17 @@ class _Registration(Generic[T]):
     cleanup: CleanupMode
 
 
-# Task-local resolution stack to avoid false circular detection across asyncio tasks
+# Module-level ContextVars provide async task isolation, ensuring each
+# concurrent execution context maintains its own resolution stack.
+# This is NOT global state - each async task/thread gets its own copy.
+# ContextVars are specifically designed for context-local state management
+# that is isolated between different asynchronous tasks and threads.
 _resolution_stack: ContextVar[tuple[Token[Any], ...]] = ContextVar(
     "pyinj_resolution_stack", default=()
 )
-# Set for O(1) cycle detection
+
+# O(1) cycle detection using set membership.
+# Each concurrent context gets its own set for tracking resolution chains.
 _resolution_set: ContextVar[set[Token[Any]]] = ContextVar(
     "pyinj_resolution_set", default=set()
 )
@@ -114,6 +120,9 @@ class Container(ContextualContainer):
         self._type_index: dict[type[object], Token[object]] = {}
         self._singleton_cleanup_sync: list[Callable[[], None]] = []
         self._singleton_cleanup_async: list[Callable[[], Awaitable[None]]] = []
+
+        # Legacy resource tracking for compatibility
+        self._resources: list[SupportsClose | SupportsAsyncClose] = []
 
         self._auto_register()
 
@@ -188,7 +197,9 @@ class Container(ContextualContainer):
         obj_cls = cast(type[object], cls)
         found = self._type_index.get(obj_cls)
         if found is not None:
-            return cast(Token[U], found)
+            # Cast to the expected type
+            result: Token[U] = cast(Token[U], found)
+            return result
 
         # Check registered providers and singletons
         token = self._search_for_token_by_type(cls)
@@ -230,8 +241,6 @@ class Container(ContextualContainer):
     @contextmanager
     def _resolution_guard(self, token: Token[Any]):
         """Guard against circular dependencies with O(1) cycle detection using sets."""
-        # Why is resoultion set global on the top of the module ?
-        # Am I missing something here and not undertanding the code properly?
         resolution_set = _resolution_set.get()
         # O(1) lookup for cycle detection
         if token in resolution_set:

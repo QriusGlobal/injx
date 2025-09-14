@@ -1,4 +1,4 @@
-"""Enhanced Token implementation with immutability and optimizations."""
+"""Token implementation with immutability and optimizations."""
 
 from __future__ import annotations
 

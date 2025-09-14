@@ -1,6 +1,6 @@
 """Tests for contextual scoping implementation."""
 
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
@@ -140,16 +140,25 @@ class TestContextualContainer:
     def test_cleanup_with_context_manager(self):
         """Test cleanup of context manager resources."""
         container = ContextualContainer()
-        token = Token("resource", Mock, scope=Scope.REQUEST)
 
-        mock_resource = MagicMock()
+        # Create a proper context manager class
+        class ContextManagedResource:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        token = Token("resource", ContextManagedResource, scope=Scope.REQUEST)
+        # Create a mock instance with the __exit__ method
+        mock_resource = ContextManagedResource()
+        mock_resource.__exit__ = Mock()
 
         with container.request_scope():
             container.store_in_context(token, mock_resource)
 
-        # __exit__ should have been called if it exists
-        if hasattr(mock_resource, "__exit__"):
-            mock_resource.__exit__.assert_called_once_with(None, None, None)
+        # __exit__ should have been called
+        mock_resource.__exit__.assert_called_once_with(None, None, None)
 
     @pytest.mark.asyncio
     async def test_async_request_scope(self):

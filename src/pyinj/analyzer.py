@@ -79,5 +79,5 @@ def extract_type_from_token(token: Any) -> Optional[Type[Any]]:
 
     if isinstance(token, Token):
         # Token.type_ is always a Type[Any]
-        return getattr(token, 'type_', None)
+        return getattr(token, "type_", None)
     return None

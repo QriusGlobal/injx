@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
-from collections import ChainMap
+from collections import ChainMap, deque
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
@@ -12,8 +11,8 @@ from contextvars import Token as ContextToken
 from types import TracebackType
 from typing import Any, Awaitable, Callable, TypeVar, cast
 
+from .cleanup_strategy import CleanupStrategy
 from .exceptions import AsyncCleanupRequiredError
-from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .tokens import Scope, Token
 
 __all__ = [
@@ -81,7 +80,8 @@ class ContextualContainer:
         self._singletons: dict[Token[object], object] = {}
         self._providers: dict[Token[object], Any] = {}
         self._async_locks: dict[Token[object], asyncio.Lock] = {}
-        self._resources: list[SupportsClose | SupportsAsyncClose] = []
+        # Use deque for LIFO cleanup ordering with precomputed strategies
+        self._cleanup_stack: deque[CleanupStrategy] = deque()
         self._scope_manager = ScopeManager(self)
 
     def _register_request_cleanup_sync(self, fn: Callable[[], None]) -> None:
@@ -177,107 +177,54 @@ class ContextualContainer:
         with self._scope_manager.session_scope():
             yield self
 
-    def _cleanup_scope(self, cache: dict[Token[object], object]) -> None:
-        """
-        Clean up resources in LIFO order.
+    def _cleanup_scope(self, cleanup_tasks: deque[Callable[[], Any]]) -> None:
+        """Clean up resources in LIFO order using cleanup tasks.
+
+        This method uses tasks created at scope exit time,
+        eliminating runtime type checking and improving performance.
 
         Args:
-            cache: Cache of resources to clean up
+            cleanup_tasks: Deque of cleanup task callables
         """
-        # Hold on if yooure using a list as the data structure ?
-        # and then a dict as the data structure for your scopes how do you
-        # ensure that this dict and list is ordered ?
-        # can we use ordered list and ordered dict where applicable
-        # we perofrming cleanup operations like this the we should also ensure
-        # that the data structures which are the containers holding these values are
-        # immutable
-        # How do you know that reversing the resources simply has properly sorted this into LIFO order
-        # many asusmptions being made
-        # is there an option to use stadnard libraries and itertools
-        # vectorize this resoruce cleanup scope and the long try/except block
-        # Use proper pattern matching or a simple method of
-        # identify what cleanup method has to be run by precomputing the steps
-        # be more smart and intelligent
-        # why would there be instances where the resources wouldn't have a aclose or aexit method ?
-        # I don't udnrestand this ?
-        resources: list[object] = list(cache.values())
-        for resource in reversed(resources):
-            try:
-                # extract this check into a simple function which checks
-                # what exit function has to be used
-                aclose = getattr(resource, "aclose", None)
-                aexit = getattr(resource, "__aexit__", None)
-                supports_sync = hasattr(resource, "close") or hasattr(
-                    resource, "__exit__"
+        # Execute cleanup in LIFO order
+        while cleanup_tasks:
+            task = cleanup_tasks.pop()
+            result = task()
+            
+            # Check for async cleanup in sync context (fail fast)
+            if asyncio.iscoroutine(result):
+                raise AsyncCleanupRequiredError(
+                    "scope",
+                    "Use an async request/session scope.",
                 )
 
-                # How can we detect this early and use a if guard statement outside of the try/except block
-                # Then raise the exception straight away
-                if (
-                    (aclose and inspect.iscoroutinefunction(aclose))
-                    or (aexit and inspect.iscoroutinefunction(aexit))
-                ) and not supports_sync:
-                    raise AsyncCleanupRequiredError(
-                        type(resource).__name__,
-                        "Use an async request/session scope.",
-                    )
+    async def _async_cleanup_scope(
+        self, cleanup_tasks: deque[Callable[[], Any]]
+    ) -> None:
+        """Async cleanup of resources using cleanup tasks.
 
-                # why don't you check this get attr and the top itself ?
-                # if these tokens are implmenting the protocols correctly ?
-                # THen do you have to check and perform these hasattr or get attr
-                # The reason for using static type chekcing and the type annotated protocols
-                # is to effectively deal with these cases ?
-                # We need to ensure that contracts are explicitly fulfilled
-                # Instead of writing code which tries to check whether a contract has been fuliffffled
-                # Using hasattr and getattr
-
-                close = getattr(resource, "close", None)
-                if close is not None and inspect.iscoroutinefunction(close):
-                    raise AsyncCleanupRequiredError(
-                        type(resource).__name__,
-                        "Use an async request/session scope.",
-                    )
-                if hasattr(resource, "__exit__"):
-                    exit_fn = getattr(resource, "__exit__")
-                    exit_fn(None, None, None)
-                elif close is not None:
-                    close()
-            except AsyncCleanupRequiredError:
-                raise
-            except Exception:
-                pass
-
-    async def _async_cleanup_scope(self, cache: dict[Token[object], object]) -> None:
-        """
-        Async cleanup of resources.
+        This method uses tasks created at scope exit time,
+        eliminating runtime type checking and improving performance.
 
         Args:
-            cache: Cache of resources to clean up
+            cleanup_tasks: Deque of cleanup task callables
         """
         tasks: list[Awaitable[Any]] = []
         loop = asyncio.get_running_loop()
 
-        resources: list[object] = list(cache.values())
-        for resource in reversed(resources):
-            aclose = getattr(resource, "aclose", None)
-            if aclose and callable(aclose):
-                res = aclose()
-                if inspect.isawaitable(res):
-                    tasks.append(res)
-                    continue
-            aexit = getattr(resource, "__aexit__", None)
-            if aexit and callable(aexit):
-                res = aexit(None, None, None)
-                if inspect.isawaitable(res):
-                    tasks.append(res)
-                    continue
-            close = getattr(resource, "close", None)
-            if close:
-                if inspect.iscoroutinefunction(close):
-                    tasks.append(close())
-                else:
-                    tasks.append(loop.run_in_executor(None, close))
+        # Execute cleanup in LIFO order
+        while cleanup_tasks:
+            task = cleanup_tasks.pop()
+            result = task()
+            
+            if asyncio.iscoroutine(result):
+                # Execute async cleanup directly
+                tasks.append(result)
+            else:
+                # Sync cleanup already executed by calling task()
+                pass
 
+        # Execute all cleanup tasks concurrently
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -328,6 +275,7 @@ class ScopeManager:
     @contextmanager
     def request_scope(self) -> Iterator[None]:
         request_cache: dict[Token[object], object] = {}
+        request_cleanup: deque[CleanupStrategy] = deque()
         current = _context_stack.get()
         if current is None:
             new_context = ChainMap(request_cache, self._container._singletons)
@@ -339,7 +287,14 @@ class ScopeManager:
         try:
             yield
         finally:
-            self._container._cleanup_scope(request_cache)
+            # Create cleanup tasks for all cached resources
+            for resource in request_cache.values():
+                strategy = CleanupStrategy.analyze(resource)
+                if strategy != CleanupStrategy.NONE:
+                    task = CleanupStrategy.create_task(resource, strategy)
+                    request_cleanup.append(task)
+            # Clean up resources using cleanup tasks
+            self._container._cleanup_scope(request_cleanup)
             try:
                 sync_fns = _request_cleanup_sync.get() or []
                 for fn in reversed(sync_fns):
@@ -355,6 +310,7 @@ class ScopeManager:
     @asynccontextmanager
     async def async_request_scope(self) -> AsyncIterator[None]:
         request_cache: dict[Token[object], object] = {}
+        request_cleanup: deque[CleanupStrategy] = deque()
         current = _context_stack.get()
         if current is None:
             new_context = ChainMap(request_cache, self._container._singletons)
@@ -366,7 +322,14 @@ class ScopeManager:
         try:
             yield
         finally:
-            await self._container._async_cleanup_scope(request_cache)
+            # Create cleanup tasks for all cached resources
+            for resource in request_cache.values():
+                strategy = CleanupStrategy.analyze(resource)
+                if strategy != CleanupStrategy.NONE:
+                    task = CleanupStrategy.create_task(resource, strategy)
+                    request_cleanup.append(task)
+            # Clean up resources using cleanup tasks
+            await self._container._async_cleanup_scope(request_cleanup)
             async_fns = _request_cleanup_async.get() or []
             if async_fns:
                 await asyncio.gather(

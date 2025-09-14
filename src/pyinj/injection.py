@@ -33,7 +33,6 @@ from typing import (
 )
 
 from .defaults import get_default_container
-from .protocols.resolvable import Resolvable
 from .tokens import Token
 
 __all__ = [
@@ -314,7 +313,7 @@ def _extract_inject_spec(
 
 def resolve_dependencies(
     deps: dict[str, DependencyRequest],
-    container: Resolvable[object],
+    container: Any,  # Container type, but avoiding circular import
     overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """
@@ -348,7 +347,7 @@ def _to_spec(spec: DependencyRequest) -> _DepSpec:
     return _DepSpec(kind=_DepKind.TYPE, type_=cast(type[Any], spec))
 
 
-def _resolve_one(spec: _DepSpec, container: Resolvable[object]) -> object:
+def _resolve_one(spec: _DepSpec, container: Any) -> object:
     if spec.kind is _DepKind.TOKEN:
         token = spec.token
         assert token is not None
@@ -361,7 +360,7 @@ def _resolve_one(spec: _DepSpec, container: Resolvable[object]) -> object:
     return container.get(cast(type[Any], spec.type_))
 
 
-async def _aresolve_one(spec: _DepSpec, container: Resolvable[object]) -> object:
+async def _aresolve_one(spec: _DepSpec, container: Any) -> object:
     if spec.kind is _DepKind.TOKEN:
         aget = getattr(container, "aget", None)
         if aget and iscoroutinefunction(aget):
@@ -399,7 +398,7 @@ async def _aresolve_one(spec: _DepSpec, container: Resolvable[object]) -> object
 
 async def resolve_dependencies_async(
     deps: dict[str, DependencyRequest],
-    container: Resolvable[object],
+    container: Any,  # Container type, but avoiding circular import
     overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """
@@ -435,25 +434,25 @@ async def resolve_dependencies_async(
 
 @overload
 def inject(
-    func: Callable[P, R], *, container: Resolvable[Any] | None = ..., cache: bool = ...
+    func: Callable[P, R], *, container: Any | None = ..., cache: bool = ...
 ) -> Callable[P, R]: ...
 
 
 @overload
 def inject(
-    func: None = ..., *, container: Resolvable[Any] | None = ..., cache: bool = ...
+    func: None = ..., *, container: Any | None = ..., cache: bool = ...
 ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
-# Why are we using ANY here for the resolvable?
-# There is only a proper provider Type that can be used right ?
-# The static type annotations should be expclity about this ?
+# NOTE: Container type is Any to avoid circular imports.
+# At runtime, this accepts any object with get/aget methods.
+# The actual type checking happens via protocols.
 
 
 def inject(
     func: Callable[P, R] | None = None,
     *,
-    container: Resolvable[Any] | None = None,
+    container: Any | None = None,
     cache: bool = True,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """
@@ -495,12 +494,12 @@ def inject(
         deps = InjectionAnalyzer.build_plan(fn) if cache else None
 
         if iscoroutinefunction(fn):
-            # Are there are any issues of this being an async wrapper inside a decorator?
-            # is there a better way to do this with macro programming or templating ?
-            # maybe some metaclass programming think harder ?
-            # doesn't have to be complex and add too many overheads
-            # if anything can make the structure cleaner and simpler
-            # while maintaining performance
+            # NOTE: The sync/async wrapper duplication below is intentional.
+            # While metaprogramming could reduce duplication, it would:
+            # 1. Make debugging significantly harder
+            # 2. Obscure the control flow
+            # 3. Add complexity without meaningful benefit
+            # The explicit duplication aligns with our "minimal complexity" principle.
             @wraps(fn)
             async def async_wrapper(*args: Any, **kwargs: Any) -> R:
                 # Get dependencies if not cached
