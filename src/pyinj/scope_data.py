@@ -23,20 +23,20 @@ CleanupTask = Callable[[], None] | Callable[[], Awaitable[None]]
 @dataclass(slots=True)
 class ScopeData:
     """Data container for scope-specific instance cache and cleanup tasks.
-    
+
     A simple data structure that holds cached instances and their cleanup
     tasks for a specific scope (request, session, etc.). Uses class methods
     for operations instead of instance methods, following a functional
     programming approach.
-    
+
     This is not a complex object with behavior, but rather structured data
     with associated pure functions as class methods. This design eliminates
     OOP ceremony while maintaining code organization.
-    
+
     Attributes:
         cache: Dictionary mapping tokens to cached instances
         cleanup: Deque of cleanup tasks in LIFO order
-        
+
     Example:
         >>> scope = ScopeData()
         >>> token = Token("db", Database)
@@ -55,21 +55,21 @@ class ScopeData:
         cls, scope: ScopeData, token: Token[T], instance: T, record: ProviderRecord[T]
     ) -> None:
         """Store an instance in scope cache and register its cleanup task.
-        
+
         Stores the instance in the scope's cache and, if the provider record
         indicates cleanup is needed, creates and registers a cleanup task.
         This is an explicit mutation point that modifies the scope in place.
-        
+
         The cleanup task is added to the front of the deque (appendleft) to
         ensure LIFO (Last In, First Out) cleanup order - resources are cleaned
         up in reverse order of their creation.
-        
+
         Args:
             scope: The scope data to modify (mutated in place)
             token: The token identifying this instance
             instance: The instance to store in the cache
             record: The provider record containing cleanup strategy
-            
+
         Note:
             Type casts to Token[object] and object are necessary because
             the cache uses object types internally for type erasure, but

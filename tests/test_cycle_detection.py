@@ -42,18 +42,33 @@ class TestCycleDetection:
                         token, lambda c=container, t=prev_token: c.get(t)
                     )
 
-            # Create a cycle: add one more service that creates the cycle
-            cycle_token = Token(
-                f"service_cycle_{depth}", type(f"ServiceCycle{depth}", (), {})
-            )
-            container.register(cycle_token, lambda c=container, t=tokens[0]: c.get(t))
-            # Update last token to depend on cycle token
-            tokens.append(cycle_token)
-            # Override the first token to depend on the last to create the cycle
-            first_token = tokens[0]
-            container._providers[first_token] = lambda c=container, t=tokens[-1]: c.get(
-                t
-            )
+            # Create a cycle by making a service that depends on itself indirectly
+            # We'll create a new container with the cycle built in from the start
+            container = Container()
+            tokens = []
+
+            # Register services with circular dependency from the beginning
+            for i in range(depth):
+                token = Token(f"service_{i}", type(f"Service{i}", (), {}))
+                tokens.append(token)
+
+            # Register all services with the cycle built in
+            for i in range(depth):
+                token = tokens[i]
+                if i == depth - 1:
+                    # Last service depends on first (creating the cycle)
+                    first = tokens[0]
+                    container.register(token, lambda c=container, t=first: c.get(t))
+                elif i == 0:
+                    # First service depends on the last
+                    last = tokens[-1]
+                    container.register(token, lambda c=container, t=last: c.get(t))
+                else:
+                    # Middle services depend on the next one
+                    next_token = tokens[i + 1]
+                    container.register(
+                        token, lambda c=container, t=next_token: c.get(t)
+                    )
 
             # Measure cycle detection time
             start_time = time.perf_counter()

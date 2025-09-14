@@ -13,6 +13,7 @@ from typing import Any, Awaitable, Callable, TypeVar, cast
 
 from .cleanup_strategy import CleanupStrategy
 from .exceptions import AsyncCleanupRequiredError
+from .logging import logger
 from .tokens import Scope, Token
 
 __all__ = [
@@ -190,7 +191,7 @@ class ContextualContainer:
         while cleanup_tasks:
             task = cleanup_tasks.pop()
             result = task()
-            
+
             # Check for async cleanup in sync context (fail fast)
             if asyncio.iscoroutine(result):
                 raise AsyncCleanupRequiredError(
@@ -210,13 +211,12 @@ class ContextualContainer:
             cleanup_tasks: Deque of cleanup task callables
         """
         tasks: list[Awaitable[Any]] = []
-        loop = asyncio.get_running_loop()
 
         # Execute cleanup in LIFO order
         while cleanup_tasks:
             task = cleanup_tasks.pop()
             result = task()
-            
+
             if asyncio.iscoroutine(result):
                 # Execute async cleanup directly
                 tasks.append(result)
@@ -275,7 +275,7 @@ class ScopeManager:
     @contextmanager
     def request_scope(self) -> Iterator[None]:
         request_cache: dict[Token[object], object] = {}
-        request_cleanup: deque[CleanupStrategy] = deque()
+        request_cleanup: deque[Callable[[], Any]] = deque()
         current = _context_stack.get()
         if current is None:
             new_context = ChainMap(request_cache, self._container._singletons)
@@ -284,9 +284,11 @@ class ScopeManager:
         token = _context_stack.set(new_context)
         req_sync_token = _request_cleanup_sync.set([])
         req_async_token = _request_cleanup_async.set([])
+        logger.info("Entering request scope")
         try:
             yield
         finally:
+            logger.info("Exiting request scope")
             # Create cleanup tasks for all cached resources
             for resource in request_cache.values():
                 strategy = CleanupStrategy.analyze(resource)
@@ -300,8 +302,10 @@ class ScopeManager:
                 for fn in reversed(sync_fns):
                     try:
                         fn()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to execute cleanup function: {e}", exc_info=True
+                        )
             finally:
                 _request_cleanup_sync.reset(req_sync_token)
             _request_cleanup_async.reset(req_async_token)
@@ -310,7 +314,7 @@ class ScopeManager:
     @asynccontextmanager
     async def async_request_scope(self) -> AsyncIterator[None]:
         request_cache: dict[Token[object], object] = {}
-        request_cleanup: deque[CleanupStrategy] = deque()
+        request_cleanup: deque[Callable[[], Any]] = deque()
         current = _context_stack.get()
         if current is None:
             new_context = ChainMap(request_cache, self._container._singletons)
@@ -319,9 +323,11 @@ class ScopeManager:
         token = _context_stack.set(new_context)
         req_sync_token = _request_cleanup_sync.set([])
         req_async_token = _request_cleanup_async.set([])
+        logger.info("Entering async request scope")
         try:
             yield
         finally:
+            logger.info("Exiting async request scope")
             # Create cleanup tasks for all cached resources
             for resource in request_cache.values():
                 strategy = CleanupStrategy.analyze(resource)
@@ -339,8 +345,10 @@ class ScopeManager:
             for fn in reversed(sync_fns):
                 try:
                     fn()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to execute async cleanup function: {e}", exc_info=True
+                    )
             _request_cleanup_sync.reset(req_sync_token)
             _request_cleanup_async.reset(req_async_token)
             _context_stack.reset(token)
@@ -366,9 +374,11 @@ class ScopeManager:
                 current.maps[0], session_cache, self._container._singletons
             )
         context_token = _context_stack.set(new_context)
+        logger.info("Entering session scope")
         try:
             yield
         finally:
+            logger.info("Exiting session scope")
             _context_stack.reset(context_token)
             if session_token:
                 try:
@@ -376,8 +386,11 @@ class ScopeManager:
                     for fn in reversed(sync_fns):
                         try:
                             fn()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to execute session cleanup function: {e}",
+                                exc_info=True,
+                            )
                 finally:
                     if sess_sync_token is not None:
                         _session_cleanup_sync.reset(sess_sync_token)

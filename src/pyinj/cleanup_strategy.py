@@ -13,18 +13,18 @@ from typing import Any, Awaitable, Callable
 
 class CleanupStrategy(IntEnum):
     """Memory-efficient cleanup strategy enumeration.
-    
+
     Uses IntEnum for minimal memory footprint (4-8 bytes) compared to
     class instances (56+ bytes). Provides class methods for analyzing
     providers and creating cleanup tasks at registration time.
-    
+
     Values:
         NONE: No cleanup required
         CLOSE: Synchronous close() method
-        ACLOSE: Asynchronous aclose() method  
+        ACLOSE: Asynchronous aclose() method
         CONTEXT: Synchronous context manager (__exit__)
         ASYNC_CONTEXT: Asynchronous context manager (__aexit__)
-    
+
     Example:
         >>> strategy = CleanupStrategy.analyze(my_resource)
         >>> if strategy != CleanupStrategy.NONE:
@@ -41,30 +41,30 @@ class CleanupStrategy(IntEnum):
     @classmethod
     def analyze(cls, provider: Any) -> CleanupStrategy:
         """Determine cleanup strategy at registration time.
-        
+
         Analyzes a provider/resource to determine the appropriate cleanup
         strategy. This is a pure function with no side effects that checks
         for cleanup protocols.
-        
+
         When a resource has both sync and async cleanup methods, the async
         methods take priority. This is by design - if a resource provides
         async cleanup, it's likely designed for async usage. Resources that
         need to work in both contexts should be registered separately or
         use a wrapper that provides the appropriate interface.
-        
+
         Priority order:
             1. Async context manager (__aenter__/__aexit__)
             2. Sync context manager (__enter__/__exit__)
             3. Async cleanup (aclose)
             4. Sync cleanup (close)
             5. No cleanup needed
-        
+
         Args:
             provider: The provider/resource to analyze for cleanup capabilities
-            
+
         Returns:
             CleanupStrategy: The appropriate cleanup strategy enum value
-            
+
         Example:
             >>> class Database:
             ...     def close(self): pass
@@ -89,25 +89,25 @@ class CleanupStrategy(IntEnum):
         cls, instance: Any, strategy: CleanupStrategy
     ) -> Callable[[], None] | Callable[[], Awaitable[None]]:
         """Create a cleanup task for an instance based on strategy.
-        
+
         Factory method that creates a cleanup task (callable) for a given
         instance and strategy. The returned lambda captures only the method
         name as a string, not a bound method reference, avoiding holding
         strong references to the instance.
-        
+
         Args:
             instance: The instance that needs cleanup
             strategy: The cleanup strategy to apply
-            
+
         Returns:
             Callable: A cleanup task that can be executed later.
                      Returns None for sync cleanup, Awaitable[None] for async.
-            
+
         Example:
             >>> db = Database()
             >>> task = CleanupStrategy.create_task(db, CleanupStrategy.CLOSE)
             >>> task()  # Executes db.close()
-            
+
         Note:
             The task uses getattr() to look up the method at execution time,
             which allows the instance to be garbage collected if no other
@@ -115,12 +115,41 @@ class CleanupStrategy(IntEnum):
         """
         match strategy:
             case cls.CLOSE:
-                return lambda: getattr(instance, "close")()
+
+                def cleanup_close():
+                    """Execute close() cleanup on resource."""
+                    return getattr(instance, "close")()
+
+                return cleanup_close
+
             case cls.ACLOSE:
-                return lambda: getattr(instance, "aclose")()
+
+                def cleanup_aclose():
+                    """Execute aclose() async cleanup on resource."""
+                    return getattr(instance, "aclose")()
+
+                return cleanup_aclose
+
             case cls.CONTEXT:
-                return lambda: instance.__exit__(None, None, None)
+
+                def cleanup_context_exit():
+                    """Execute __exit__ cleanup on context manager."""
+                    return instance.__exit__(None, None, None)
+
+                return cleanup_context_exit
+
             case cls.ASYNC_CONTEXT:
-                return lambda: instance.__aexit__(None, None, None)
+
+                def cleanup_async_context_exit():
+                    """Execute __aexit__ async cleanup on context manager."""
+                    return instance.__aexit__(None, None, None)
+
+                return cleanup_async_context_exit
+
             case _:
-                return lambda: None
+
+                def cleanup_noop():
+                    """No-op cleanup for resources without cleanup needs."""
+                    return None
+
+                return cleanup_noop

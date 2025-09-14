@@ -20,6 +20,8 @@ This file is managed by Release Please and updated automatically as part of the 
 - Performance benchmarking strategy with statistical significance testing
 - Architectural evolution section in CLAUDE.md documenting planned improvements
 - Logging strategy documentation for balanced observability
+- New `logging.py` module with centralized logging configuration and performance metrics
+- Configurable logging levels for debugging lifecycle events and performance
 
 ### Changed
 - **BREAKING**: Converted `CleanupStrategy` from class to IntEnum for 92% memory reduction (56+ bytes → 4-8 bytes)
@@ -29,6 +31,9 @@ This file is managed by Release Please and updated automatically as part of the 
 - Extracted resolution logic into focused helper methods following single responsibility principle
 - Improved code organization with comprehensive docstrings for all methods
 - Replaced MagicMock with proper Mock(spec=) in tests for better type safety
+- **Replaced lambda functions with named inner functions in `CleanupStrategy.create_task()`** for meaningful stack traces during debugging
+- Consolidated 3 container dictionaries (`_providers`, `_registrations`, `_token_scopes`) into single `_registry` dictionary
+- Enhanced `ProviderRecord` with `is_async` and `dependencies` fields for better metadata precomputation
 
 ### Performance
 - **51% memory reduction** per provider registration (272 → 132 bytes) through functional architecture
@@ -37,6 +42,8 @@ This file is managed by Release Please and updated automatically as part of the 
 - Reduced method complexity from 100+ lines to max 30 lines per method
 - Eliminated unnecessary conditional branches in hot code paths
 - Zero runtime overhead for cleanup strategy determination
+- Reduced dictionary lookups from 3 to 1 per resolution through consolidation
+- Improved debugging performance with named cleanup functions instead of lambdas
 
 ### Architecture
 - Adopted functional-first paradigm: data structures + pure functions over OOP ceremony
