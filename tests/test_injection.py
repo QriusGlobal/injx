@@ -11,9 +11,9 @@ from pyinj.injection import (
     Given,
     Inject,
     analyze_dependencies,
+    aresolve_dependencies,
     inject,
     resolve_dependencies,
-    resolve_dependencies_async,
 )
 from pyinj.tokens import Token
 
@@ -299,7 +299,7 @@ class TestResolveDependencies:
         token = Token("database", Database)
         deps = cast(dict[str, DependencyRequest], {"db": token})
 
-        resolved = await resolve_dependencies_async(deps, container)
+        resolved = await aresolve_dependencies(deps, container)
 
         assert resolved["db"] is db_instance
 
@@ -314,7 +314,7 @@ class TestResolveDependencies:
         token = Token("database", Database)
         deps = cast(dict[str, DependencyRequest], {"db": token})
 
-        resolved = await resolve_dependencies_async(deps, container)
+        resolved = await aresolve_dependencies(deps, container)
 
         assert resolved["db"] is db_instance
         container.get.assert_called_once_with(token)
@@ -331,7 +331,7 @@ class TestResolveDependencies:
         inject_marker: Inject[object] = Inject(async_provider)
         deps: dict[str, DependencyRequest] = {"db": inject_marker}
 
-        resolved = await resolve_dependencies_async(deps, container)
+        resolved = await aresolve_dependencies(deps, container)
 
         assert resolved["db"] is db_instance
 

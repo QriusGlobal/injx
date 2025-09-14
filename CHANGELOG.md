@@ -17,11 +17,15 @@ This file is managed by Release Please and updated automatically as part of the 
 - Comprehensive docstrings for all new modules and functions for better documentation generation
 - New `period_tasks/` directory for project planning documentation
 - PRD-004 document outlining Phase 2 container optimizations with Gemini architectural review
+- PRD-005 document detailing injection module refactoring for safety and maintainability
 - Performance benchmarking strategy with statistical significance testing
 - Architectural evolution section in CLAUDE.md documenting planned improvements
 - Logging strategy documentation for balanced observability
 - New `logging.py` module with centralized logging configuration and performance metrics
 - Configurable logging levels for debugging lifecycle events and performance
+- New `UnresolvableForwardRefError` exception for clear forward reference error handling
+- New `DependencyRequest` dataclass with slots for memory-efficient dependency metadata
+- Pattern matching support in dependency resolution logic (Python 3.13+)
 
 ### Changed
 - **BREAKING**: Converted `CleanupStrategy` from class to IntEnum for 92% memory reduction (56+ bytes → 4-8 bytes)
@@ -34,6 +38,13 @@ This file is managed by Release Please and updated automatically as part of the 
 - **Replaced lambda functions with named inner functions in `CleanupStrategy.create_task()`** for meaningful stack traces during debugging
 - Consolidated 3 container dictionaries (`_providers`, `_registrations`, `_token_scopes`) into single `_registry` dictionary
 - Enhanced `ProviderRecord` with `is_async` and `dependencies` fields for better metadata precomputation
+- **Major refactoring of `injection.py` module (~40% code reduction from 600 to ~450 lines)**:
+  - Removed unsafe `eval()` usage (line 234) for security - replaced with explicit error handling
+  - Extracted complex logic into testable helper functions (`_extract_from_annotated`, `_extract_from_inject_type`, etc.)
+  - Implemented pattern matching for dependency resolution using match/case statements
+  - Added guard clauses throughout for early exits and cleaner code flow
+  - Renamed `resolve_dependencies_async` to `aresolve_dependencies` for consistency
+  - Added comprehensive logging integration with performance metrics
 
 ### Performance
 - **51% memory reduction** per provider registration (272 → 132 bytes) through functional architecture
