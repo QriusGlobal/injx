@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pyinj"
-version = "1.2.0"
+name = "injx"
+version = "0.1.0a1"
 description = "Type-safe dependency injection for Python 3.13+"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.13"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["dependency-injection", "ioc", "di", "type-safe", "async", "python3.13"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
@@ -26,12 +26,12 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/qriusglobal/pyinj"
-Repository = "https://github.com/qriusglobal/pyinj"
-Documentation = "https://github.com/qriusglobal/pyinj#readme"
-"Bug Tracker" = "https://github.com/qriusglobal/pyinj/issues"
-Changelog = "https://github.com/qriusglobal/pyinj/releases"
-CI = "https://github.com/qriusglobal/pyinj/actions"
+Homepage = "https://github.com/qriusglobal/injx"
+Repository = "https://github.com/qriusglobal/injx"
+Documentation = "https://github.com/qriusglobal/injx#readme"
+"Bug Tracker" = "https://github.com/qriusglobal/injx/issues"
+Changelog = "https://github.com/qriusglobal/injx/releases"
+CI = "https://github.com/qriusglobal/injx/actions"
 
 [tool.uv]
 package = true
@@ -114,16 +114,16 @@ asyncio_mode = "auto"
 
 [tool.hatch.build]
 include = [
-    "src/pyinj/py.typed",
+    "src/injx/py.typed",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pyinj"]
+packages = ["src/injx"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "src/pyinj/py.typed",
-    "src/pyinj/**/*.py",
+    "src/injx/py.typed",
+    "src/injx/**/*.py",
     "README.md",
     "LICENSE",
     "NOTICE",

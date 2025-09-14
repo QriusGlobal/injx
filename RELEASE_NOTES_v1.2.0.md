@@ -101,13 +101,13 @@ No migration required. Simply update your dependency:
 
 ```bash
 # Using pip
-pip install --upgrade pyinj==1.2.0
+pip install --upgrade injx==1.2.0
 
 # Using uv
-uv pip install --upgrade pyinj==1.2.0
+uv pip install --upgrade injx==1.2.0
 
 # Using poetry
-poetry add pyinj@^1.2.0
+poetry add injx@^1.2.0
 ```
 
 ## 🎯 Highlights for Production Use
@@ -125,16 +125,16 @@ Thanks to all contributors and users who reported issues and provided feedback f
 ## 📦 Installation
 
 ```bash
-pip install pyinj==1.2.0
+pip install injx==1.2.0
 ```
 
 ## 🔗 Links
 
-- [GitHub Repository](https://github.com/QriusGlobal/pyinj)
-- [PyPI Package](https://pypi.org/project/pyinj/1.2.0/)
-- [Documentation](https://github.com/QriusGlobal/pyinj#readme)
-- [Changelog](https://github.com/QriusGlobal/pyinj/blob/main/CHANGELOG.md)
+- [GitHub Repository](https://github.com/QriusGlobal/injx)
+- [PyPI Package](https://pypi.org/project/injx/1.2.0/)
+- [Documentation](https://github.com/QriusGlobal/injx#readme)
+- [Changelog](https://github.com/QriusGlobal/injx/blob/main/CHANGELOG.md)
 
 ---
 
-**Full Changelog**: https://github.com/QriusGlobal/pyinj/compare/v1.1.1...v1.2.0
+**Full Changelog**: https://github.com/QriusGlobal/injx/compare/v1.1.1...v1.2.0

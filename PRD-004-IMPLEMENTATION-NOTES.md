@@ -6,9 +6,9 @@ Successfully implemented all Phase 2 optimizations from PRD-004 without any brea
 ## Implemented Changes
 
 ### Phase A: Logging Infrastructure ✅
-- **Created `src/pyinj/logging.py`**: Centralized logging configuration module
-  - Main logger (`pyinj`) for operational events
-  - Performance logger (`pyinj.perf`) for metrics
+- **Created `src/injx/logging.py`**: Centralized logging configuration module
+  - Main logger (`injx`) for operational events
+  - Performance logger (`injx.perf`) for metrics
   - `configure_logging()` with default WARNING level
   - Helper functions for resolution paths and performance metrics
 
@@ -67,7 +67,7 @@ Successfully implemented all Phase 2 optimizations from PRD-004 without any brea
 ## New Public Features
 - **`configure_logging(level)`**: Optional logging configuration for debugging
   ```python
-  from pyinj.logging import configure_logging
+  from injx.logging import configure_logging
   import logging
   
   # Enable lifecycle logging
@@ -87,8 +87,8 @@ The implementation is complete and ready for:
 3. Release as part of next version (likely v1.2.0 given new features)
 
 ## Files Modified
-- `src/pyinj/logging.py` (NEW)
-- `src/pyinj/container.py` (MODIFIED)
-- `src/pyinj/contextual.py` (MODIFIED)
-- `src/pyinj/provider_record.py` (MODIFIED)
+- `src/injx/logging.py` (NEW)
+- `src/injx/container.py` (MODIFIED)
+- `src/injx/contextual.py` (MODIFIED)
+- `src/injx/provider_record.py` (MODIFIED)
 - `tests/test_cycle_detection.py` (FIXED)

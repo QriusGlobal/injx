@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABCMeta
 from typing import Any, ClassVar
 
-from pyinj.tokens import Scope, Token
+from injx.tokens import Scope, Token
 
 __all__ = ["Injectable"]
 

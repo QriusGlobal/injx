@@ -6,9 +6,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from pyinj import Container, Scope, Token
-from pyinj.container import _resolution_set, _resolution_stack
-from pyinj.exceptions import CircularDependencyError
+from injx import Container, Scope, Token
+from injx.container import _resolution_set, _resolution_stack
+from injx.exceptions import CircularDependencyError
 
 
 class TestCycleDetection:

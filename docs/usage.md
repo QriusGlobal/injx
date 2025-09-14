@@ -13,7 +13,7 @@ PyInj integrates seamlessly with FastAPI through multiple approaches:
 ```python
 from typing import Annotated
 from fastapi import FastAPI, Depends
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 app = FastAPI()
 container = Container()
@@ -63,7 +63,7 @@ async def get_user(
 #### Option 2: PyInj @inject Decorator (Recommended)
 
 ```python
-from pyinj import inject, set_default_container
+from injx import inject, set_default_container
 
 # Set global container
 set_default_container(container)
@@ -88,7 +88,7 @@ async def get_user_v2(
 #### Request-Scoped Dependencies
 
 ```python
-from pyinj import RequestScope
+from injx import RequestScope
 
 # Current user based on request context
 CURRENT_USER = Token[User]("current_user", scope=Scope.REQUEST)
@@ -118,7 +118,7 @@ async def get_profile(current_user: User) -> dict[str, str]:
 
 ```python
 # settings.py
-from pyinj import Container, Token, Scope, set_default_container
+from injx import Container, Token, Scope, set_default_container
 
 # Global DI container
 DI_CONTAINER = Container()
@@ -141,7 +141,7 @@ DI_CONTAINER.register(LOGGER, lambda: DjangoLogger())
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from pyinj import inject
+from injx import inject
 
 @csrf_exempt
 @inject  # Uses default container
@@ -178,7 +178,7 @@ def user_list_view(
 ```python
 from django.views import View
 from django.http import JsonResponse
-from pyinj import inject
+from injx import inject
 
 class UserView(View):
     @inject
@@ -213,7 +213,7 @@ class UserView(View):
 
 ```python
 from flask import Flask, request, jsonify
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 app = Flask(__name__)
 container = Container()
@@ -257,7 +257,7 @@ def get_profile(current_user: User) -> dict[str, str]:
 
 ```python
 import click
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 # Setup container
 container = Container()
@@ -323,7 +323,7 @@ if __name__ == "__main__":
 ### Microservice Architecture
 
 ```python
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 import httpx
 from typing import Protocol
 
@@ -510,7 +510,7 @@ asyncio.run(main())
 ```python
 import pytest
 from unittest.mock import AsyncMock, Mock
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 class TestUserService:
     def setup_method(self):
@@ -617,7 +617,7 @@ class TestUserService:
 from dataclasses import dataclass
 from typing import Optional
 import os
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 @dataclass
 class DatabaseConfig:

@@ -1,1 +1,1 @@
-# Test package for pyinj
+# Test package for injx

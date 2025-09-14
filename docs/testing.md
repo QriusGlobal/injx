@@ -19,7 +19,7 @@ PyInj makes testing easier by:
 ```python
 import pytest
 from unittest.mock import Mock, AsyncMock
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 class TestUserService:
     def setup_method(self):
@@ -110,7 +110,7 @@ Create a reusable base class for DI-enabled tests:
 ```python
 import pytest
 from unittest.mock import Mock
-from pyinj import Container, Token
+from injx import Container, Token
 
 class DITestCase:
     """Base class for dependency injection tests."""
@@ -545,7 +545,7 @@ class TestUserRegistrationFlow(DITestCase):
 
 ```python
 import pytest
-from pyinj import Container
+from injx import Container
 
 @pytest.fixture
 def container() -> Container:

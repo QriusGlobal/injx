@@ -1,8 +1,8 @@
-# PyInj - Project Context and Maintenance Guide
+# Injx - Project Context and Maintenance Guide
 
 ## Project Overview
 
-PyInj is a type-safe dependency injection container for Python 3.13+, designed with production reliability and performance as primary goals. The library provides compile-time type safety, O(1) lookup performance, and zero external dependencies.
+Injx is a type-safe dependency injection container for Python 3.13+, designed with production reliability and performance as primary goals. The library provides compile-time type safety, O(1) lookup performance, and zero external dependencies.
 
 ### Core Value Proposition
 - **Minimal complexity**: ~200 lines of core implementation
@@ -79,8 +79,8 @@ To simplify the internal state management, the various dictionaries (`_providers
 ## Repository Structure
 
 ```
-pyinj/
-├── src/pyinj/              # Source code
+injx/
+├── src/injx/              # Source code
 │   ├── __init__.py         # Public API exports
 │   ├── container.py        # Core container implementation
 │   ├── contextual.py       # Scoped containers (Request/Session)
@@ -99,7 +99,7 @@ pyinj/
 
 ### Key Files
 - `pyproject.toml`: Package metadata, dependencies, tool configuration
-- `src/pyinj/__init__.py`: Version string and public API
+- `src/injx/__init__.py`: Version string and public API
 - `.github/workflows/ci.yml`: Quality gates (format, lint, type, test)
 - `.github/workflows/publish.yml`: PyPI publishing via OIDC
 - `release-please-config.json`: Automated release configuration
@@ -136,7 +136,7 @@ uv pip install -r requirements-dev.txt  # Install dev dependencies
 
 # Managing packages
 uv pip list  # List installed packages
-uv pip show pyinj  # Show package details
+uv pip show injx  # Show package details
 ```
 
 #### Important Notes
@@ -177,7 +177,7 @@ uv pip show pyinj  # Show package details
 - **Pre-release tags**: `a` (alpha), `b` (beta), `rc` (release candidate)
 - **Version locations**:
   - `pyproject.toml`: `[project].version`
-  - `src/pyinj/__init__.py`: `__version__`
+  - `src/injx/__init__.py`: `__version__`
   - `.release-please-manifest.json`: Current version tracker
 
 ### Publishing Process
@@ -287,9 +287,9 @@ TRANSIENT    # New instance each resolution
 
 ### Logging Strategy
 To balance observability with performance, the library will adopt the following logging strategy:
-- **Default Log Level**: The `pyinj` logger will default to the `WARNING` level to avoid excessive log volume in production environments.
+- **Default Log Level**: The `injx` logger will default to the `WARNING` level to avoid excessive log volume in production environments.
 - **Opt-in Verbosity**: Users can enable more detailed `INFO` or `DEBUG` level logging for development or troubleshooting. `INFO` level logs will cover container lifecycle events and scope transitions.
-- **Performance Logger**: A separate, dedicated logger, `pyinj.perf`, can be used for detailed performance metrics, allowing users to selectively enable performance tracing without enabling all debug logs.
+- **Performance Logger**: A separate, dedicated logger, `injx.perf`, can be used for detailed performance metrics, allowing users to selectively enable performance tracing without enabling all debug logs.
 
 ## Maintenance Notes
 
@@ -313,4 +313,4 @@ To balance observability with performance, the library will adopt the following 
 
 ---
 
-*This document serves as the authoritative reference for PyInj's architecture, design decisions, and maintenance procedures. It should be updated whenever significant architectural decisions are made or development processes change.*
+*This document serves as the authoritative reference for Injx's architecture, design decisions, and maintenance procedures. It should be updated whenever significant architectural decisions are made or development processes change.*

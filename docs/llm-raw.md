@@ -4,7 +4,7 @@ For LLM tools and agents that need direct access to PyInj documentation, we prov
 
 **Standard LLM Endpoint:**
 ```
-https://qriusglobal.github.io/pyinj/llms.txt
+https://qriusglobal.github.io/injx/llms.txt
 ```
 
 This follows the `llms.txt` standard and provides:
@@ -16,7 +16,7 @@ This follows the `llms.txt` standard and provides:
 
 **Alternative GitHub Raw:**
 ```
-https://raw.githubusercontent.com/QriusGlobal/pyinj/main/docs/llm.md
+https://raw.githubusercontent.com/QriusGlobal/injx/main/docs/llm.md
 ```
 
 ## Alternative: Copy Raw Content Below
@@ -40,7 +40,7 @@ Purpose: concise guidance for integrating PyInj into LLM-driven projects and too
 ## Setup (Minimal Boilerplate)
 
 ```python
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 container = Container()
 
 # Tokens
@@ -78,7 +78,7 @@ async def run_tool(container: Container, tool_input: dict) -> dict:
 ## Injection in Handlers
 
 ```python
-from pyinj.injection import Inject, inject
+from injx.injection import Inject, inject
 
 @inject(container=container)
 async def handler(payload: dict, http: Inject[HttpClient]):

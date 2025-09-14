@@ -4,7 +4,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from pyinj.tokens import Scope, Token, TokenFactory
+from injx.tokens import Scope, Token, TokenFactory
 
 
 class Database:

@@ -1,0 +1,90 @@
+name: injx-release-agent
+version: 1.0.0
+description: Automated release management for injx
+
+capabilities:
+  - version_bumping
+  - changelog_generation
+  - pypi_publishing
+  - github_releases
+  - pre_release_management
+
+release_channels:
+  alpha:
+    pattern: "^(feat|fix|perf)/.*"
+    prerelease: true
+    prerelease_token: "alpha"
+    pypi_channel: "pre-release"
+    
+  beta:
+    pattern: "^beta/.*"
+    prerelease: true
+    prerelease_token: "beta"
+    pypi_channel: "pre-release"
+    
+  rc:
+    pattern: "^rc/.*"
+    prerelease: true
+    prerelease_token: "rc"
+    pypi_channel: "pre-release"
+    
+  stable:
+    pattern: "^main$"
+    prerelease: false
+    pypi_channel: "stable"
+
+version_rules:
+  # While in 0.x.y, breaking changes bump minor
+  pre_1_0_0:
+    breaking_change: "minor"
+    feature: "patch"
+    fix: "patch"
+    
+  # After 1.0.0, follow strict semver
+  post_1_0_0:
+    breaking_change: "major"
+    feature: "minor"
+    fix: "patch"
+
+quality_gates:
+  - tests_pass
+  - type_check_pass
+  - coverage_threshold: 80
+  - no_security_vulnerabilities
+  - documentation_complete
+
+release_workflow:
+  1_analyze_commits:
+    - Parse conventional commits
+    - Determine version bump type
+    - Check current version against PEP 440
+    
+  2_update_version:
+    - Update pyproject.toml
+    - Update src/injx/__init__.py
+    - Generate CHANGELOG entries
+    
+  3_quality_checks:
+    - Run test suite
+    - Type checking with basedpyright
+    - Security scanning
+    - Documentation build
+    
+  4_build_artifacts:
+    - Build sdist
+    - Build wheel
+    - Generate checksums
+    
+  5_publish:
+    - Create GitHub release
+    - Upload to PyPI (or TestPyPI for pre-releases)
+    - Update documentation site
+    - Send notifications
+
+commands:
+  check_version: "Check current version and next version"
+  release_alpha: "Create alpha pre-release"
+  release_beta: "Create beta pre-release"
+  release_rc: "Create release candidate"
+  release_stable: "Create stable release"
+  rollback: "Rollback a failed release"

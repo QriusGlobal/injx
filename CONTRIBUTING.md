@@ -20,8 +20,8 @@ Before contributing, ensure you have:
 1. **Fork the repository** on GitHub
 2. **Clone your fork**:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/pyinj.git
-   cd pyinj
+   git clone https://github.com/YOUR_USERNAME/injx.git
+   cd injx
    ```
 
 3. **Install dependencies**:
@@ -238,7 +238,7 @@ Use pytest markers for test organization:
 
 ## 🐛 Reporting Bugs
 
-Use our [bug report template](https://github.com/qriusglobal/pyinj/issues/new?template=bug_report.yml) and include:
+Use our [bug report template](https://github.com/qriusglobal/injx/issues/new?template=bug_report.yml) and include:
 
 - **Python version** and operating system
 - **PyInj version**
@@ -248,7 +248,7 @@ Use our [bug report template](https://github.com/qriusglobal/pyinj/issues/new?te
 
 ## 💡 Feature Requests
 
-Use our [feature request template](https://github.com/qriusglobal/pyinj/issues/new?template=feature_request.yml) and include:
+Use our [feature request template](https://github.com/qriusglobal/injx/issues/new?template=feature_request.yml) and include:
 
 - **Use case** description
 - **Proposed API** design
@@ -263,10 +263,10 @@ Please follow our [Security Policy](SECURITY.md) and report security issues priv
 
 ## 📚 Additional Resources
 
-- **Documentation**: https://github.com/qriusglobal/pyinj
+- **Documentation**: https://github.com/qriusglobal/injx
 - **Examples**: [examples/](examples/) directory
-- **Issue Tracker**: https://github.com/qriusglobal/pyinj/issues
-- **Discussions**: https://github.com/qriusglobal/pyinj/discussions
+- **Issue Tracker**: https://github.com/qriusglobal/injx/issues
+- **Discussions**: https://github.com/qriusglobal/injx/discussions
 
 ## 🤝 Code of Conduct
 
@@ -309,4 +309,4 @@ Examples:
 - PyPI publish runs from `.github/workflows/publish.yml` on release publish.
 
 
-**Questions?** Feel free to open a [discussion](https://github.com/qriusglobal/pyinj/discussions) or reach out to the maintainers!
+**Questions?** Feel free to open a [discussion](https://github.com/qriusglobal/injx/discussions) or reach out to the maintainers!

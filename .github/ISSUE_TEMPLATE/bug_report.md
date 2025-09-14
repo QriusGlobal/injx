@@ -28,7 +28,7 @@ What actually happened, including logs and stacktraces if applicable.
 
 - OS: 
 - Python: 
-- pyinj version: 
+- injx version: 
 
 ## Additional Context
 

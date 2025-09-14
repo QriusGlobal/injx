@@ -1,12 +1,12 @@
-"""Pytest configuration and shared fixtures for pyinj tests."""
+"""Pytest configuration and shared fixtures for injx tests."""
 
 import asyncio
 from typing import AsyncGenerator, Generator
 
 import pytest
 
-from pyinj.container import Container
-from pyinj.tokens import Token
+from injx.container import Container
+from injx.tokens import Token
 
 
 @pytest.fixture

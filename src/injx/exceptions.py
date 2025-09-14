@@ -1,4 +1,4 @@
-"""Exception classes for pyinj dependency injection container."""
+"""Exception classes for injx dependency injection container."""
 
 from __future__ import annotations
 
@@ -7,22 +7,22 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
-    from pyinj.tokens import Token
+    from injx.tokens import Token
 
 __all__ = [
     "CircularDependencyError",
-    "PyInjError",
+    "InjxError",
     "ResolutionError",
     "AsyncCleanupRequiredError",
     "CleanupContractError",
 ]
 
 
-class PyInjError(Exception):
-    """Base exception for all pyinj errors."""
+class InjxError(Exception):
+    """Base exception for all injx errors."""
 
 
-class ResolutionError(PyInjError):
+class ResolutionError(InjxError):
     """Raised when a dependency cannot be resolved."""
 
     def __init__(
@@ -64,7 +64,7 @@ class CircularDependencyError(ResolutionError):
         )
 
 
-class AsyncCleanupRequiredError(PyInjError):
+class AsyncCleanupRequiredError(InjxError):
     """Raised when a synchronous cleanup is attempted for an async-only resource.
 
     This indicates incorrect usage by the caller. Use an async scope or
@@ -77,7 +77,7 @@ class AsyncCleanupRequiredError(PyInjError):
         )
 
 
-class CleanupContractError(PyInjError):
+class CleanupContractError(InjxError):
     """Raised when a registration declares an invalid or inconsistent cleanup contract."""
 
     def __init__(self, message: str) -> None:

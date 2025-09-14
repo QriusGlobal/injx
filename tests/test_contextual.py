@@ -4,12 +4,12 @@ from unittest.mock import Mock
 
 import pytest
 
-from pyinj.contextual import (
+from injx.contextual import (
     ContextualContainer,
     RequestScope,
     SessionScope,
 )
-from pyinj.tokens import Scope, Token
+from injx.tokens import Scope, Token
 
 
 class Database:

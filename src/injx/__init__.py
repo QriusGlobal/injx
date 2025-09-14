@@ -1,6 +1,6 @@
-"""PyInj - Type-safe dependency injection for modern Python.
+"""Injx - Type-safe dependency injection for modern Python.
 
-Status: Beta - APIs may change between pre-releases. Pin exact versions in production.
+Status: Alpha - APIs will change. Not recommended for production use.
 
 Highlights:
 - Immutable tokens with pre-computed hashes (O(1) lookups)
@@ -10,7 +10,7 @@ Highlights:
 - Zero runtime dependencies
 
 Quick start:
-    from pyinj import Container, Token, Scope
+    from injx import Container, Token, Scope
 
     container = Container()
     DB = Token[Database]("database")
@@ -20,15 +20,15 @@ Quick start:
     # ... use db ...
 """
 
-from pyinj.container import Container
-from pyinj.contextual import ContextualContainer, RequestScope, SessionScope
-from pyinj.defaults import get_default_container, set_default_container
-from pyinj.exceptions import CircularDependencyError, PyInjError, ResolutionError
-from pyinj.injection import Depends, Given, Inject, inject
-from pyinj.metaclasses import Injectable
-from pyinj.tokens import Scope, Token, TokenFactory
+from injx.container import Container
+from injx.contextual import ContextualContainer, RequestScope, SessionScope
+from injx.defaults import get_default_container, set_default_container
+from injx.exceptions import CircularDependencyError, InjxError, ResolutionError
+from injx.injection import Depends, Given, Inject, inject
+from injx.metaclasses import Injectable
+from injx.tokens import Scope, Token, TokenFactory
 
-__version__ = "1.2.0"
+__version__ = "0.1.0a1"
 __author__ = "Qrius Global"
 
 __all__ = [
@@ -43,7 +43,7 @@ __all__ = [
     "SessionScope",
     "Token",
     "TokenFactory",
-    "PyInjError",
+    "InjxError",
     "ResolutionError",
     "CircularDependencyError",
     "get_default_container",

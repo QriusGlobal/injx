@@ -5,9 +5,9 @@ from typing import Annotated, Awaitable, Callable, Optional, cast
 
 import pytest
 
-from pyinj.container import Container
-from pyinj.injection import Inject, inject
-from pyinj.tokens import Token
+from injx.container import Container
+from injx.injection import Inject, inject
+from injx.tokens import Token
 
 
 # Test domain classes
@@ -279,7 +279,7 @@ class TestCompleteIntegration:
                 lambda: CacheConfig(),
             ),
         ]
-        from pyinj.types import ProviderLike
+        from injx.types import ProviderLike
 
         container.batch_register(
             cast(list[tuple[Token[object], ProviderLike[object]]], registrations)
@@ -315,7 +315,7 @@ class TestCompleteIntegration:
         container = Container()
 
         # Unregistered dependency
-        from pyinj.exceptions import ResolutionError
+        from injx.exceptions import ResolutionError
 
         with pytest.raises(ResolutionError) as exc_info:
             container.get(Database)
@@ -344,7 +344,7 @@ class TestCompleteIntegration:
         container.register(token_a, create_a)
         container.register(token_b, create_b)
 
-        from pyinj.exceptions import CircularDependencyError
+        from injx.exceptions import CircularDependencyError
 
         with pytest.raises(CircularDependencyError):
             container.get(token_a)

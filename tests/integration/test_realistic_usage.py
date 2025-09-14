@@ -1,6 +1,6 @@
 """Realistic integration tests emulating user projects with async libs.
 
-These tests demonstrate typical project usage of pyinj with httpx only
+These tests demonstrate typical project usage of injx with httpx only
 to keep tests fast and network-light. Playwright-style usage is simulated via a fake to avoid
 browser downloads while exercising DI patterns and cleanup behavior.
 """
@@ -14,9 +14,9 @@ from typing import Annotated, Any
 import httpx
 import pytest
 
-from pyinj.container import Container
-from pyinj.injection import Inject, inject
-from pyinj.tokens import Scope, Token
+from injx.container import Container
+from injx.injection import Inject, inject
+from injx.tokens import Scope, Token
 
 
 def _make_mock_httpx() -> httpx.AsyncClient:
@@ -142,7 +142,7 @@ async def test_sync_cleanup_circuit_breaker_raises_for_async_resources() -> None
     assert len(resources) > 0
 
     # Using sync context manager should raise due to async cleanup required
-    from pyinj.exceptions import AsyncCleanupRequiredError
+    from injx.exceptions import AsyncCleanupRequiredError
 
     with pytest.raises(AsyncCleanupRequiredError):
         with container:

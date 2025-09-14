@@ -6,7 +6,7 @@ with separate loggers for operational events and performance metrics.
 Example:
     Configure logging for development::
 
-        from pyinj.logging import configure_logging
+        from injx.logging import configure_logging
         import logging
 
         configure_logging(logging.INFO)

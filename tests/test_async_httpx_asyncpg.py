@@ -14,8 +14,8 @@ from typing import Any
 import httpx
 import pytest
 
-from pyinj.container import Container
-from pyinj.tokens import Scope, Token
+from injx.container import Container
+from injx.tokens import Scope, Token
 
 
 class FakeAsyncPGPool:

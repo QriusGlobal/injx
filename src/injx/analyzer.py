@@ -46,7 +46,7 @@ def get_token_metadata(cls: Type[Any]) -> tuple[str, Any]:
     Returns:
         Tuple of (token_name, scope)
     """
-    from pyinj.tokens import Scope
+    from injx.tokens import Scope
 
     token_name = getattr(cls, "__token_name__", cls.__name__.lower())
     scope = getattr(cls, "__scope__", Scope.TRANSIENT)
@@ -75,7 +75,7 @@ def extract_type_from_token(token: Any) -> Optional[Type[Any]]:
     Returns:
         The type if token is a Token[T], None otherwise
     """
-    from pyinj.tokens import Token
+    from injx.tokens import Token
 
     if isinstance(token, Token):
         # Token.type_ is always a Type[Any]

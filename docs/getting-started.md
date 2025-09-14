@@ -6,10 +6,10 @@ This guide covers the fundamentals of using PyInj for type-safe dependency injec
 
 ```bash
 # UV (recommended)
-uv add pyinj
+uv add injx
 
 # Or pip
-pip install pyinj
+pip install injx
 ```
 
 ## Core Concepts
@@ -18,7 +18,7 @@ pip install pyinj
 A typed identifier that represents a dependency. Tokens are immutable and use pre-computed hashes for O(1) lookups.
 
 ```python
-from pyinj import Token
+from injx import Token
 from typing import Protocol
 
 class Logger(Protocol):
@@ -32,7 +32,7 @@ LOGGER = Token[Logger]("logger", scope=Scope.SINGLETON)
 The central registry that manages dependencies and their lifecycles.
 
 ```python
-from pyinj import Container
+from injx import Container
 
 container = Container()
 ```
@@ -63,7 +63,7 @@ Here's a complete example showing the fundamental pattern:
 
 ```python
 from typing import Protocol
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 # Define interfaces using protocols
 class Logger(Protocol):
@@ -114,7 +114,7 @@ PyInj provides multiple ways to inject dependencies. Here's the recommended appr
 This is the cleanest and most type-safe approach:
 
 ```python
-from pyinj import inject, set_default_container
+from injx import inject, set_default_container
 
 # Set up a default container (optional)
 set_default_container(container)
@@ -218,7 +218,7 @@ asyncio.run(main())
 
 ```python
 # ❌ DON'T DO THIS - Breaks type safety
-from pyinj import Inject
+from injx import Inject
 
 def bad_handler(logger: Inject[Logger] = None) -> None:
     # This breaks static type checking and is confusing
@@ -353,7 +353,7 @@ asyncio.run(main())
 PyInj prevents resource leaks by raising `AsyncCleanupRequiredError` when you try to use sync cleanup on async-only resources:
 
 ```python
-from pyinj import AsyncCleanupRequiredError
+from injx import AsyncCleanupRequiredError
 
 # Register an async-only resource
 container.register_context_async(ASYNC_DB, async_database_connection)
@@ -380,7 +380,7 @@ asyncio.run(main())
 The `TokenFactory` provides convenient methods for creating tokens:
 
 ```python
-from pyinj import TokenFactory
+from injx import TokenFactory
 
 factory = TokenFactory()
 
@@ -411,7 +411,7 @@ Now that you understand the basics, explore these advanced topics:
 
 ```python
 from typing import Protocol
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 ```
 
 ### Basic Pattern

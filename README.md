@@ -1,19 +1,19 @@
-# PyInj - Type-Safe Dependency Injection
+# Injx - Type-Safe Dependency Injection
 
 [![Python Version](https://img.shields.io/badge/python-3.13+-blue.svg)](https://python.org)
 [![Type Checked](https://img.shields.io/badge/type--checked-basedpyright-blue.svg)](https://github.com/DetachHead/basedpyright)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Docs](https://img.shields.io/badge/docs-mkdocs--material-informational)](https://qriusglobal.github.io/pyinj/)
+[![Docs](https://img.shields.io/badge/docs-mkdocs--material-informational)](https://qriusglobal.github.io/injx/)
 
 > Status: Stable — Actively maintained. Breaking changes follow semantic versioning.
 
 ## Project Status
 
-[![PyPI Version](https://img.shields.io/pypi/v/pyinj.svg?logo=pypi&label=PyPI)](https://pypi.org/project/pyinj/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/pyinj.svg?logo=python&logoColor=white)](https://pypi.org/project/pyinj/)
-[![Tests & Linting](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/ci.yml)
-[![Docs Build](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/pyinj/actions/workflows/docs.yml)
-[![codecov](https://codecov.io/gh/QriusGlobal/pyinj/branch/main/graph/badge.svg)](https://codecov.io/gh/QriusGlobal/pyinj)
+[![PyPI Version](https://img.shields.io/pypi/v/injx.svg?logo=pypi&label=PyPI)](https://pypi.org/project/injx/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/injx.svg?logo=python&logoColor=white)](https://pypi.org/project/injx/)
+[![Tests & Linting](https://github.com/QriusGlobal/injx/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/injx/actions/workflows/ci.yml)
+[![Docs Build](https://github.com/QriusGlobal/injx/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/QriusGlobal/injx/actions/workflows/docs.yml)
+[![codecov](https://codecov.io/gh/QriusGlobal/injx/branch/main/graph/badge.svg)](https://codecov.io/gh/QriusGlobal/injx)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Typing: strict](https://img.shields.io/badge/typing-strict-blue?logo=python)](#)
 [![Linting: Ruff](https://img.shields.io/badge/linting-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
@@ -33,23 +33,23 @@ A **type-safe** dependency injection container for Python 3.13+ that provides:
 
 ## Documentation
 
-Full docs: https://qriusglobal.github.io/pyinj/
+Full docs: https://qriusglobal.github.io/injx/
 
 ## Quick Start
 
 ```bash
 # Install with UV (recommended)
-uv add pyinj
+uv add injx
 
 # Or with pip
-pip install pyinj
+pip install injx
 ```
 
 ### Basic Usage (Recommended Pattern)
 
 ```python
 from typing import Protocol
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 # Define interfaces
 class Logger(Protocol):
@@ -98,7 +98,7 @@ db = container.get(DATABASE)
 ```python
 import asyncio
 from typing import Protocol
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 class AsyncDatabase(Protocol):
     async def connect(self) -> None: ...
@@ -159,7 +159,7 @@ pyright your_code.py
 
 ```python
 from typing import Protocol
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 class UserService(Protocol):
     def get_user(self, id: int) -> dict[str, str]: ...
@@ -182,7 +182,7 @@ container.register(USER_SERVICE, DatabaseUserService)  # ✅ OK
 
 ```python
 from typing import Protocol, runtime_checkable
-from pyinj import Container, Token, inject
+from injx import Container, Token, inject
 
 @runtime_checkable
 class EmailService(Protocol):
@@ -219,7 +219,7 @@ send_welcome_email(user_email="user@example.com")
 **Use this pattern for 95% of cases:**
 
 ```python
-from pyinj import inject
+from injx import inject
 
 @inject  # Uses default container
 def business_logic(logger: Logger, db: Database, user_id: int) -> None:
@@ -242,7 +242,7 @@ business_logic(user_id=123)
 
 ```python
 from typing import Annotated
-from pyinj import inject, Inject
+from injx import inject, Inject
 
 @inject
 def advanced_handler(
@@ -297,7 +297,7 @@ def handler_with_optional_logger(logger: Logger) -> None:
 ### 1. Contextual Scoping
 
 ```python
-from pyinj import Container, ContextualContainer, Token, Scope
+from injx import Container, ContextualContainer, Token, Scope
 
 # Contextual container supports request/session scopes
 container = Container()  # Inherits from ContextualContainer
@@ -334,7 +334,7 @@ with container.session_scope():
 ### 2. TokenFactory for Convenient Creation
 
 ```python
-from pyinj import Container, TokenFactory, Scope
+from injx import Container, TokenFactory, Scope
 
 container = Container()
 # TokenFactory provides convenient methods
@@ -358,7 +358,7 @@ container.register(SECONDARY_DB, lambda: PostgreSQLDatabase("secondary"))
 ### 3. Default Container Support
 
 ```python
-from pyinj import get_default_container, set_default_container, inject
+from injx import get_default_container, set_default_container, inject
 
 # Set up global default container
 default_container = Container()
@@ -383,7 +383,7 @@ current_container = get_default_container()
 import asyncio
 from contextlib import asynccontextmanager, contextmanager
 from typing import AsyncGenerator, Generator
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 # Sync context manager
 @contextmanager 
@@ -430,7 +430,7 @@ asyncio.run(main())
 ### 5. Given Instances (Scala-Style)
 
 ```python
-from pyinj import Container, Given, inject
+from injx import Container, Given, inject
 
 class UserService:
     def __init__(self, db: Database):
@@ -458,7 +458,7 @@ def process_request(
 
 ```python
 import asyncio
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 # Thread-safe async singleton creation
 async def create_expensive_service() -> ExpensiveService:
@@ -485,7 +485,7 @@ asyncio.run(concurrent_access())
 ### Circular Dependency Detection
 
 ```python
-from pyinj import Container, Token, CircularDependencyError
+from injx import Container, Token, CircularDependencyError
 
 class ServiceA:
     def __init__(self, service_b: 'ServiceB'):
@@ -516,7 +516,7 @@ except CircularDependencyError as e:
 
 ```python
 from unittest.mock import Mock
-from pyinj import Container, Token
+from injx import Container, Token
 
 # Production setup
 container = Container()
@@ -552,7 +552,7 @@ def test_email_functionality() -> None:
 ```python
 from typing import Annotated
 from fastapi import FastAPI, Depends
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 # Setup DI container
 app = FastAPI()
@@ -614,7 +614,7 @@ async def shutdown():
 
 ```python
 # settings.py
-from pyinj import Container, Token, Scope, set_default_container
+from injx import Container, Token, Scope, set_default_container
 
 # Global container setup
 DI_CONTAINER = Container()
@@ -629,7 +629,7 @@ DI_CONTAINER.register(EMAIL_SERVICE, lambda: DjangoEmailService())
 
 # views.py
 from django.http import JsonResponse
-from pyinj import inject
+from injx import inject
 
 @inject  # Uses default container
 def create_user_view(
@@ -650,7 +650,7 @@ def create_user_view(
 
 ```python
 import click
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 # Setup container
 container = Container()
@@ -695,7 +695,7 @@ if __name__ == "__main__":
 ```python
 import pytest
 from unittest.mock import Mock, MagicMock
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 class TestUserService:
     def setup_method(self):
@@ -751,7 +751,7 @@ class TestUserService:
 import asyncio
 import pytest
 from unittest.mock import AsyncMock
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 @pytest.mark.asyncio
 async def test_async_user_service():
@@ -830,7 +830,7 @@ PyInj is designed for production-scale applications with predictable performance
 ### O(1) Token Lookups
 
 ```python
-from pyinj import Container, Token, TokenFactory
+from injx import Container, Token, TokenFactory
 
 # Tokens use pre-computed hashes for O(1) lookups
 container = Container()
@@ -853,7 +853,7 @@ service_500 = container.get(tokens[500])  # Same speed as tokens[0]
 ### Cached Injection Metadata
 
 ```python
-from pyinj import inject, InjectionAnalyzer
+from injx import inject, InjectionAnalyzer
 
 # Function signature analysis is cached automatically
 @inject  # Analysis cached on first call
@@ -874,7 +874,7 @@ expensive_handler(regular_param="test2") # Fast
 
 ```python
 from weakref import WeakValueDictionary
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 # Transient dependencies use weak references for automatic cleanup
 container = Container()
@@ -893,7 +893,7 @@ temp_service = container.get(TEMP_TOKEN)
 ### Detailed Error Messages
 
 ```python
-from pyinj import Container, Token, ResolutionError
+from injx import Container, Token, ResolutionError
 
 container = Container()
 SERVICE_A = Token[ServiceA]("service_a")
@@ -921,11 +921,11 @@ except ResolutionError as e:
 
 ```python
 import logging
-from pyinj import Container, Token
+from injx import Container, Token
 
 # Enable debug logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("pyinj")
+logger = logging.getLogger("injx")
 
 container = Container()
 SERVICE_TOKEN = Token[DebugService]("debug_service", scope=Scope.SINGLETON)
@@ -959,7 +959,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
     )
 
 # After (PyInj)
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 container = Container()
 
@@ -996,7 +996,7 @@ def user_handler(db: Database) -> None:
     pass
 
 # After (PyInj) 
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 container = Container()
 DATABASE = Token[Database]("database", scope=Scope.SINGLETON)
@@ -1011,14 +1011,14 @@ def user_handler(db: Database) -> None:
 
 ```bash
 # Clone repository
-git clone https://github.com/qriusglobal/pyinj.git
-cd pyinj
+git clone https://github.com/qriusglobal/injx.git
+cd injx
 
 # Install with development dependencies
 uv sync
 
 # Run tests with coverage
-uv run pytest --cov=pyinj --cov-report=html
+uv run pytest --cov=injx --cov-report=html
 
 # Type checking (strict mode)
 uvx basedpyright src
@@ -1046,7 +1046,7 @@ uv run pytest tests/test_performance.py       # Performance benchmarks
 uv run pytest tests/integration/              # Integration tests
 
 # With coverage
-uv run pytest --cov=pyinj --cov-report=term-missing
+uv run pytest --cov=injx --cov-report=term-missing
 ```
 
 ## Best Practices
@@ -1055,7 +1055,7 @@ uv run pytest --cov=pyinj --cov-report=term-missing
 
 ```python
 # tokens.py - Centralize token definitions
-from pyinj import TokenFactory, Token
+from injx import TokenFactory, Token
 from typing import Protocol
 
 # Use factory for consistency
@@ -1084,7 +1084,7 @@ class Tokens:
 # app.py - Application lifecycle
 import asyncio
 from contextlib import asynccontextmanager
-from pyinj import Container, set_default_container
+from injx import Container, set_default_container
 
 @asynccontextmanager
 async def lifespan():
@@ -1124,7 +1124,7 @@ if __name__ == "__main__":
 ```python
 # test_base.py - Shared testing infrastructure
 import pytest
-from pyinj import Container
+from injx import Container
 from unittest.mock import Mock
 
 class DITestCase:
@@ -1284,5 +1284,5 @@ PyInj follows the philosophy that **good software is simple software**. We provi
 **Ready to build type-safe applications with confidence?**
 
 ```bash
-uv add pyinj
+uv add injx
 ```

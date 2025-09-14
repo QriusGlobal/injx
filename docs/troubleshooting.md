@@ -10,7 +10,7 @@ This guide covers common issues, error messages, and solutions when using PyInj.
 
 **Error Message:**
 ```
-pyinj.exceptions.CircularDependencyError: Cannot resolve token 'service_a':
+injx.exceptions.CircularDependencyError: Cannot resolve token 'service_a':
   Resolution chain: service_a -> service_b -> service_a
   Cause: Circular dependency detected: service_a -> service_b -> service_a
 ```
@@ -172,7 +172,7 @@ service = await container.aget(ASYNC_SERVICE)  # OK
 
 **Error:**
 ```
-pyinj.exceptions.AsyncCleanupRequiredError: Resource AsyncDatabaseClient requires 
+injx.exceptions.AsyncCleanupRequiredError: Resource AsyncDatabaseClient requires 
 asynchronous cleanup. Use an async request/session scope.
 ```
 
@@ -205,7 +205,7 @@ asyncio.run(main())
 
 **Error:**
 ```
-pyinj.exceptions.ResolutionError: Cannot resolve token 'database':
+injx.exceptions.ResolutionError: Cannot resolve token 'database':
   Resolution chain: user_service -> database
   Cause: No provider registered for token 'database'
 ```
@@ -233,7 +233,7 @@ container.register(USER_SERVICE, lambda: UserService(container.get(DATABASE)))
 
 **Error:**
 ```
-pyinj.exceptions.ResolutionError: Cannot resolve token for type 'Database':
+injx.exceptions.ResolutionError: Cannot resolve token for type 'Database':
   Resolution chain: root
   Cause: No provider registered for type 'Database'
 ```
@@ -389,7 +389,7 @@ class UserService:
 **Debugging:**
 ```python
 import time
-from pyinj import Container, Token
+from injx import Container, Token
 
 container = Container()
 
@@ -493,7 +493,7 @@ import logging
 
 # Enable PyInj debug logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("pyinj")
+logger = logging.getLogger("injx")
 
 container = Container()
 # Resolution steps will be logged
@@ -515,7 +515,7 @@ print("Overrides:", list(container._overrides.keys()) if hasattr(container, '_ov
 ### 3. Resolution Chain Analysis
 
 ```python
-from pyinj.exceptions import ResolutionError
+from injx.exceptions import ResolutionError
 
 try:
     service = container.get(PROBLEMATIC_TOKEN)

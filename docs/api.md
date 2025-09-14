@@ -6,7 +6,7 @@ This page provides a comprehensive reference for all PyInj classes, functions, a
 
 ### Container
 
-**`pyinj.Container`**
+**`injx.Container`**
 
 The main dependency injection container that manages services and their lifecycles.
 
@@ -133,7 +133,7 @@ Property returning the cache hit rate (0.0 to 1.0).
 
 ### Token
 
-**`pyinj.Token[T]`**
+**`injx.Token[T]`**
 
 A typed identifier for dependencies with pre-computed hash for O(1) lookups.
 
@@ -199,7 +199,7 @@ Validate that an instance matches the token's expected type.
 
 ### TokenFactory
 
-**`pyinj.TokenFactory`**
+**`injx.TokenFactory`**
 
 Factory for creating and caching commonly used tokens.
 
@@ -241,7 +241,7 @@ Number of cached tokens.
 
 ### Scope
 
-**`pyinj.Scope`**
+**`injx.Scope`**
 
 Enumeration of dependency lifecycle scopes.
 
@@ -267,7 +267,7 @@ New instance for every resolution.
 
 ### inject
 
-**`pyinj.inject(func: Callable = None, *, container: Container | None = None, cache: bool = True) -> Callable`**
+**`injx.inject(func: Callable = None, *, container: Container | None = None, cache: bool = True) -> Callable`**
 
 Decorator that automatically injects dependencies based on type annotations.
 
@@ -292,7 +292,7 @@ async def async_handler(service: AsyncService) -> None:
 
 ### Inject
 
-**`pyinj.Inject[T]`**
+**`injx.Inject[T]`**
 
 Marker class for explicit dependency injection.
 
@@ -311,13 +311,13 @@ def handler(
 
 ### Given
 
-**`pyinj.Given[T]`**
+**`injx.Given[T]`**
 
 Scala-style marker for implicit dependencies (alias for Inject[T]).
 
 ### Depends
 
-**`pyinj.Depends(provider: Callable[[], T]) -> T`**
+**`injx.Depends(provider: Callable[[], T]) -> T`**
 
 FastAPI-compatible dependency marker.
 
@@ -330,7 +330,7 @@ def handler(service: Service = Depends(lambda: ServiceImpl())) -> None:
 
 ### ContextualContainer
 
-**`pyinj.ContextualContainer`**
+**`injx.ContextualContainer`**
 
 Base class adding request/session context support via `contextvars`. The main `Container` class inherits from this.
 
@@ -358,7 +358,7 @@ Clear all contexts including singletons.
 
 ### RequestScope
 
-**`pyinj.RequestScope`**
+**`injx.RequestScope`**
 
 Helper class for managing request-scoped dependencies.
 
@@ -371,7 +371,7 @@ async with RequestScope(container) as scope:
 
 ### SessionScope
 
-**`pyinj.SessionScope`**
+**`injx.SessionScope`**
 
 Helper class for managing session-scoped dependencies.
 
@@ -379,13 +379,13 @@ Helper class for managing session-scoped dependencies.
 
 ### PyInjError
 
-**`pyinj.exceptions.PyInjError`**
+**`injx.exceptions.PyInjError`**
 
 Base exception for all PyInj errors.
 
 ### ResolutionError
 
-**`pyinj.exceptions.ResolutionError`**
+**`injx.exceptions.ResolutionError`**
 
 Raised when a dependency cannot be resolved.
 
@@ -405,13 +405,13 @@ Human-readable cause description.
 
 ### CircularDependencyError
 
-**`pyinj.exceptions.CircularDependencyError`**
+**`injx.exceptions.CircularDependencyError`**
 
 Raised when circular dependency is detected. Inherits from `ResolutionError`.
 
 ### AsyncCleanupRequiredError
 
-**`pyinj.exceptions.AsyncCleanupRequiredError`**
+**`injx.exceptions.AsyncCleanupRequiredError`**
 
 Raised when synchronous cleanup is attempted on async-only resources.
 
@@ -419,7 +419,7 @@ Raised when synchronous cleanup is attempted on async-only resources.
 
 ### get_default_container
 
-**`pyinj.get_default_container() -> Container`**
+**`injx.get_default_container() -> Container`**
 
 Get the global default container.
 
@@ -428,7 +428,7 @@ Get the global default container.
 
 ### set_default_container
 
-**`pyinj.set_default_container(container: Container) -> None`**
+**`injx.set_default_container(container: Container) -> None`**
 
 Set the global default container.
 
@@ -438,7 +438,7 @@ Set the global default container.
 
 ### Injectable
 
-**`pyinj.Injectable`**
+**`injx.Injectable`**
 
 Metaclass for automatic service registration.
 
@@ -489,11 +489,11 @@ USER_REPO = Token[Repository[User]]("user_repo")
 
 ### Version Information
 
-**`pyinj.__version__`**
+**`injx.__version__`**
 
 String containing the current PyInj version.
 
-**`pyinj.__author__`**
+**`injx.__author__`**
 
 Author information.
 

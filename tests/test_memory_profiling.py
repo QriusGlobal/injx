@@ -6,7 +6,7 @@ import weakref
 
 import pytest
 
-from pyinj import Container, Scope, Token
+from injx import Container, Scope, Token
 
 
 class TestMemoryProfiling:
@@ -313,7 +313,7 @@ class TestMemoryProfiling:
         tracemalloc.stop()
 
         # The resolution stack should be cleared after resolution
-        from pyinj.container import _resolution_set, _resolution_stack
+        from injx.container import _resolution_set, _resolution_stack
 
         assert len(_resolution_stack.get()) == 0, (
             "Resolution stack should be empty after resolution"

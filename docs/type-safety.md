@@ -63,7 +63,7 @@ PyInj enforces type compatibility between tokens and providers:
 
 ```python
 from typing import Protocol
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 class Logger(Protocol):
     def info(self, message: str) -> None: ...
@@ -202,7 +202,7 @@ container.register(STRING_CACHE, MemoryCache)
 The cleanest and most type-safe approach:
 
 ```python
-from pyinj import inject
+from injx import inject
 
 @inject
 def user_service(
@@ -228,7 +228,7 @@ Use when you need custom providers or explicit control:
 
 ```python
 from typing import Annotated
-from pyinj import Inject
+from injx import Inject
 
 @inject  
 def advanced_service(

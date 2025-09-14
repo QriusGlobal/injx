@@ -2,7 +2,7 @@
 
 from typing import Protocol, runtime_checkable
 
-from pyinj import Container, Injectable, Scope
+from injx import Container, Injectable, Scope
 
 
 class TestMetaclassRegistration:

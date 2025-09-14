@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from pyinj import Container, ResolutionError, Scope, Token
+from injx import Container, ResolutionError, Scope, Token
 
 
 class MockAsyncResource:
@@ -330,7 +330,7 @@ class TestAsyncInjection:
         container.register(token_a, provider_a)
         container.register(token_b, provider_b)
 
-        from pyinj.exceptions import CircularDependencyError
+        from injx.exceptions import CircularDependencyError
 
         with pytest.raises(CircularDependencyError):
             await container.aget(token_a)

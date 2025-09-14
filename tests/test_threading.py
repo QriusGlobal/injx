@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 # no direct pytest usage in this module
-from pyinj import Container, Scope, Token
+from injx import Container, Scope, Token
 
 
 class TestThreadSafety:

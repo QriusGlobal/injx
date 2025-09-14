@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-from pyinj import Container, Scope, Token
-from pyinj.exceptions import CircularDependencyError
+from injx import Container, Scope, Token
+from injx.exceptions import CircularDependencyError
 
 
 class TestPerformance:

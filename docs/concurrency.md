@@ -10,7 +10,7 @@ PyInj is designed for both threaded and async-concurrent programs.
 ## Threaded programs
 
 ```python
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 import threading
 
 container = Container()
@@ -34,7 +34,7 @@ assert all(v is values[0] for v in values)
 ```python
 import asyncio
 from typing import Awaitable
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 container = Container()
 
@@ -61,7 +61,7 @@ asyncio.run(main())
 
 ```python
 from typing import Any
-from pyinj import Container, Token, Scope
+from injx import Container, Token, Scope
 
 container = Container()
 SESSION = Token[dict[str, Any]]("session", scope=Scope.SESSION)

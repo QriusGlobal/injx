@@ -17,17 +17,17 @@ A **type-safe** dependency injection container for Python 3.13+ that provides:
 
 ```bash
 # Install with UV (recommended)
-uv add pyinj
+uv add injx
 
 # Or with pip
-pip install pyinj
+pip install injx
 ```
 
 ## Quick Start
 
 ```python
 from typing import Protocol
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 # Define interfaces
 class Logger(Protocol):
@@ -186,5 +186,5 @@ Ready to build type-safe applications? Continue with:
 **Ready to simplify your Python dependency injection?**
 
 ```bash
-uv add pyinj
+uv add injx
 ```
