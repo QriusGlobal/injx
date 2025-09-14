@@ -32,11 +32,49 @@ PyInj is a type-safe dependency injection container for Python 3.13+, designed w
 - **Lock-free fast paths**: Double-checked locking for singleton initialization
 - **Memory efficient**: ~500 bytes overhead per registered service
 
+### Performance Benchmarking
+To prevent regressions and validate optimizations, a consistent benchmarking strategy is required:
+- **Key Metrics**: Benchmarks will focus on:
+  - Provider registration time
+  - Resolution time for each scope (transient, singleton, etc.), including first and subsequent lookups
+  - Container creation and teardown time
+  - Memory usage per provider and per container
+- **Methodology**: Performance tests will use statistical analysis (e.g., t-tests) to determine the significance of any changes in performance.
+- **Regression Thresholds**: Instead of hard-coded thresholds, regressions will be evaluated based on their statistical significance.
+- **Percentile Tracking**: Key latency metrics will be tracked at the 50th, 95th, and 99th percentiles to monitor tail latency and ensure predictable performance under load.
+
 ### Concurrency Model
 - **ContextVar isolation**: Thread-safe and async-safe by default
 - **Scope hierarchy**: Container → Session → Request with proper isolation
 - **LIFO cleanup**: Resources cleaned up in reverse registration order
 - **Circuit breaker**: Early failure for async resources in sync contexts
+
+## Architectural Evolution
+
+This section outlines planned architectural improvements to enhance maintainability, performance, and clarity.
+
+### Dictionary Consolidation
+
+To simplify the internal state management, the various dictionaries (`_providers`, `_singletons`, etc.) will be consolidated into a single `_registry`.
+
+- **Motivation**: Reduce complexity, create a single source of truth for provider information, and simplify logic for features like overrides and dependency analysis.
+
+- **ProviderRecord Design**: The `_registry` will map tokens to a `ProviderRecord`. This will be a frozen dataclass to keep it lightweight, while caching key information computed at registration time to improve performance. A generic `metadata` field is rejected to maintain a minimal memory footprint and focused design.
+  ```python
+  @dataclass(frozen=True, slots=True)
+  class ProviderRecord(Generic[T]):
+      provider: Callable[..., T]
+      cleanup: CleanupStrategy
+      scope: Scope
+      is_async: bool
+      dependencies: tuple[Token, ...]
+  ```
+
+- **Concurrency Strategy**: The existing granular locking strategy will be adapted. A single `threading.RLock` will protect the `_registry` dictionary itself during provider registration and removal. For singleton instantiation, the per-token `threading.Lock` will be maintained in a separate dictionary (`dict[Token, threading.Lock]`), keyed by the token, to prevent contention during resolution. This balances simplicity with performance by avoiding a single global lock for all operations.
+
+- **Migration Strategy**: The refactoring will be performed directly within a feature branch, accompanied by a comprehensive suite of tests to ensure no regressions. A gradual, parallel implementation is deemed to add unnecessary complexity and risk for a library context.
+
+- **Impact Analysis**: This consolidation is expected to simplify features like overrides, "given" instances, and auto-registration by providing a unified view of providers. It will not negatively impact the type index and should make dependency-related features easier to implement and reason about.
 
 ## Repository Structure
 
@@ -246,6 +284,12 @@ TRANSIENT    # New instance each resolution
 - Use singleton scope for expensive objects
 - Avoid transient scope for frequently accessed services
 - Cache injection metadata with `@inject` decorator
+
+### Logging Strategy
+To balance observability with performance, the library will adopt the following logging strategy:
+- **Default Log Level**: The `pyinj` logger will default to the `WARNING` level to avoid excessive log volume in production environments.
+- **Opt-in Verbosity**: Users can enable more detailed `INFO` or `DEBUG` level logging for development or troubleshooting. `INFO` level logs will cover container lifecycle events and scope transitions.
+- **Performance Logger**: A separate, dedicated logger, `pyinj.perf`, can be used for detailed performance metrics, allowing users to selectively enable performance tracing without enabling all debug logs.
 
 ## Maintenance Notes
 
