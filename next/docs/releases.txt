@@ -1,0 +1,16 @@
+Release Process - PyInj
+
+Release Process
+¶
+Releases are automated with Release Please:
+Merge Conventional Commits into
+main
+.
+Release Please opens a release PR with version bump and changelog.
+Merge the release PR to tag and publish a GitHub Release.
+The
+publish.yml
+workflow builds and publishes to PyPI.
+See also the maintainer notes in README and
+CLAUDE.md
+.
