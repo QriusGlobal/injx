@@ -4,12 +4,7 @@ All notable changes to Injx will be documented in this file.
 
 ## [Unreleased]
 
-### Notes
-- Injx is a complete rewrite and rename of the pyinj package
-- Starting fresh with proper semantic versioning from 0.1.0-alpha.1
-- Previous pyinj versions (0.0.2, 1.0.0-1.2.0) are deprecated
-
-## 0.1.0-alpha.1 (Not Released Yet)
+## 0.1.0a1 - 2025-01-15
 
 ### Initial Alpha Release
 
