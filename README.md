@@ -5,7 +5,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Docs](https://img.shields.io/badge/docs-mkdocs--material-informational)](https://qriusglobal.github.io/injx/)
 
-> Status: Stable — Actively maintained. Breaking changes follow semantic versioning.
+> **Status: Alpha (v0.1.0a1)** — Ready for early adoption in SDK libraries and greenfield projects. APIs may change. Not recommended for production use without thorough testing.
 
 ## Project Status
 
@@ -19,17 +19,49 @@
 [![Linting: Ruff](https://img.shields.io/badge/linting-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-46a2f1?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/formatter/)
 
-A **type-safe** dependency injection container for Python 3.13+ that provides:
+Type-safe dependency injection container for Python 3.13+.
 
-- 🚀 **Thread-safe and async-safe** resolution (ContextVar-based; no cross-talk)  
-- ⚡ **O(1) performance** for type lookups with pre-computed hash tokens
-- 🔍 **O(1) circular dependency detection** using set-based tracking (improved from O(n²))
-- 🧹 **Automatic resource cleanup** (LIFO order with proper async support)
-- 🛡️ **Protocol-based type safety** with full static type checking
-- 🏭 **Metaclass auto-registration** for declarative DI patterns
-- 📦 **Zero external dependencies** - pure Python implementation
-- 🎯 **PEP 561 compliant** with `py.typed` for mypy/basedpyright support
-- 💾 **Memory efficient** - proper cleanup of singleton locks, no transient caching
+## Features
+
+- Thread-safe and async-safe resolution using ContextVar isolation
+- O(1) token lookups with pre-computed hashes
+- O(1) circular dependency detection using set-based tracking
+- Automatic resource cleanup in LIFO order
+- Protocol-based type safety with static type checking
+- Metaclass auto-registration for declarative patterns
+- Zero external dependencies
+- PEP 561 compliant with py.typed marker
+- Memory-efficient singleton management
+
+## Architecture
+
+### Pure Python Implementation
+Injx uses pure Python without C extensions:
+- No platform-specific compilation requirements
+- Standard Python debugging tools work without modification
+- No segmentation faults from C extension issues
+- Consistent behavior across all Python environments
+
+### Async Handling
+Explicit `get()` and `aget()` methods for synchronous and asynchronous resolution:
+- Synchronous `get()` raises `AsyncCleanupRequiredError` for async providers
+- Asynchronous `aget()` properly awaits async providers
+- No implicit async mode switching
+- Clear separation of sync and async code paths
+
+### Token System
+Strongly-typed `Token[T]` instances as container keys:
+- Type information preserved at runtime
+- Pre-computed hashes for O(1) lookups
+- No string-based token resolution
+- Tokens are immutable and hashable
+
+### Registration Model
+Explicit provider registration without auto-discovery:
+- All dependencies must be explicitly registered
+- No module scanning or import hooks
+- No decorator-based auto-registration
+- Registration happens at container initialization
 
 ## Documentation
 
@@ -214,21 +246,14 @@ send_welcome_email(user_email="user@example.com")
 
 ## Injection Patterns Guide
 
-### ⭐ Recommended: Plain Type Annotations with @inject
-
-**Use this pattern for 95% of cases:**
+### Plain Type Annotations with @inject
 
 ```python
 from injx import inject
 
 @inject  # Uses default container
 def business_logic(logger: Logger, db: Database, user_id: int) -> None:
-    """
-    ✅ RECOMMENDED PATTERN:
-    - Clean type annotations 
-    - Automatic dependency resolution
-    - Mixed injected/regular parameters
-    """
+    """Dependencies are automatically resolved based on type annotations."""
     logger.info(f"Processing user {user_id}")
     db.query("SELECT * FROM users WHERE id = ?", user_id)
 
@@ -236,9 +261,7 @@ def business_logic(logger: Logger, db: Database, user_id: int) -> None:
 business_logic(user_id=123)
 ```
 
-### 🎯 Advanced: Inject[T] Markers
-
-**Use only when you need explicit control or custom providers:**
+### Inject[T] Markers for Custom Providers
 
 ```python
 from typing import Annotated
@@ -246,10 +269,10 @@ from injx import inject, Inject
 
 @inject
 def advanced_handler(
-    # Regular injection - recommended
+    # Regular injection
     logger: Logger,
     
-    # With custom provider - useful for testing
+    # With custom provider
     cache: Annotated[Cache, Inject(lambda: MockCache())],
     
     # Regular parameter
@@ -259,37 +282,31 @@ def advanced_handler(
     cache.set("last_request", request_id)
 ```
 
-### ❌ Anti-Patterns to Avoid
-
-**DON'T do this - breaks type safety:**
+### Anti-Patterns
 
 ```python
-# ❌ WRONG - Don't do this!
+# Incorrect: Using Inject[T] as type annotation with None default
 def bad_handler(logger: Inject[Logger] = None) -> None:
-    # This breaks type safety and static analysis
+    # Type checkers cannot infer the actual type
     pass
 
-# ❌ WRONG - Mixing patterns unnecessarily
+# Incorrect: Using Inject[T] without custom provider
 def confusing_handler(logger: Inject[Logger]) -> None:
-    # Just use plain Logger annotation instead
+    # Use plain Logger annotation instead
     pass
-```
 
-**✅ Correct alternatives:**
-
-```python
-# ✅ Simple and type-safe
+# Correct: Plain type annotation
 @inject
 def good_handler(logger: Logger) -> None:
-    logger.info("This is the recommended pattern")
+    logger.info("Resolved from container")
 
-# ✅ For optional dependencies, use container overrides
+# Correct: Override in tests
 @inject  
-def handler_with_optional_logger(logger: Logger) -> None:
-    logger.info("Logger will be injected or overridden")
+def handler(logger: Logger) -> None:
+    logger.info("Logger injected from container")
 
-# In tests:
-# container.override(LOGGER, MockLogger())
+# Test override:
+container.override(LOGGER, MockLogger())
 ```
 
 ## Core Features
@@ -818,14 +835,11 @@ def test_request_scoped_dependencies():
 
 ### Performance Characteristics
 
-PyInj is designed for production-scale applications with predictable performance:
-
-- **Token Lookups**: O(1) with pre-computed hashes (< 1 microsecond per lookup)
-- **Cycle Detection**: O(1) using set-based tracking (improved from O(n²) in v1.1)
-- **Memory Overhead**: ~500 bytes per registered service
-- **Singleton Access**: < 1 microsecond after initial creation
-- **Transient Scope**: Zero caching overhead - new instance every time
-- **Memory Safety**: Automatic cleanup of singleton locks prevents memory leaks
+- Token lookups: O(1) with pre-computed hashes
+- Cycle detection: O(1) using set-based tracking  
+- Memory overhead: ~500 bytes per registered service
+- Singleton access: Constant time after initial creation
+- Transient scope: No caching, new instance per resolution
 
 ### O(1) Token Lookups
 
@@ -1272,17 +1286,3 @@ See [LICENSE](LICENSE) for the full license text.
 
 Copyright 2025 Qrius Global - Licensed under Apache License 2.0
 
-## Why "PyInj"?
-
-**Py** - Python-first design for modern Python 3.13+  
-**Inj** - Injection (Dependency Injection)
-
-PyInj follows the philosophy that **good software is simple software**. We provide exactly what you need for dependency injection with complete type safety - nothing more, nothing less.
-
----
-
-**Ready to build type-safe applications with confidence?**
-
-```bash
-uv add injx
-```

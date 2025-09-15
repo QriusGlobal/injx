@@ -239,6 +239,54 @@ TRANSIENT    # New instance each resolution
 - **Circular detection**: Prevents infinite recursion
 - **Async safety**: AsyncCleanupRequiredError for context mismatches
 
+## Architectural Stance
+
+This section documents key architectural decisions, reinforcing the library's design philosophy in response to common patterns found in other dependency injection frameworks.
+
+### 1. Token Design: Strict Typing over Flexibility
+
+**Decision:** The current token design, based on frozen dataclasses with pre-computed hashes, is affirmed as the optimal approach. We will not introduce more flexible, string-based, or implicit token mechanisms.
+
+- **Rationale:**
+  - **Type Safety:** `Token[T]` is the cornerstone of our compile-time safety guarantee. Allowing string-based fallbacks or other non-typed keys would undermine this core value proposition and re-introduce the very class of runtime errors `injx` is designed to prevent.
+  - **Performance:** Pre-computed hashes ensure O(1) lookup complexity, which is critical for production performance.
+  - **Clarity:** Explicit `Token` instances make dependency requirements unambiguous and discoverable through static analysis.
+
+This aligns with our philosophy of prioritizing correctness and leveraging the full power of Python's modern type system.
+
+### 2. Public API Contract: Explicit and Minimal
+
+**Decision:** The public API will continue to be explicitly defined in `src/injx/__init__.py` using `__all__`. We will not add separate `api.py` modules or facade patterns at this stage.
+
+- **Rationale:**
+  - **Simplicity:** For a library with a focused scope, a single `__init__.py` provides a clean and easily discoverable public contract.
+  - **Explicitness:** Using `__all__` is a precise, standard Python mechanism for defining the public API. It prevents accidental exposure of internal components and provides a clear contract for users and static analysis tools.
+  - **Avoids Over-Engineering:** Facades or separate API modules would add unnecessary complexity for the current scale of the library. The `Container` class already serves as a natural facade.
+
+### 3. Injection Strategy: Explicit Registration over Auto-Wiring
+
+**Decision:** `injx` will not implement auto-injection, module scanning, or "wiring" features found in other libraries. Registration will remain explicit.
+
+- **Rationale:**
+  - **Predictability:** Explicit registration makes the dependency graph deterministic and easy to reason about. Auto-wiring can create "magic" behavior that is difficult to debug, especially in large applications.
+  - **Startup Performance:** Module scanning and import hooks can negatively impact application startup time.
+  - **Adherence to Python's Zen:** "Explicit is better than implicit." Our target audience of developers building robust, greenfield applications values clarity and control over convenience that obscures behavior.
+
+### 4. Async Provider Pattern: Explicit Context over Cascading Async
+
+**Decision:** The explicit separation of `get()` (sync) and `aget()` (async) is a deliberate design choice that will be maintained. We will not adopt "cascading async" modes.
+
+- **Rationale:**
+  - **Correctness:** Mixing synchronous and asynchronous resolution paths implicitly can lead to deadlocks, event loop blocking, and other subtle concurrency bugs. The `AsyncCleanupRequiredError` is a critical safety feature that prevents such misuse.
+  - **Performance Awareness:** Forcing developers to choose the resolution context (`get` vs. `aget`) makes them aware of the performance implications of their dependency graph.
+  - **Simplicity of Implementation:** An explicit approach is simpler to implement, test, and maintain, reducing the surface area for bugs within the container itself.
+
+### 5. Summary of Stance on Other Concerns
+
+- **Module-Level Wiring:** Rejected. See "Explicit Registration over Auto-Wiring."
+- **`Token[T]` Optimality:** Affirmed. It is the ideal pattern for leveraging Python 3.13+'s type system for this use case.
+- **String-Based Fallbacks:** Rejected. This would violate our type safety invariants and was intentionally removed in v1.1.0.
+
 ## Testing Patterns
 
 ### Override Mechanisms
