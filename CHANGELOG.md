@@ -4,7 +4,35 @@ All notable changes to Injx will be documented in this file.
 
 ## [Unreleased]
 
-## 0.1.0a1 - 2025-01-15
+## 0.1.0 - 2025-01-15
+
+### First Official Release
+
+This is the first official release of Injx, following the alpha testing phase. Going forward, we adopt clean semantic versioning (0.x.y) without alpha/beta suffixes.
+
+**Note:** This release supersedes 0.1.0a1 and establishes the baseline for the project.
+
+### Features
+- Type-safe dependency injection with full static type checking
+- Thread-safe and async-safe resolution using ContextVars
+- O(1) performance for type lookups with pre-computed hash tokens
+- Zero external dependencies
+- Protocol-based type safety
+- Metaclass auto-registration for declarative DI patterns
+- PEP 561 compliant with py.typed support
+- Memory efficient with proper cleanup
+- Comprehensive scope management (Singleton, Request, Session, Transient)
+- Context manager support for automatic resource cleanup
+- Full async/await support with proper cleanup ordering
+
+### Installation
+```bash
+pip install injx==0.1.0
+# or
+uv pip install injx==0.1.0
+```
+
+## 0.1.0a1 - 2025-01-15 (Pre-release)
 
 ### Initial Alpha Release
 

@@ -10,9 +10,6 @@ name: Publish to PyPI (Trusted Publishing)
 
 jobs:
   build-and-publish:
-    # Skip pre-release tags (e.g., v1.2.0-rc.1) to keep PyPI strictly SemVer finals
-    if: >-
-      ${{ !contains(github.ref, '-') && (github.event_name != 'release' || github.event.release.prerelease != true) }}
     runs-on: ubuntu-latest
     environment: release
     permissions:
