@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide covers common issues, error messages, and solutions when using PyInj.
+This guide covers common issues, error messages, and solutions when using Injx.
 
 ## Common Issues
 
@@ -75,7 +75,7 @@ container.register(SERVICE_B, ServiceBImplementation)
 
 ### 2. Type Checker Issues
 
-**Problem:** Static type checkers report errors with PyInj code.
+**Problem:** Static type checkers report errors with Injx code.
 
 #### Issue: "Cannot assign to Token[X]"
 
@@ -199,7 +199,7 @@ asyncio.run(main())
 
 ### 4. Resolution Errors
 
-**Problem:** PyInj cannot resolve a requested dependency.
+**Problem:** Injx cannot resolve a requested dependency.
 
 #### Issue: Missing Provider
 
@@ -491,7 +491,7 @@ print(mock_db.create_user.call_args_list)
 ```python
 import logging
 
-# Enable PyInj debug logging
+# Enable Injx debug logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("injx")
 
@@ -560,7 +560,7 @@ When reporting issues, include:
 
 - Complete error message and stack trace
 - Minimal reproduction code
-- Python and PyInj versions
+- Python and Injx versions
 - Type checker (mypy/basedpyright) version if relevant
 
 ### 2. Code Review Checklist
@@ -586,4 +586,4 @@ Before asking for help, verify:
 | Performance issues | Use appropriate scopes (singleton for expensive) |
 | Import errors | Use protocols or TYPE_CHECKING imports |
 
-This should help you diagnose and fix most common PyInj issues. For complex problems, consider breaking down your dependency graph and testing components in isolation.
+This should help you diagnose and fix most common Injx issues. For complex problems, consider breaking down your dependency graph and testing components in isolation.

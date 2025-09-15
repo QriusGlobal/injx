@@ -1,6 +1,6 @@
 # API Reference
 
-This page provides a comprehensive reference for all PyInj classes, functions, and constants.
+This page provides a comprehensive reference for all Injx classes, functions, and constants.
 
 ## Core Classes
 
@@ -377,11 +377,11 @@ Helper class for managing session-scoped dependencies.
 
 ## Exceptions
 
-### PyInjError
+### InjxError
 
-**`injx.exceptions.PyInjError`**
+**`injx.exceptions.InjxError`**
 
-Base exception for all PyInj errors.
+Base exception for all Injx errors.
 
 ### ResolutionError
 
@@ -458,7 +458,7 @@ class EmailService(metaclass=Injectable):
 
 ### Protocols
 
-PyInj works with Python's `Protocol` system for structural typing:
+Injx works with Python's `Protocol` system for structural typing:
 
 ```python
 from typing import Protocol, runtime_checkable
@@ -471,7 +471,7 @@ class Logger(Protocol):
 
 ### Generic Support
 
-PyInj fully supports generic types:
+Injx fully supports generic types:
 
 ```python
 from typing import Generic, TypeVar
@@ -491,7 +491,7 @@ USER_REPO = Token[Repository[User]]("user_repo")
 
 **`injx.__version__`**
 
-String containing the current PyInj version.
+String containing the current Injx version.
 
 **`injx.__author__`**
 
@@ -513,4 +513,4 @@ Author information.
 - **Generic preservation**: Complete generic type support throughout the API
 - **Zero runtime type overhead**: Type checking is compile-time only (unless explicitly requested)
 
-This API reference covers all public interfaces in PyInj. For examples and usage patterns, see the other documentation sections.
+This API reference covers all public interfaces in Injx. For examples and usage patterns, see the other documentation sections.

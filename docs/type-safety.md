@@ -1,10 +1,10 @@
 # Type Safety & Static Analysis
 
-PyInj provides comprehensive static type checking support, ensuring your dependency injection code is type-safe at compile time.
+Injx provides comprehensive static type checking support, ensuring your dependency injection code is type-safe at compile time.
 
 ## PEP 561 Compliance
 
-PyInj is fully compliant with [PEP 561](https://peps.python.org/pep-0561/) and includes a `py.typed` marker file. This means:
+Injx is fully compliant with [PEP 561](https://peps.python.org/pep-0561/) and includes a `py.typed` marker file. This means:
 
 - **Full type information** is available to all type checkers
 - **Zero configuration** required for type checking
@@ -21,13 +21,13 @@ pyright your_code.py
 
 ### basedpyright (Recommended)
 
-PyInj is developed and tested with basedpyright in strict mode:
+Injx is developed and tested with basedpyright in strict mode:
 
 ```bash
 # Install basedpyright
 uvx basedpyright --help
 
-# Check your PyInj code
+# Check your Injx code
 uvx basedpyright src/ --strict
 ```
 
@@ -59,7 +59,7 @@ Works with VS Code and other editors supporting pyright:
 
 ## Type-Safe Registration
 
-PyInj enforces type compatibility between tokens and providers:
+Injx enforces type compatibility between tokens and providers:
 
 ```python
 from typing import Protocol
@@ -102,7 +102,7 @@ container.register(LOGGER, lambda: FileLogger("app.log"))  # OK
 
 ## Protocol-Based Type Safety
 
-PyInj works seamlessly with Python's Protocol system for structural typing:
+Injx works seamlessly with Python's Protocol system for structural typing:
 
 ### Runtime Protocol Validation
 
@@ -483,7 +483,7 @@ Enable strict type checking in Settings → Editor → Inspections → Python:
 
 ## Performance of Type Checking
 
-PyInj's type checking has minimal runtime impact:
+Injx's type checking has minimal runtime impact:
 
 - **Compile-time only**: Type checking happens during static analysis, not at runtime
 - **O(1) token lookups**: Pre-computed hash values for tokens

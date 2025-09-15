@@ -1,6 +1,6 @@
 # Concurrency
 
-PyInj is designed for both threaded and async-concurrent programs.
+Injx is designed for both threaded and async-concurrent programs.
 
 - Thread-safe singletons: first creation is protected by locks.
 - Async-safe singletons: first creation is protected by `asyncio.Lock`.

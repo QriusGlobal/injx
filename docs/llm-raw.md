@@ -1,6 +1,6 @@
 # LLM Documentation Access
 
-For LLM tools and agents that need direct access to PyInj documentation, we provide the standard `llms.txt` endpoint:
+For LLM tools and agents that need direct access to Injx documentation, we provide the standard `llms.txt` endpoint:
 
 **Standard LLM Endpoint:**
 ```
@@ -8,7 +8,7 @@ https://qriusglobal.github.io/injx/llms.txt
 ```
 
 This follows the `llms.txt` standard and provides:
-- Comprehensive PyInj documentation in plain text
+- Comprehensive Injx documentation in plain text
 - No HTML wrapper, CSS, or JavaScript processing
 - Direct HTTP GET access optimized for LLM consumption
 - Complete usage patterns, examples, and best practices
@@ -23,9 +23,9 @@ https://raw.githubusercontent.com/QriusGlobal/injx/main/docs/llm.md
 
 ---
 
-# LLM Guide: Using PyInj for Reliable DI
+# LLM Guide: Using Injx for Reliable DI
 
-Purpose: concise guidance for integrating PyInj into LLM-driven projects and tools.
+Purpose: concise guidance for integrating Injx into LLM-driven projects and tools.
 
 - Audience: engineers wiring DI into agents, tools, plugins.
 - Constraints: brief, <10k tokens, actionable.

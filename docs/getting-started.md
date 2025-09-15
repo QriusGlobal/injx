@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide covers the fundamentals of using PyInj for type-safe dependency injection in Python 3.13+.
+This guide covers the fundamentals of using Injx for type-safe dependency injection in Python 3.13+.
 
 ## Installation
 
@@ -107,7 +107,7 @@ logger.info(f"Found {len(users)} users")
 
 ## Type-Safe Injection Patterns
 
-PyInj provides multiple ways to inject dependencies. Here's the recommended approach:
+Injx provides multiple ways to inject dependencies. Here's the recommended approach:
 
 ### ⭐ Recommended: `@inject` with Type Annotations
 
@@ -153,7 +153,7 @@ user = process_user_by_id(user_id=123)
 
 ### Async Support
 
-PyInj fully supports async functions and providers:
+Injx fully supports async functions and providers:
 
 ```python
 import asyncio
@@ -245,7 +245,7 @@ def good_handler(logger: Logger) -> None:
 
 ## Scoped Dependencies
 
-PyInj supports different dependency scopes for various use cases:
+Injx supports different dependency scopes for various use cases:
 
 ### Singleton Scope
 
@@ -293,7 +293,7 @@ with container.request_scope():
 
 ## Resource Cleanup
 
-PyInj provides automatic resource cleanup using context managers:
+Injx provides automatic resource cleanup using context managers:
 
 ### Sync Resource Cleanup
 
@@ -350,7 +350,7 @@ asyncio.run(main())
 
 ### Circuit Breaker for Mixed Cleanup
 
-PyInj prevents resource leaks by raising `AsyncCleanupRequiredError` when you try to use sync cleanup on async-only resources:
+Injx prevents resource leaks by raising `AsyncCleanupRequiredError` when you try to use sync cleanup on async-only resources:
 
 ```python
 from injx import AsyncCleanupRequiredError
@@ -437,4 +437,4 @@ def handler(service: Service) -> None:
     result = service.method()
 ```
 
-This covers the fundamentals of PyInj. The key is to use type annotations with the `@inject` decorator for clean, type-safe dependency injection.
+This covers the fundamentals of Injx. The key is to use type annotations with the `@inject` decorator for clean, type-safe dependency injection.

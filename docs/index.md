@@ -1,4 +1,4 @@
-# PyInj - Type-Safe Dependency Injection
+# Injx - Type-Safe Dependency Injection
 
 > **Status:** Stable — Actively maintained. Breaking changes follow semantic versioning.
 
@@ -66,7 +66,7 @@ def process_users(logger: Logger, db: Database) -> None:
 process_users()
 ```
 
-## Why PyInj?
+## Why Injx?
 
 **Traditional DI libraries are over-engineered:**
 - 20,000+ lines of code for simple dependency injection
@@ -74,7 +74,7 @@ process_users()
 - Poor async support and race conditions
 - Memory leaks and thread safety issues
 
-**PyInj is different:**
+**Injx is different:**
 - ~200 lines of pure Python - easy to understand and debug
 - Designed specifically for Python 3.13+ with no-GIL support
 - Production-focused design patterns; stable and ready for production
@@ -84,7 +84,7 @@ process_users()
 
 ### Type-Safe Injection Patterns
 
-PyInj provides clear guidance on injection patterns to prevent common mistakes:
+Injx provides clear guidance on injection patterns to prevent common mistakes:
 
 #### ⭐ Recommended: Plain Type Annotations
 
@@ -112,7 +112,7 @@ def bad_handler(logger: Inject[Logger] = None) -> None:
 
 ### Full Static Type Checking
 
-PyInj includes a `py.typed` marker file and works with all type checkers:
+Injx includes a `py.typed` marker file and works with all type checkers:
 
 ```bash
 # Works with all type checkers
@@ -155,16 +155,16 @@ await container.aclose()
 
 ## Framework Integration
 
-PyInj integrates seamlessly with popular Python frameworks:
+Injx integrates seamlessly with popular Python frameworks:
 
-- **FastAPI**: Both FastAPI-style and PyInj-style injection
+- **FastAPI**: Both FastAPI-style and Injx-style injection
 - **Django**: Global container with automatic injection
 - **Flask**: Request-scoped dependencies
 - **Click**: CLI applications with DI
 
 ## Performance
 
-PyInj is optimized for production workloads:
+Injx is optimized for production workloads:
 
 - **O(1) type lookups** - Constant time resolution regardless of container size
 - **Cached injection metadata** - Function signatures parsed once at decoration time  

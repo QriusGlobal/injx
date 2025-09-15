@@ -1,10 +1,10 @@
-# Testing with PyInj
+# Testing with Injx
 
-This guide covers comprehensive testing strategies when using PyInj for dependency injection, including mocking, test isolation, and async testing patterns.
+This guide covers comprehensive testing strategies when using Injx for dependency injection, including mocking, test isolation, and async testing patterns.
 
 ## Overview
 
-PyInj makes testing easier by:
+Injx makes testing easier by:
 
 - **Type-safe mocking** with protocol-based interfaces
 - **Dependency overrides** for isolated testing
@@ -681,4 +681,4 @@ def test_async_service():  # Missing @pytest.mark.asyncio
     # Will fail at runtime
 ```
 
-This comprehensive testing guide ensures your PyInj-based applications are thoroughly tested with type safety and proper isolation.
+This comprehensive testing guide ensures your Injx-based applications are thoroughly tested with type safety and proper isolation.

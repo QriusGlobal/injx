@@ -1,6 +1,6 @@
 # Performance
 
-PyInj delivers production-grade performance with predictable overhead and efficient memory usage.
+Injx delivers production-grade performance with predictable overhead and efficient memory usage.
 
 ## Core Performance Metrics
 

@@ -1,12 +1,12 @@
 # Usage Guide
 
-This guide covers practical usage patterns, framework integration, and real-world examples of PyInj in production applications.
+This guide covers practical usage patterns, framework integration, and real-world examples of Injx in production applications.
 
 ## Framework Integration
 
 ### FastAPI Integration
 
-PyInj integrates seamlessly with FastAPI through multiple approaches:
+Injx integrates seamlessly with FastAPI through multiple approaches:
 
 #### Option 1: FastAPI Dependencies (Traditional)
 
@@ -60,7 +60,7 @@ async def get_user(
     return user_service.get_user(user_id)
 ```
 
-#### Option 2: PyInj @inject Decorator (Recommended)
+#### Option 2: Injx @inject Decorator (Recommended)
 
 ```python
 from injx import inject, set_default_container
@@ -693,4 +693,4 @@ container.register(DATABASE_SERVICE, database_service)
 container.register(REDIS_SERVICE, redis_service)
 ```
 
-This covers the main usage patterns for PyInj in real-world applications. The key benefits are clean separation of concerns, easy testing with mocks, and type-safe dependency resolution.
+This covers the main usage patterns for Injx in real-world applications. The key benefits are clean separation of concerns, easy testing with mocks, and type-safe dependency resolution.

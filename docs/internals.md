@@ -1,6 +1,6 @@
 # Internals
 
-This page outlines how PyInj is structured under the hood.
+This page outlines how Injx is structured under the hood.
 
 ## Core concepts
 
