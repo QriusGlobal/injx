@@ -163,7 +163,9 @@ class DependencyRequest:
 
 
 @lru_cache(maxsize=256)
-def analyze_dependencies(func: Callable[..., Any]) -> dict[str, DependencyRequest | type[Any] | Token[object] | Inject[object]]:
+def analyze_dependencies(
+    func: Callable[..., Any],
+) -> dict[str, DependencyRequest | type[Any] | Token[object] | Inject[object]]:
     """
     Analyze a function's signature to find injectable dependencies.
 
@@ -223,7 +225,7 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, DependencyReques
         if isinstance(annotation, Token):
             deps[name] = annotation
             continue
-            
+
         # Check for Annotated[T, Token] or Annotated[T, Inject]
         if get_origin(annotation) is Annotated:
             dep_type, *metadata = get_args(annotation)
@@ -240,7 +242,7 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, DependencyReques
                     break
             if name in deps:
                 continue
-                
+
         # Check for Inject[T] type annotation
         if _is_inject_type(annotation):
             # For Inject[T], the annotation is a subclass with _inject_type attribute
@@ -251,7 +253,7 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, DependencyReques
                 # Standard typing.Generic style (shouldn't happen but handle it)
                 args = get_args(annotation)
                 dep_type = args[0] if args else Any
-                
+
             if isinstance(param.default, Inject):
                 # If there's an Inject default, use it with the type
                 inject_marker = cast(Inject[object], param.default)
@@ -262,7 +264,7 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, DependencyReques
                 # Just the type annotation Inject[T], return the type
                 deps[name] = dep_type
             continue
-            
+
         # Check for Inject() default value
         if isinstance(param.default, Inject):
             inject_marker = cast(Inject[object], param.default)
@@ -271,7 +273,7 @@ def analyze_dependencies(func: Callable[..., Any]) -> dict[str, DependencyReques
                     inject_marker.set_type(annotation)
             deps[name] = inject_marker
             continue
-            
+
         # Check if we should auto-inject
         if _should_auto_inject(annotation):
             deps[name] = annotation
@@ -312,7 +314,7 @@ def _extract_from_inject_type(
 
     args = get_args(annotation)
     dep_type = args[0] if args else Any
-    
+
     # Ensure dep_type is a valid key type
     if not isinstance(dep_type, type) and dep_type is not Any:
         dep_type = cast(type[Any], dep_type)
@@ -330,11 +332,11 @@ def _extract_from_default(default: Any, annotation: Any) -> DependencyRequest | 
         return None
 
     dep_type = annotation if annotation is not Parameter.empty else Any
-    
+
     # Ensure dep_type is a valid key type
     if not isinstance(dep_type, type) and dep_type is not Any:
         dep_type = cast(type[Any], dep_type)
-    
+
     return DependencyRequest(
         kind=_DepKind.INJECT, key=dep_type, provider=default.provider
     )
@@ -360,7 +362,7 @@ def _is_inject_type(annotation: Any) -> bool:
 
 
 def _convert_to_dependency_request(
-    dep: DependencyRequest | type[Any] | Token[object] | Inject[object]
+    dep: DependencyRequest | type[Any] | Token[object] | Inject[object],
 ) -> DependencyRequest:
     """Convert a dependency to a DependencyRequest for internal use."""
     if isinstance(dep, DependencyRequest):

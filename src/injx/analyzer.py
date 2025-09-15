@@ -81,6 +81,7 @@ def extract_type_from_token(token: Any) -> Optional[Type[Any]]:
         # Token.type_ is always a Type[Any]
         # Use cast to satisfy type checker since we know Token has type_
         from typing import cast
+
         token_obj = cast(Any, token)  # Cast to Any to avoid type issues
         return getattr(token_obj, "type_", None)
     return None
