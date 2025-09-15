@@ -1,6 +1,6 @@
-# Getting Started - PyInj
+# Getting Started - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/getting-started.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/getting-started.md "Edit this page")
 
 # Getting Started¶
 

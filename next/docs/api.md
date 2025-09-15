@@ -1,6 +1,6 @@
-# API - PyInj
+# API - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/api.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/api.md "Edit this page")
 
 # API Reference¶
 

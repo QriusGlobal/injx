@@ -1,6 +1,6 @@
-# Testing - PyInj
+# Testing - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/testing.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/testing.md "Edit this page")
 
 # Testing with Injx¶
 

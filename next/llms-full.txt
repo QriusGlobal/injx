@@ -1,8 +1,8 @@
-# PyInj
+# Injx
 
 > Type-safe dependency injection for Python 3.13+
 
-PyInj is a lightweight, type-safe dependency injection container for Python 3.13+, designed for modern applications with O(1) lookup performance and zero external dependencies.
+Injx is a lightweight, type-safe dependency injection container for Python 3.13+, designed for modern applications with O(1) lookup performance and zero external dependencies.
 
 # Core Documentation
 

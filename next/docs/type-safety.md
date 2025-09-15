@@ -1,6 +1,6 @@
-# Type Safety - PyInj
+# Type Safety - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/type-safety.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/type-safety.md "Edit this page")
 
 # Type Safety & Static Analysis¶
 

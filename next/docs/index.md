@@ -1,6 +1,6 @@
-# PyInj
+# Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/index.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/index.md "Edit this page")
 
 # Injx - Type-Safe Dependency Injection¶
 

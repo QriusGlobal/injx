@@ -1,6 +1,6 @@
-# Contributing - PyInj
+# Contributing - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/contributing.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/contributing.md "Edit this page")
 
 # Contributing¶
 

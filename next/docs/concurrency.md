@@ -1,6 +1,6 @@
-# Concurrency - PyInj
+# Concurrency - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/concurrency.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/concurrency.md "Edit this page")
 
 # Concurrency¶
 

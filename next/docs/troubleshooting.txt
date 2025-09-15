@@ -1,4 +1,4 @@
-Troubleshooting - PyInj
+Troubleshooting - Injx
 
 Troubleshooting Guide
 ¶

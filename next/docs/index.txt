@@ -1,4 +1,4 @@
-PyInj
+Injx
 
 Injx - Type-Safe Dependency Injection
 ¶

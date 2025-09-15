@@ -1,6 +1,6 @@
-# PyInj - Type-safe Dependency Injection for Python 3.13+
+# injx - Type-safe Dependency Injection for Python 3.13+
 
-PyInj is a lightweight, type-safe dependency injection container designed for modern Python applications. It provides O(1) lookup performance, full static type safety, and zero external dependencies.
+injx is a lightweight, type-safe dependency injection container designed for modern Python applications. It provides O(1) lookup performance, full static type safety, and zero external dependencies.
 
 ## Core Architecture
 
@@ -13,7 +13,7 @@ PyInj is a lightweight, type-safe dependency injection container designed for mo
 ## Basic Usage
 
 ```python
-from pyinj import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject
 
 # Create container and tokens
 container = Container()
@@ -77,14 +77,14 @@ def test_user_creation():
 
 ```python
 from fastapi import FastAPI, Depends
-from pyinj import Depends as PyInjDepends
+from injx import Depends as injxDepends
 
 app = FastAPI()
 
 @app.post("/users")
 async def create_user_endpoint(
     user_data: UserCreate,
-    db: Database = PyInjDepends(lambda: container.get(DB_TOKEN))
+    db: Database = injxDepends(lambda: container.get(DB_TOKEN))
 ):
     return await create_user(user_data.name, db)
 ```
@@ -93,14 +93,14 @@ async def create_user_endpoint(
 
 ```python
 # settings.py
-from pyinj import Container, set_default_container
+from injx import Container, set_default_container
 
 container = Container()
 # Register services...
 set_default_container(container)
 
 # views.py
-from pyinj import inject
+from injx import inject
 
 @inject
 def user_list_view(request, user_service: UserService):
@@ -112,7 +112,7 @@ def user_list_view(request, user_service: UserService):
 
 ```python
 from flask import Flask
-from pyinj import inject
+from injx import inject
 
 app = Flask(__name__)
 
@@ -210,7 +210,7 @@ container.register(CONFIG, lambda: Config(
 ### Resolution Errors
 
 ```python
-from pyinj.exceptions import ResolutionError, CircularDependencyError
+from injx.exceptions import ResolutionError, CircularDependencyError
 
 try:
     service = container.get(MISSING_TOKEN)
@@ -236,7 +236,7 @@ container.register(SERVICE_B, lambda: ServiceB(container.get(SERVICE_A)))  # ✗
 
 ```python
 import pytest
-from pyinj import Container
+from injx import Container
 
 @pytest.fixture
 def container():
@@ -300,7 +300,7 @@ class Container(containers.DeclarativeContainer):
     database = providers.Singleton(Database, config.database_url)
 
 # New
-from pyinj import Container, Token
+from injx import Container, Token
 
 container = Container()
 CONFIG = Token[Config]("config", scope=Scope.SINGLETON)
@@ -336,7 +336,7 @@ async def shutdown():
 ### Microservice Setup
 
 ```python
-from pyinj import Container, TokenFactory
+from injx import Container, TokenFactory
 
 # Use TokenFactory for consistent token creation
 factory = TokenFactory()
@@ -370,4 +370,4 @@ container.register(AUTH_SERVICE, lambda: AuthService(
 ))
 ```
 
-This provides a comprehensive reference for using PyInj in LLM-driven development projects.
+This provides a comprehensive reference for using injx in LLM-driven development projects.

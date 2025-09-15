@@ -1,6 +1,6 @@
-# Release Process - PyInj
+# Release Process - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/releases.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/releases.md "Edit this page")
 
 # Release Process¶
 

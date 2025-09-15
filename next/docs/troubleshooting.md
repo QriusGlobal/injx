@@ -1,6 +1,6 @@
-# Troubleshooting - PyInj
+# Troubleshooting - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/troubleshooting.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/troubleshooting.md "Edit this page")
 
 # Troubleshooting Guide¶
 

@@ -1,4 +1,4 @@
-Type Safety - PyInj
+Type Safety - Injx
 
 Type Safety & Static Analysis
 ¶

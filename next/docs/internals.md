@@ -1,6 +1,6 @@
-# Internals - PyInj
+# Internals - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/internals.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/internals.md "Edit this page")
 
 # Internals¶
 

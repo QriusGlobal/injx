@@ -1,6 +1,6 @@
-# Performance - PyInj
+# Performance - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/performance.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/performance.md "Edit this page")
 
 # Performance¶
 

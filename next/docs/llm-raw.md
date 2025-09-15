@@ -1,6 +1,6 @@
-# LLM Guide (Raw) - PyInj
+# LLM Guide (Raw) - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/llm-raw.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/llm-raw.md "Edit this page")
 
 # LLM Documentation Access¶
 

@@ -1,4 +1,4 @@
-Performance - PyInj
+Performance - Injx
 
 Performance
 ¶

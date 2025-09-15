@@ -1,6 +1,6 @@
-# LLM Guide: Using Injx for Reliable DI - PyInj
+# LLM Guide: Using Injx for Reliable DI - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/llm.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/llm.md "Edit this page")
 
 # LLM Guide: Using Injx for Reliable DI¶
 

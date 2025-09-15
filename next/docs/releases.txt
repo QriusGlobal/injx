@@ -1,4 +1,4 @@
-Release Process - PyInj
+Release Process - Injx
 
 Release Process
 ¶

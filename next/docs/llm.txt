@@ -1,4 +1,4 @@
-LLM Guide: Using Injx for Reliable DI - PyInj
+LLM Guide: Using Injx for Reliable DI - Injx
 
 LLM Guide: Using Injx for Reliable DI
 ¶

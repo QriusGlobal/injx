@@ -1,4 +1,4 @@
-API - PyInj
+API - Injx
 
 API Reference
 ¶

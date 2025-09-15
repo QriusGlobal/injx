@@ -1,5 +1,5 @@
 /**
- * LLM Tools Widget for PyInj Documentation
+ * LLM Tools Widget for injx Documentation
  * Provides easy access to LLM-friendly documentation formats
  */
 
@@ -220,7 +220,7 @@
         const url = window.location.href;
         
         // Prepare the prompt
-        const prompt = `I'm reading the PyInj documentation page "${title}" (${url}). Here's the content:\n\n${content}\n\nCan you help me understand this documentation?`;
+        const prompt = `I'm reading the injx documentation page "${title}" (${url}). Here's the content:\n\n${content}\n\nCan you help me understand this documentation?`;
         
         // Truncate if too long (URL length limits)
         const maxLength = 4000;
@@ -260,7 +260,7 @@
       // Create a temporary link and click it
       const link = document.createElement('a');
       link.href = llmsFullUrl;
-      link.download = 'pyinj-docs-full.txt';
+      link.download = 'injx-docs-full.txt';
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();

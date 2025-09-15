@@ -1,6 +1,6 @@
-# Advanced - PyInj
+# Advanced - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/advanced.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/advanced.md "Edit this page")
 
 # Advanced¶
 

@@ -1,63 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/advanced/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/advanced/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/api/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/api/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/concurrency/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/concurrency/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/contributing/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/contributing/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/getting-started/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/getting-started/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/internals/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/internals/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/llm-raw/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/llm-raw/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/llm/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/llm/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/performance/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/performance/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/releases/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/philosophy/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/testing/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/releases/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/troubleshooting/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/testing/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/type-safety/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/troubleshooting/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
     <url>
-         <loc>https://qriusglobal.github.io/pyinj/next/usage/</loc>
+         <loc>https://qriusglobal.github.io/injx/next/type-safety/</loc>
+         <lastmod>2025-09-15</lastmod>
+    </url>
+    <url>
+         <loc>https://qriusglobal.github.io/injx/next/usage/</loc>
          <lastmod>2025-09-15</lastmod>
     </url>
 </urlset>

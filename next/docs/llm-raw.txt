@@ -1,4 +1,4 @@
-LLM Guide (Raw) - PyInj
+LLM Guide (Raw) - Injx
 
 LLM Documentation Access
 ¶

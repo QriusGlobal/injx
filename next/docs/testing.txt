@@ -1,4 +1,4 @@
-Testing - PyInj
+Testing - Injx
 
 Testing with Injx
 ¶

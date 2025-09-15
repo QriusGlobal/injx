@@ -1,6 +1,6 @@
-# Usage - PyInj
+# Usage - Injx
 
-[ ](https://github.com/QriusGlobal/pyinj/edit/master/docs/usage.md "Edit this page")
+[ ](https://github.com/QriusGlobal/injx/edit/master/docs/usage.md "Edit this page")
 
 # Usage Guide¶
 

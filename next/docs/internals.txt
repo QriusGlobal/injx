@@ -1,4 +1,4 @@
-Internals - PyInj
+Internals - Injx
 
 Internals
 ¶
