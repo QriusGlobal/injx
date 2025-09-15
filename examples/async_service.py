@@ -1,4 +1,4 @@
-"""Advanced async patterns with pyinj dependency injection."""
+"""Advanced async patterns with injx dependency injection."""
 
 import asyncio
 import time
@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Protocol, runtime_checkable
 
-from pyinj import Container, Scope, Token
+from injx import Container, Scope, Token
 
 
 # Data models

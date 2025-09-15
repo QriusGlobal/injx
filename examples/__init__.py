@@ -1,1 +1,1 @@
-# Examples package for pyinj
+# Examples package for injx

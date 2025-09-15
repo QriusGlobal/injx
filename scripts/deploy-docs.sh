@@ -12,5 +12,5 @@ echo "Deploying to GitHub Pages..."
 uvx --with mkdocs-material mkdocs gh-deploy --force --ignore-version
 
 echo "✅ Documentation deployed successfully!"
-echo "📖 Documentation site: https://qriusglobal.github.io/pyinj/"
-echo "🤖 LLM standard endpoint: https://qriusglobal.github.io/pyinj/llms.txt"
+echo "📖 Documentation site: https://qriusglobal.github.io/injx/"
+echo "🤖 LLM standard endpoint: https://qriusglobal.github.io/injx/llms.txt"

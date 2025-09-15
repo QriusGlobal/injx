@@ -20,6 +20,8 @@ Quick start:
     # ... use db ...
 """
 
+from injx._metadata import __author__, __docs__, __email__, __org__, __repo__
+from injx._version import __version__
 from injx.container import Container
 from injx.contextual import ContextualContainer, RequestScope, SessionScope
 from injx.defaults import get_default_container, set_default_container
@@ -27,9 +29,6 @@ from injx.exceptions import CircularDependencyError, InjxError, ResolutionError
 from injx.injection import Depends, Given, Inject, inject
 from injx.metaclasses import Injectable
 from injx.tokens import Scope, Token, TokenFactory
-
-__version__ = "0.1.0a1"
-__author__ = "Qrius Global"
 
 __all__ = [
     "Container",

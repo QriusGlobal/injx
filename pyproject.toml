@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "injx"
-version = "0.1.0a1"
+dynamic = ["version"]
 description = "Type-safe dependency injection for Python 3.13+"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.13"
@@ -48,12 +48,6 @@ dev = [
     "pre-commit>=3.7",
 ]
 
-[tool.mypy]
-python_version = "3.13"
-strict = true
-warn_return_any = true
-warn_unused_configs = true
-show_error_codes = true
 
 [tool.basedpyright]
 include = ["src"]
@@ -119,6 +113,9 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/injx"]
+
+[tool.hatch.version]
+path = "src/injx/_version.py"
 
 [tool.hatch.build.targets.sdist]
 include = [

@@ -94,13 +94,13 @@ Concurrency Model & Limitations
 
 **Single-Process Concurrency Support**
 
-PyInj provides full concurrency support within a single process:
+injx provides full concurrency support within a single process:
 
 - **Asyncio Tasks**: Full isolation via ContextVar propagation
 - **Threading**: Thread-safe operations with proper locking
 - **Request/Session Scoping**: Isolated contexts within the same process
 
-**Important**: PyInj does NOT support cross-process state sharing. Each process 
+**Important**: injx does NOT support cross-process state sharing. Each process 
 must maintain its own container instance. ContextVar and threading primitives 
 are process-local and cannot cross process boundaries.
 
@@ -111,7 +111,7 @@ process initializes its own container independently.
 Performance Guarantees
 ----------------------
 
-PyInj is designed for production-scale applications with predictable performance:
+injx is designed for production-scale applications with predictable performance:
 
 **Core Performance Characteristics**:
 
@@ -200,7 +200,7 @@ Clean decorator-based dependency injection:
 
 .. code-block:: python
 
-   from pyinj import inject, Inject
+   from injx import inject, Inject
    
    @inject
    async def handler(
@@ -1317,7 +1317,7 @@ dependencies, a scoped container is necessary to prevent state leakage.
 
 .. code-block:: python
 
-   from pyinj import Container
+   from injx import Container
 
    async def handle_request():
        container = Container()
@@ -1731,7 +1731,7 @@ Reference Implementation
 
 ### 1. Core Components
 
-- **Container**: ``src/pyinj/container.py``
+- **Container**: ``src/injx/container.py``
 - **Public API**: ``src/di/__init__.py`` (re-exports)
 - **Ports (example)**: ``src/servicem8py/ports.py``
 - **SDK Boundary (example)**: ``src/servicem8py/client.py``

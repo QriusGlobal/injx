@@ -5,7 +5,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Docs](https://img.shields.io/badge/docs-mkdocs--material-informational)](https://qriusglobal.github.io/injx/)
 
-> **Status: Alpha (v0.1.0a1)** — Ready for early adoption in SDK libraries and greenfield projects. APIs may change. Not recommended for production use without thorough testing.
+> **Status: Alpha** — Ready for early adoption in SDK libraries and greenfield projects. APIs may change. Not recommended for production use without thorough testing.
 
 ## Project Status
 
@@ -174,11 +174,11 @@ asyncio.run(main())
 
 ## Type Safety & Static Analysis
 
-PyInj provides full static type checking support:
+injx provides full static type checking support:
 
 ### PEP 561 Compliance
 
-PyInj includes a `py.typed` marker file and provides complete type information:
+injx includes a `py.typed` marker file and provides complete type information:
 
 ```bash
 # Works with all type checkers
@@ -597,7 +597,7 @@ async def create_user(
     email_service.send_email(user.email, "Welcome!", "Welcome to our service")
     return UserResponse.from_user(user)
 
-# Option 2: PyInj @inject decorator (cleaner)
+# Option 2: injx @inject decorator (cleaner)
 @app.post("/users-v2")
 @inject(container=container)
 async def create_user_v2(
@@ -972,7 +972,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
         db=database
     )
 
-# After (PyInj)
+# After (injx)
 from injx import Container, Token, Scope
 
 container = Container()
@@ -1009,7 +1009,7 @@ injector.binder.bind(Database, to=PostgreSQLDatabase, scope=singleton)
 def user_handler(db: Database) -> None:
     pass
 
-# After (PyInj) 
+# After (injx) 
 from injx import Container, Token, Scope, inject
 
 container = Container()
@@ -1273,11 +1273,11 @@ container.register_context_sync(DB_TOKEN, database_connection)
 
 ## License
 
-PyInj is licensed under the **Apache License 2.0**.
+injx is licensed under the **Apache License 2.0**.
 
-This is a permissive open source license that allows you to use PyInj in both open source and proprietary projects. The Apache 2.0 license provides:
+This is a permissive open source license that allows you to use injx in both open source and proprietary projects. The Apache 2.0 license provides:
 
-- **Freedom to use commercially**: Use PyInj in your commercial products without restrictions
+- **Freedom to use commercially**: Use injx in your commercial products without restrictions
 - **Patent protection**: Explicit patent grant protects you from patent claims
 - **Simple attribution**: Just include the license and copyright notice
 - **Compatible with most licenses**: Works well with MIT, BSD, and other permissive licenses

@@ -1,8 +1,8 @@
-site_name: PyInj
+site_name: Injx
 site_description: Type-safe dependency injection for Python 3.13+
-site_url: https://qriusglobal.github.io/pyinj/
-repo_url: https://github.com/QriusGlobal/pyinj
-repo_name: QriusGlobal/pyinj
+site_url: https://qriusglobal.github.io/injx/
+repo_url: https://github.com/QriusGlobal/injx
+repo_name: QriusGlobal/injx
 copyright: Copyright © Qrius Global
 
 theme:
@@ -53,7 +53,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/QriusGlobal/pyinj
+      link: https://github.com/QriusGlobal/injx
   version:
     provider: mike
     default: latest
@@ -61,17 +61,17 @@ extra:
 plugins:
   - search
   - llmstxt:
-      markdown_description: "PyInj is a lightweight, type-safe dependency injection container for Python 3.13+, designed for modern applications with O(1) lookup performance and zero external dependencies."
+      markdown_description: "Injx is a lightweight, type-safe dependency injection container for Python 3.13+, designed for modern applications with O(1) lookup performance and zero external dependencies."
       full_output: llms-full.txt
       sections:
         Core Documentation:
-          - index.md: "Overview and introduction to PyInj"
+          - index.md: "Overview and introduction to Injx"
           - getting-started.md: "Quick start guide"
           - type-safety.md: "Type safety features and patterns"
           - usage.md: "Usage patterns and examples"
         Advanced Topics:
           - advanced.md: "Advanced patterns and techniques"
-          - testing.md: "Testing with PyInj"
+          - testing.md: "Testing with Injx"
           - performance.md: "Performance considerations"
           - troubleshooting.md: "Common issues and solutions"
         Reference:

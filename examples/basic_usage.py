@@ -1,9 +1,9 @@
-"""Basic usage example for pyinj dependency injection."""
+"""Basic usage example for injx dependency injection."""
 
 import asyncio
 from typing import Protocol, runtime_checkable
 
-from pyinj import Container, Injectable, Scope, Token
+from injx import Container, Injectable, Scope, Token
 
 
 # Define protocols for type safety
@@ -104,8 +104,8 @@ class EmailService(metaclass=Injectable):
 
 
 async def main():
-    """Demonstrate basic usage of pyinj container."""
-    print("=== Basic PyInj Usage Example ===\n")
+    """Demonstrate basic usage of injx container."""
+    print("=== Basic Injx Usage Example ===\n")
 
     # Create container
     container = Container()

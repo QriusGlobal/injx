@@ -27,25 +27,25 @@ __all__ = [
 T = TypeVar("T")
 
 _context_stack: ContextVar[ChainMap[Token[object], object] | None] = ContextVar(
-    "pyinj_context_stack", default=None
+    "injx_context_stack", default=None
 )
 
 _session_context: ContextVar[dict[Token[object], object] | None] = ContextVar(
-    "pyinj_session_context", default=None
+    "injx_session_context", default=None
 )
 
 _request_cleanup_sync: ContextVar[list[Callable[[], None]] | None] = ContextVar(
-    "pyinj_request_cleanup_sync", default=None
+    "injx_request_cleanup_sync", default=None
 )
 _request_cleanup_async: ContextVar[list[Callable[[], Awaitable[None]]] | None] = (
-    ContextVar("pyinj_request_cleanup_async", default=None)
+    ContextVar("injx_request_cleanup_async", default=None)
 )
 
 _session_cleanup_sync: ContextVar[list[Callable[[], None]] | None] = ContextVar(
-    "pyinj_session_cleanup_sync", default=None
+    "injx_session_cleanup_sync", default=None
 )
 _session_cleanup_async: ContextVar[list[Callable[[], Awaitable[None]]] | None] = (
-    ContextVar("pyinj_session_cleanup_async", default=None)
+    ContextVar("injx_session_cleanup_async", default=None)
 )
 
 

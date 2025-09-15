@@ -296,9 +296,9 @@ This specification introduces new interfaces and does not affect existing code. 
 Reference Implementation
 ========================
 
-The ``pyinj`` package provides a reference implementation of this specification::
+The ``injx`` package provides a reference implementation of this specification::
 
-    from pyinj import Container, Token, Scope
+    from injx import Container, Token, Scope
 
     # Create container
     container = Container()

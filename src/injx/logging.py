@@ -1,6 +1,6 @@
-"""Logging configuration and utilities for PyInj.
+"""Logging configuration and utilities for injx.
 
-This module provides centralized logging configuration for the PyInj library,
+This module provides centralized logging configuration for the injx library,
 with separate loggers for operational events and performance metrics.
 
 Example:
@@ -21,16 +21,16 @@ if TYPE_CHECKING:
 __all__ = ["logger", "perf_logger", "configure_logging"]
 
 # Main logger for operational events
-logger = logging.getLogger("pyinj")
+logger = logging.getLogger("injx")
 
 # Separate logger for performance metrics
-perf_logger = logging.getLogger("pyinj.perf")
+perf_logger = logging.getLogger("injx.perf")
 
 
 def configure_logging(level: int = logging.WARNING) -> None:
-    """Configure PyInj logging levels.
+    """Configure injx logging levels.
 
-    Sets the logging level for the main PyInj logger. The performance
+    Sets the logging level for the main injx logger. The performance
     logger must be configured separately if needed.
 
     Args:
@@ -55,8 +55,8 @@ def configure_logging(level: int = logging.WARNING) -> None:
 
             import logging
             perf_handler = logging.StreamHandler()
-            logging.getLogger("pyinj.perf").addHandler(perf_handler)
-            logging.getLogger("pyinj.perf").setLevel(logging.INFO)
+            logging.getLogger("injx.perf").addHandler(perf_handler)
+            logging.getLogger("injx.perf").setLevel(logging.INFO)
     """
     logger.setLevel(level)
 

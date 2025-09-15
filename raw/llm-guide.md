@@ -1,6 +1,6 @@
-# LLM Guide: Using PyInj for Reliable DI
+# LLM Guide: Using injx for Reliable DI
 
-Purpose: concise guidance for integrating PyInj into LLM-driven projects and tools.
+Purpose: concise guidance for integrating injx into LLM-driven projects and tools.
 
 - Audience: engineers wiring DI into agents, tools, plugins.
 - Constraints: brief, <10k tokens, actionable.

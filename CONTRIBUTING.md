@@ -1,6 +1,6 @@
-# Contributing to PyInj
+# Contributing to injx
 
-Thank you for your interest in contributing to PyInj! This guide will help you get started with contributing to our type-safe, production-ready dependency injection library for Python 3.13+.
+Thank you for your interest in contributing to injx! This guide will help you get started with contributing to our type-safe, production-ready dependency injection library for Python 3.13+.
 
 ## 🚀 Quick Start
 
@@ -241,7 +241,7 @@ Use pytest markers for test organization:
 Use our [bug report template](https://github.com/qriusglobal/injx/issues/new?template=bug_report.yml) and include:
 
 - **Python version** and operating system
-- **PyInj version**
+- **injx version**
 - **Minimal reproducible example**
 - **Expected vs actual behavior**
 - **Stack trace** if applicable
@@ -274,7 +274,7 @@ This project follows the [Python Community Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## 📄 License
 
-By contributing to PyInj, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+By contributing to injx, you agree that your contributions will be licensed under the [MIT License](LICENSE).
 
 ---
 

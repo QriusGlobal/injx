@@ -1,4 +1,4 @@
-"""FastAPI integration example with pyinj dependency injection."""
+"""FastAPI integration example with injx dependency injection."""
 
 import asyncio
 from contextlib import asynccontextmanager
@@ -33,7 +33,7 @@ except ImportError:
             pass
 
 
-from pyinj import Container, Injectable, Scope, Token
+from injx import Container, Injectable, Scope, Token
 
 
 # Domain models
@@ -254,8 +254,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="PyInj FastAPI Example",
-    description="Demonstration of pyinj dependency injection with FastAPI",
+    title="Injx FastAPI Example",
+    description="Demonstration of injx dependency injection with FastAPI",
     lifespan=lifespan,
 )
 
@@ -264,7 +264,7 @@ app = FastAPI(
 @app.get("/")
 async def root():
     """Health check endpoint."""
-    return {"message": "PyInj FastAPI Example is running!"}
+    return {"message": "Injx FastAPI Example is running!"}
 
 
 @app.post("/users", response_model=User)

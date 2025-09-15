@@ -1,5 +1,5 @@
 /**
- * GitBook-style Contextual LLM Tools for PyInj Documentation
+ * GitBook-style Contextual LLM Tools for injx Documentation
  * Provides contextual menu when selecting text or hovering over sections
  */
 

@@ -1,4 +1,4 @@
-"""Testing patterns and strategies with pyinj dependency injection."""
+"""Testing patterns and strategies with injx dependency injection."""
 
 import asyncio
 from typing import Protocol, runtime_checkable
@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from pyinj import Container, Scope, Token
+from injx import Container, Scope, Token
 
 
 # Domain models for testing

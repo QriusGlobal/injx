@@ -53,13 +53,13 @@ U = TypeVar("U")
 # ContextVars are specifically designed for context-local state management
 # that is isolated between different asynchronous tasks and threads.
 _resolution_stack: ContextVar[tuple[Token[Any], ...]] = ContextVar(
-    "pyinj_resolution_stack", default=()
+    "injx_resolution_stack", default=()
 )
 
 # O(1) cycle detection using set membership.
 # Each concurrent context gets its own set for tracking resolution chains.
 _resolution_set: ContextVar[set[Token[Any]]] = ContextVar(
-    "pyinj_resolution_set", default=set()
+    "injx_resolution_set", default=set()
 )
 
 
@@ -103,7 +103,7 @@ class Container(ContextualContainer):
         self._singleton_locks: dict[Token[object], threading.Lock] = {}
 
         self._overrides: ContextVar[dict[Token[object], object] | None] = ContextVar(
-            "pyinj_overrides",
+            "injx_overrides",
             default=None,
         )
 
@@ -1219,7 +1219,7 @@ class Container(ContextualContainer):
     def inject(
         self, func: Callable[..., Any] | None = None, *, cache: bool = True
     ) -> Callable[..., Any]:
-        """Alias to pyinj.injection.inject bound to this container.
+        """Alias to injx.injection.inject bound to this container.
 
         Enables ``@container.inject`` usage in addition to
         ``@inject(container=container)``.

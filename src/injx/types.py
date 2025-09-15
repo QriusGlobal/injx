@@ -1,4 +1,4 @@
-"""Type definitions and aliases for pyinj."""
+"""Type definitions and aliases for injx."""
 
 from __future__ import annotations
 

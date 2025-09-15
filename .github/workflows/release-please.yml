@@ -17,6 +17,6 @@ jobs:
         uses: google-github-actions/release-please-action@v4
         with:
           release-type: python
-          package-name: pyinj
+          package-name: injx
           manifest-file: .release-please-manifest.json
           config-file: release-please-config.json

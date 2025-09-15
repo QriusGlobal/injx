@@ -9,7 +9,7 @@
       "extra-files": [
         {
           "type": "python",
-          "path": "src/pyinj/__init__.py"
+          "path": "src/injx/_version.py"
         }
       ]
     }

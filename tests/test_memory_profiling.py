@@ -1,4 +1,4 @@
-"""Memory profiling tests for PyInj improvements."""
+"""Memory profiling tests for injx improvements."""
 
 import gc
 import tracemalloc
