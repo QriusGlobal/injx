@@ -31,6 +31,7 @@ from injx.metaclasses import Injectable
 from injx.tokens import Scope, Token, TokenFactory
 
 __all__ = [
+    # Core classes
     "Container",
     "ContextualContainer",
     "Depends",
@@ -42,10 +43,19 @@ __all__ = [
     "SessionScope",
     "Token",
     "TokenFactory",
+    # Exceptions
     "InjxError",
     "ResolutionError",
     "CircularDependencyError",
+    # Functions
     "get_default_container",
     "inject",
     "set_default_container",
+    # Metadata
+    "__version__",
+    "__author__",
+    "__docs__",
+    "__email__",
+    "__org__",
+    "__repo__",
 ]
