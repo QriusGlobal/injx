@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 # no direct pytest usage in this module
-from injx import Container, Scope, Token
+from injx import Container, Scope, Token, inject
 
 
 class TestThreadSafety:
@@ -227,7 +227,7 @@ class TestThreadSafety:
 
         results: list[str] = []
 
-        @container.inject
+        @inject(container=container)
         def injected_function(service: Service) -> str:
             time.sleep(0.001)  # Small delay
             return f"Result: {service.value}"
