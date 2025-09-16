@@ -25,10 +25,13 @@ jobs:
           python-version: '3.13'
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
-          activate-environment: true
+
+      - name: Create virtual environment
+        run: uv venv
 
       - name: Install docs tooling
         run: |
+          source .venv/bin/activate
           uv pip install mkdocs-material mkdocs-minify-plugin mkdocstrings[python] mike
 
       - name: Configure git
@@ -40,6 +43,7 @@ jobs:
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
+          source .venv/bin/activate
           VERSION="${TAG#v}"
           echo "Deploying docs for version $VERSION"
-          uv run mike deploy --push --branch gh-pages --update-aliases "$VERSION" latest
+          mike deploy --push --branch gh-pages --update-aliases "$VERSION" latest

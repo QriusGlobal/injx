@@ -26,10 +26,13 @@ jobs:
           python-version: '3.13'
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
-          activate-environment: true
+
+      - name: Create virtual environment
+        run: uv venv
 
       - name: Install docs tooling
         run: |
+          source .venv/bin/activate
           uv pip install mkdocs-material mkdocs-minify-plugin mkdocstrings[python] mike mkdocs-llmstxt beautifulsoup4 html2text
 
       - name: Configure git
@@ -39,4 +42,5 @@ jobs:
 
       - name: Deploy dev docs to 'next'
         run: |
-          uv run mike deploy --push --branch gh-pages next
+          source .venv/bin/activate
+          mike deploy --push --branch gh-pages next
