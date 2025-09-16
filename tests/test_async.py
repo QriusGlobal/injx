@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from injx import Container, ResolutionError, Scope, Token
+from injx import Container, ResolutionError, Scope, Token, inject
 
 
 class MockAsyncResource:
@@ -306,7 +306,7 @@ class TestAsyncInjection:
         service_token = Token("service", Service)
         container.register(service_token, lambda: Service("injected"))
 
-        @container.inject
+        @inject(container=container)
         async def async_function(service: Service) -> str:
             await asyncio.sleep(0.001)
             return f"Result: {service.value}"
