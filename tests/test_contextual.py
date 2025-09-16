@@ -234,6 +234,72 @@ class TestContextualContainer:
             assert container.resolve_from_context(singleton_token) is None
             assert container.resolve_from_context(request_token) is None
 
+    def test_singleton_live_view_after_clear(self):
+        """Test that ChainMap live-view semantics work correctly with MappingProxyType.
+
+        This test verifies the critical architectural pattern documented in ARCHITECTURE.md:
+        - MappingProxyType provides live views, not snapshots
+        - ChainMap layers preserve live-view semantics
+        - clear_all_contexts() affects all active scopes immediately
+        - No memory leaks from stale singleton references
+
+        This test prevents regressions from converting MappingProxyType to dict().
+        """
+        container = ContextualContainer()
+
+        # Create singleton
+        singleton_token = Token("singleton", Database, scope=Scope.SINGLETON)
+        singleton_instance = Database()
+        container.store_in_context(singleton_token, singleton_instance)
+
+        # Verify singleton is accessible before entering scopes
+        assert container.resolve_from_context(singleton_token) is singleton_instance
+
+        # Enter nested scopes (request within session)
+        with container.session_scope():
+            # Store session-scoped item
+            session_token = Token("session", str, scope=Scope.SESSION)
+            container.store_in_context(session_token, "session_value")
+
+            # Verify both singleton and session items are accessible
+            assert container.resolve_from_context(singleton_token) is singleton_instance
+            assert container.resolve_from_context(session_token) == "session_value"
+
+            with container.request_scope():
+                # Store request-scoped item
+                request_token = Token("request", str, scope=Scope.REQUEST)
+                container.store_in_context(request_token, "request_value")
+
+                # Verify all three layers are accessible (ChainMap layering)
+                assert container.resolve_from_context(singleton_token) is singleton_instance
+                assert container.resolve_from_context(session_token) == "session_value"
+                assert container.resolve_from_context(request_token) == "request_value"
+
+                # CRITICAL TEST: Clear singletons while in nested scopes
+                # This must affect the ChainMap immediately due to live-view semantics
+                container._clear_singletons()
+
+                # Singleton should now be None due to live-view (not snapshot) semantics
+                assert container.resolve_from_context(singleton_token) is None
+
+                # Session and request items should still be accessible
+                assert container.resolve_from_context(session_token) == "session_value"
+                assert container.resolve_from_context(request_token) == "request_value"
+
+                # Re-add singleton to test propagation in the other direction
+                new_singleton = Database()
+                container.store_in_context(singleton_token, new_singleton)
+
+                # New singleton should be immediately visible in active scopes
+                assert container.resolve_from_context(singleton_token) is new_singleton
+
+            # After exiting request scope, singleton should still be visible in session
+            assert container.resolve_from_context(singleton_token) is new_singleton
+            assert container.resolve_from_context(session_token) == "session_value"
+
+        # After exiting all scopes, singleton should still be accessible
+        assert container.resolve_from_context(singleton_token) is new_singleton
+
 
 class TestRequestScope:
     """Test suite for RequestScope helper."""
