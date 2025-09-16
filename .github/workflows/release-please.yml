@@ -6,15 +6,19 @@ name: Release Please
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
       pull-requests: write
     steps:
       - name: Release Please
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@10bbcc987eedcad7e72fd3a5717e674826c18e69  # v4.1.0
         with:
           release-type: python
           manifest-file: .release-please-manifest.json

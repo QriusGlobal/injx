@@ -8,22 +8,26 @@ name: Publish to PyPI (Trusted Publishing)
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: release
     permissions:
       id-token: write  # required for OIDC
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
         with:
           # For releases, build exactly the tagged ref; for manual runs, use the current sha
           ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
         with:
           python-version: '3.13'
           enable-cache: true
@@ -36,7 +40,7 @@ jobs:
           uv build
 
       - name: Publish to PyPI (OIDC)
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@b7f401de30cb6434a1e19f805ff006643653240e  # v1.8.10
         with:
           packages-dir: dist
           skip-existing: true
