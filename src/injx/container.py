@@ -750,9 +750,15 @@ class Container:
         Returns:
             The resolved instance
         """
+        # Fast path: Check cache WITHOUT lock first
+        cached = self._get_singleton_cached(token)
+        if cached is not None:
+            return cached
+
+        # Slow path: Need lock for creation
         obj_token = self._obj_token(token)
         with self._get_singleton_lock(obj_token):
-            # Check cache inside lock
+            # Double-check pattern (race condition protection)
             cached = self._get_singleton_cached(token)
             if cached is not None:
                 return cached
@@ -857,9 +863,15 @@ class Container:
         Returns:
             The resolved instance
         """
+        # Fast path: Check cache WITHOUT lock first
+        cached = self._get_singleton_cached(token)
+        if cached is not None:
+            return cached
+
+        # Slow path: Need lock for creation
         obj_token = self._obj_token(token)
         with self._get_singleton_lock(obj_token):
-            # Double-check pattern
+            # Double-check pattern (race condition protection)
             cached = self._get_singleton_cached(token)
             if cached is not None:
                 return cached
@@ -1267,6 +1279,9 @@ class Container:
         with self._lock:
             self._singletons.clear()
             self._given_providers.clear()
+            self._async_locks.clear()      # Clear async locks to prevent memory leak
+            self._singleton_locks.clear()  # Clear sync locks to prevent memory leak
+            self._type_index.clear()       # Clear type index to prevent memory leak
             self._cache_hits = 0
             self._cache_misses = 0
             self._resolution_times.clear()
@@ -1317,6 +1332,8 @@ class Container:
                 fn()
             except Exception:
                 pass
+        # Clear async locks after cleanup to prevent memory leak
+        self._async_locks.clear()
 
     async def aclose(self) -> None:
         """Async close: close tracked resources and clear caches."""

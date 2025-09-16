@@ -273,6 +273,124 @@ class TestMemoryProfiling:
             f"Cleanup not in LIFO order: {cleanup_called}"
         )
 
+    async def test_async_lock_cleanup(self):
+        """Verify that async locks are cleaned up properly."""
+        container = Container()
+
+        class AsyncSingletonService:
+            def __init__(self):
+                self.value = "async_singleton"
+
+        # Test 1: Async locks created during resolution
+        token1 = Token("async_singleton_1", AsyncSingletonService, scope=Scope.SINGLETON)
+        token2 = Token("async_singleton_2", AsyncSingletonService, scope=Scope.SINGLETON)
+        container.register(token1, AsyncSingletonService)
+        container.register(token2, AsyncSingletonService)
+
+        # Resolve async singletons
+        instance1 = await container.aget(token1)
+        instance2 = await container.aget(token2)
+
+        # Async locks should be created
+        assert len(container._async_locks) == 2, (
+            "Async locks should be created for singleton resolution"
+        )
+
+        # Test 2: Clear should remove async locks
+        container.clear()
+        assert len(container._async_locks) == 0, (
+            "clear() should remove all async locks"
+        )
+
+        # Test 3: __aexit__ should clear async locks
+        # Create a new container for this test
+        container2 = Container()
+        token3 = Token("async_singleton_3", AsyncSingletonService, scope=Scope.SINGLETON)
+        container2.register(token3, AsyncSingletonService)
+        await container2.aget(token3)
+        assert len(container2._async_locks) == 1, (
+            "Async lock should be created for resolution"
+        )
+
+        async with container2:
+            pass  # Context exit triggers cleanup
+
+        assert len(container2._async_locks) == 0, (
+            "__aexit__ should clear all async locks"
+        )
+
+    def test_container_clear_cleanup(self):
+        """Verify that clear() properly cleans up all lock dictionaries."""
+        container = Container()
+
+        class TestService:
+            def __init__(self):
+                self.value = "test"
+
+        # Create multiple singleton tokens
+        tokens = []
+        for i in range(5):
+            token = Token(f"service_{i}", TestService, scope=Scope.SINGLETON)
+            container.register(token, TestService)
+            tokens.append(token)
+
+        # Resolve all to create singleton locks
+        for token in tokens:
+            container.get(token)
+
+        # Locks should exist (but should be cleaned up after creation due to fast path)
+        # The important test is that clear() removes any remaining locks
+
+        # Manually create some locks to simulate worst case
+        for token in tokens[:3]:
+            obj_token = container._obj_token(token)
+            container._get_singleton_lock(obj_token)
+
+        assert len(container._singleton_locks) >= 3, (
+            "Should have at least 3 singleton locks manually created"
+        )
+
+        # Clear should remove all locks
+        container.clear()
+        assert len(container._singleton_locks) == 0, (
+            "clear() should remove all singleton locks"
+        )
+        assert len(container._async_locks) == 0, (
+            "clear() should remove all async locks"
+        )
+        assert len(container._singletons) == 0, (
+            "clear() should remove all cached singletons"
+        )
+
+    async def test_container_clear_async_cleanup(self):
+        """Verify that clear() properly cleans up async locks."""
+        container = Container()
+
+        class AsyncService:
+            def __init__(self):
+                self.value = "async"
+
+        async def create_async_service():
+            # Simulate async creation
+            return AsyncService()
+
+        # Create async singleton
+        token = Token("async_service", AsyncService, scope=Scope.SINGLETON)
+        container.register(token, create_async_service)
+
+        # This will create an async lock
+        await container.aget(token)
+
+        assert len(container._async_locks) >= 1, (
+            "Should have at least 1 async lock after async resolution"
+        )
+
+        # Clear should remove async locks
+        container.clear()
+        assert len(container._async_locks) == 0, (
+            "clear() should remove all async locks"
+        )
+
     def test_resolution_set_memory_efficiency(self):
         """Test that the new _resolution_set for O(1) cycle detection is memory efficient."""
         container = Container()
