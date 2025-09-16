@@ -163,7 +163,7 @@ class TypedRegistry(Generic[K, V]):
 
     def as_read_only(self) -> MappingProxyType[K, V]:
         """Return a read-only view of the underlying storage."""
-        return MappingProxyType(self._storage)
+        return MappingProxyType(self._storage)  # type: ignore[return-value]
 
     def __repr__(self) -> str:
         """Return string representation.
