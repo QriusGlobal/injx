@@ -469,7 +469,8 @@ class Container:
         # Add to both _singletons and _registry
         self._singletons[obj_token] = value
         # Create a provider record for the value
-        provider = lambda: value
+        def provider():
+            return value
         record = ProviderRecord.create(provider, Scope.SINGLETON, ())
         self._registry[obj_token] = record
         return self

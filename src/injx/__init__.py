@@ -27,32 +27,44 @@ from injx.contextual import ContextualContainer, RequestScope, SessionScope
 from injx.dependencies import Dependencies
 
 # Compatibility imports - these will be deprecated
-from injx.exceptions import CircularDependencyError, InjxError, ResolutionError
+from injx.exceptions import (
+    AsyncCleanupRequiredError,
+    CircularDependencyError,
+    InjxError,
+    ResolutionError,
+)
 from injx.injection import Depends, Given, Inject, inject
 from injx.metaclasses import Injectable
+from injx.protocols.container import ContainerProtocol
 from injx.tokens import Scope, Token, TokenFactory
 
 __all__ = [
     # Core classes
     "Container",
-    "ContextualContainer",
     "Dependencies",
-    "Depends",
-    "Given",
-    "Inject",
-    "Injectable",
-    "RequestScope",
-    "Scope",
-    "SessionScope",
     "Token",
     "TokenFactory",
+    "Scope",
+    # Injection
+    "inject",
+    "Inject",
+    "Given",
+    "Depends",
+    # Protocols
+    "ContainerProtocol",
+    # Scoping
+    "ContextualContainer",
+    "RequestScope",
+    "SessionScope",
+    # Compatibility
+    "Injectable",
     # Exceptions
     "InjxError",
     "ResolutionError",
     "CircularDependencyError",
-    # Functions
+    "AsyncCleanupRequiredError",
+    # Deprecated (will be removed in v2.0.0)
     "get_default_container",
-    "inject",
     "set_default_container",
     # Metadata
     "__version__",
@@ -73,7 +85,8 @@ def get_default_container():
     import warnings
 
     warnings.warn(
-        "get_default_container() is deprecated. Use Container.get_active() instead.",
+        "get_default_container() is deprecated and will be removed in v2.0.0. "
+        "Use Container.get_active() instead.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -88,7 +101,8 @@ def set_default_container(container):
     import warnings
 
     warnings.warn(
-        "set_default_container() is deprecated. Use Container.set_active() instead.",
+        "set_default_container() is deprecated and will be removed in v2.0.0. "
+        "Use Container.set_active() instead.",
         DeprecationWarning,
         stacklevel=2,
     )

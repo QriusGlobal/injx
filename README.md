@@ -867,7 +867,7 @@ service_500 = container.get(tokens[500])  # Same speed as tokens[0]
 ### Cached Injection Metadata
 
 ```python
-from injx import inject, InjectionAnalyzer
+from injx import inject
 
 # Function signature analysis is cached automatically
 @inject  # Analysis cached on first call

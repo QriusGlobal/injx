@@ -49,7 +49,6 @@ __all__ = [
     "Depends",
     "Given",
     "Inject",
-    "InjectionAnalyzer",
     "analyze_dependencies",
     "inject",
     "resolve_dependencies",
@@ -405,12 +404,7 @@ def _should_auto_inject(annotation: Any) -> bool:
     )
 
 
-class InjectionAnalyzer:
-    """Facade to build dependency plans, for backward compatibility."""
-
-    @staticmethod
-    def build_plan(func: Callable[..., Any]) -> dict[str, DependencyRequest]:
-        return analyze_dependencies(func)
+# InjectionAnalyzer removed - use analyze_dependencies() directly
 
 
 def resolve_dependencies(
