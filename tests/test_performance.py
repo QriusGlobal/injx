@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from injx import Container, Scope, Token
+from injx import Container, Scope, Token, inject
 from injx.exceptions import CircularDependencyError
 
 
@@ -107,7 +107,7 @@ class TestPerformance:
         container.register(token2, Service2)
         container.register(token3, Service3)
 
-        @container.inject
+        @inject(container=container)
         def complex_function(s1: Service1, s2: Service2, s3: Service3) -> str:
             return f"{s1.value}-{s2.value}-{s3.value}"
 

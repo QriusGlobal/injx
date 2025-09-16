@@ -1316,24 +1316,6 @@ class Container:
         """Return a read-only snapshot of tracked resources for tests/inspection."""
         return tuple(self._runtime.resources)
 
-    def inject(
-        self, func: Callable[..., Any] | None = None, *, cache: bool = True
-    ) -> Callable[..., Any]:
-        """Alias to injx.injection.inject bound to this container.
-
-        Enables ``@container.inject`` usage in addition to
-        ``@inject(container=container)``.
-        """
-        # Import at function call time to avoid circular dependency
-        import importlib
-
-        injection_module = importlib.import_module("injx.injection")
-        _inject = injection_module.inject
-
-        if func is None:
-            return _inject(container=self, cache=cache)
-        return _inject(func, container=self, cache=cache)
-
     def has(self, token: Token[Any] | type[Any]) -> bool:
         """Return True if the token/type is known to the container."""
         if isinstance(token, type):
