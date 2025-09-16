@@ -59,10 +59,10 @@ To simplify the internal state management, the various dictionaries (`_providers
 
 - **Motivation**: Reduce complexity, create a single source of truth for provider information, and simplify logic for features like overrides and dependency analysis.
 
-- **ProviderRecord Design**: The `_registry` will map tokens to a `ProviderRecord`. This will be a frozen dataclass to keep it lightweight, while caching key information computed at registration time to improve performance. A generic `metadata` field is rejected to maintain a minimal memory footprint and focused design.
+- **ProviderSpec Design**: The `_registry` will map tokens to a `ProviderSpec`. This will be a frozen dataclass to keep it lightweight, while caching key information computed at registration time to improve performance. A generic `metadata` field is rejected to maintain a minimal memory footprint and focused design.
   ```python
   @dataclass(frozen=True, slots=True)
-  class ProviderRecord(Generic[T]):
+  class ProviderSpec(Generic[T]):
       provider: Callable[..., T]
       cleanup: CleanupStrategy
       scope: Scope

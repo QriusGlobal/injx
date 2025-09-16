@@ -10,7 +10,6 @@ from collections import deque
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from contextvars import Token as CtxToken
 from functools import lru_cache
 from itertools import groupby
 from types import MappingProxyType, TracebackType
@@ -37,7 +36,8 @@ from .exceptions import (
 from .logging import log_performance_metric, log_resolution_path, logger
 from .metaclasses import Injectable
 from .protocols.resources import SupportsAsyncClose, SupportsClose
-from .provider_record import ProviderRecord
+from .provider_spec import ProviderSpec
+from .registry import TypedRegistry
 from .tokens import Scope, Token, TokenFactory
 from .types import ProviderAsync, ProviderLike, ProviderSync
 
@@ -45,6 +45,65 @@ __all__ = ["Container"]
 
 T = TypeVar("T")
 U = TypeVar("U")
+
+
+# Internal helpers keep concerns separated without introducing new modules.
+
+
+class _CoreRegistry:
+    """Container for immutable provider specifications and type index."""
+
+    __slots__ = ("providers", "type_index")
+
+    def __init__(self) -> None:
+        self.providers: TypedRegistry[Token[Any], ProviderSpec[Any]] = TypedRegistry()
+        self.type_index: TypedRegistry[type[Any], Token[Any]] = TypedRegistry()
+
+    def register(self, token: Token[Any], spec: ProviderSpec[Any]) -> None:
+        """Register provider metadata and index it by type."""
+        self.providers.set(token, spec)
+        self.type_index.set(token.type_, token)
+
+
+class _RuntimeState:
+    """Mutable container runtime state (singletons, locks, metrics)."""
+
+    __slots__ = (
+        "singletons",
+        "async_locks",
+        "singleton_locks",
+        "singleton_cleanup_sync",
+        "singleton_cleanup_async",
+        "resources",
+        "resolution_times",
+        "cache_hits",
+        "cache_misses",
+        "lock",
+    )
+
+    def __init__(self) -> None:
+        self.singletons: TypedRegistry[Token[Any], Any] = TypedRegistry()
+        self.async_locks: dict[Token[Any], asyncio.Lock] = {}
+        self.singleton_locks: dict[Token[Any], threading.Lock] = {}
+        self.singleton_cleanup_sync: list[Callable[[], None]] = []
+        self.singleton_cleanup_async: list[Callable[[], Awaitable[None]]] = []
+        self.resources: list[SupportsClose | SupportsAsyncClose] = []
+        self.resolution_times: deque[float] = deque(maxlen=1000)
+        self.cache_hits: int = 0
+        self.cache_misses: int = 0
+        self.lock: threading.RLock = threading.RLock()
+
+
+class _ContextState:
+    """Thread/task specific override storage."""
+
+    __slots__ = ("overrides",)
+
+    def __init__(self) -> None:
+        self.overrides: ContextVar[TypedRegistry[Token[Any], Any] | None] = ContextVar(
+            "injx_overrides",
+            default=None,
+        )
 
 
 # Module-level ContextVars provide async task isolation, ensuring each
@@ -98,35 +157,20 @@ class Container:
 
         # Composition instead of inheritance
         self._contextual = ContextualContainer()
-        # Set back-reference for contextual to access container methods
-        if hasattr(self._contextual, "_container"):
-            self._contextual._container = self
+        # Provide bridge for contextual scopes to share singleton state
+        if hasattr(self._contextual, "_set_container_bridge"):
+            self._contextual._set_container_bridge(self)
 
         self.tokens: TokenFactory = TokenFactory()
-        self._given_providers: dict[type[object], ProviderSync[object]] = {}
-        # Consolidated registry: single source of truth for all provider information
-        self._registry: dict[Token[object], ProviderRecord[object]] = {}
-        self._singletons: dict[Token[object], object] = {}
-        self._async_locks: dict[Token[object], asyncio.Lock] = {}
-
-        self._resolution_times: deque[float] = deque(maxlen=1000)
-        self._cache_hits: int = 0
-        self._cache_misses: int = 0
-
-        self._lock: threading.RLock = threading.RLock()
-        self._singleton_locks: dict[Token[object], threading.Lock] = {}
-
-        self._overrides: ContextVar[dict[Token[object], object] | None] = ContextVar(
-            "injx_overrides",
-            default=None,
+        self._given_providers: TypedRegistry[type[Any], ProviderSync[Any]] = (
+            TypedRegistry()
         )
 
-        self._type_index: dict[type[object], Token[object]] = {}
-        self._singleton_cleanup_sync: list[Callable[[], None]] = []
-        self._singleton_cleanup_async: list[Callable[[], Awaitable[None]]] = []
-
-        # Legacy resource tracking for compatibility
-        self._resources: list[SupportsClose | SupportsAsyncClose] = []
+        # Internal organization helpers keep responsibilities clear without
+        # introducing new modules (avoids circular imports).
+        self._core = _CoreRegistry()
+        self._runtime = _RuntimeState()
+        self._context_state = _ContextState()
 
         self._auto_register()
 
@@ -198,10 +242,10 @@ class Container:
             An existing token if found, otherwise a new token
         """
         # Fast path: check type index
-        found = self._type_index.get(cast(type[object], cls))  # type: ignore[reportGeneralTypeIssues]
+        found = self._core.type_index.get(cls)
         if found is not None:
-            # Cast to the expected type
-            return cast(Token[U], found)
+            # TypedRegistry preserves types, no cast needed
+            return found
 
         # Check registered providers and singletons
         token = self._search_for_token_by_type(cls)
@@ -221,23 +265,21 @@ class Container:
             The matching token if found, None otherwise
         """
         # Search in registry
-        for registered in self._registry:
+        for registered in self._core.providers.keys():
             if registered.type_ == cls:
-                return cast(Token[U], registered)
+                return registered  # No cast needed with TypedRegistry
 
         # Search in singletons
-        for registered in self._singletons:
+        for registered in self._runtime.singletons.keys():
             if registered.type_ == cls:
-                return cast(Token[U], registered)
+                return registered  # No cast needed with TypedRegistry
 
         return None
 
     def _get_override(self, token: Token[U]) -> U | None:
-        current = self._overrides.get()
+        current = self._context_state.overrides.get()
         if current is not None:
-            val = current.get(cast(Token[object], token))
-            if val is not None:
-                return cast(U, val)
+            return current.get(token)
         return None
 
     @contextmanager
@@ -304,31 +346,30 @@ class Container:
                 f"  Example: container.register(token, lambda: {token.type_.__name__}())"
             )
 
-        with self._lock:
-            obj_token = cast(Token[object], token)
-            if obj_token in self._registry or obj_token in self._singletons:
+        with self._runtime.lock:
+            # No cast needed with TypedRegistry!
+            if token in self._core.providers or token in self._runtime.singletons:
                 logger.error(
-                    f"Registration conflict: Token '{obj_token.name}' is already registered"
+                    f"Registration conflict: Token '{token.name}' is already registered"
                 )
-                raise ValueError(f"Token '{obj_token.name}' is already registered")
+                raise ValueError(f"Token '{token.name}' is already registered")
 
             # Determine the actual scope to use
             actual_scope = (
-                scope
-                if scope is not None
-                else getattr(obj_token, "scope", Scope.TRANSIENT)
+                scope if scope is not None else getattr(token, "scope", Scope.TRANSIENT)
             )
 
-            # Create ProviderRecord with precomputed metadata
-            record: ProviderRecord[object] = ProviderRecord.create(  # type: ignore[reportUnknownVariableType]
-                provider=cast(Callable[..., object], provider),
+            # Create ProviderSpec with precomputed metadata
+            record = ProviderSpec.create(
+                provider=provider,
                 scope=actual_scope,
                 dependencies=(),  # TODO: Analyze dependencies when we have analyzer support
             )
-            self._registry[obj_token] = record
-            self._type_index[obj_token.type_] = obj_token
+            # All registry writes must go through typed helpers to honour the
+            # single-cast guarantee in TypedRegistry. Never mutate registry._storage.
+            self._core.register(token, record)
             logger.debug(
-                f"Registered provider for token '{obj_token.name}' with scope {actual_scope}"
+                f"Registered provider for token '{token.name}' with scope {actual_scope}"
             )
 
         return self
@@ -402,16 +443,14 @@ class Container:
                 "cm_provider must be callable and return a (async) context manager"
             )
 
-        with self._lock:
-            obj_token = cast(Token[object], token)
-            if obj_token in self._registry or obj_token in self._singletons:
-                raise ValueError(f"Token '{obj_token.name}' is already registered")
+        with self._runtime.lock:
+            # No cast needed with TypedRegistry!
+            if token in self._core.providers or token in self._runtime.singletons:
+                raise ValueError(f"Token '{token.name}' is already registered")
 
             # Determine the actual scope to use
             actual_scope = (
-                scope
-                if scope is not None
-                else getattr(obj_token, "scope", Scope.TRANSIENT)
+                scope if scope is not None else getattr(token, "scope", Scope.TRANSIENT)
             )
 
             # Context managers have special cleanup strategies
@@ -419,16 +458,16 @@ class Container:
                 CleanupStrategy.ASYNC_CONTEXT if is_async else CleanupStrategy.CONTEXT
             )
 
-            # Create ProviderRecord with explicit cleanup strategy
-            record = ProviderRecord(
-                provider=cast(Callable[..., object], cm_provider),
+            # Create ProviderSpec with explicit cleanup strategy
+            record = ProviderSpec(
+                provider=cm_provider,
                 cleanup=cleanup,
                 scope=actual_scope,
                 is_async=is_async,
                 dependencies=(),
             )
-            self._registry[obj_token] = record
-            self._type_index[obj_token.type_] = obj_token
+            self._core.providers.set(token, record)
+            self._core.type_index.set(token.type_, token)
         return self
 
     def register_context_sync(
@@ -462,19 +501,19 @@ class Container:
         if isinstance(token, type):
             token = self.tokens.singleton(token.__name__, token)
 
-        obj_token = cast(Token[object], token)
-        if obj_token in self._registry or obj_token in self._singletons:
-            raise ValueError(f"Token '{obj_token.name}' is already registered")
+        # No cast needed with TypedRegistry!
+        if token in self._core.providers or token in self._runtime.singletons:
+            raise ValueError(f"Token '{token.name}' is already registered")
 
         # Add to both _singletons and _registry
-        self._singletons[obj_token] = value
+        self._runtime.singletons.set(token, value)
 
         # Create a provider record for the value
         def provider():
             return value
 
-        record = ProviderRecord.create(provider, Scope.SINGLETON, ())
-        self._registry[obj_token] = record
+        record = ProviderSpec.create(provider, Scope.SINGLETON, ())
+        self._core.providers.set(token, record)
         return self
 
     def override(self, token: Token[U], value: U) -> None:
@@ -483,17 +522,21 @@ class Container:
         Uses a ContextVar-backed mapping so overrides are isolated between
         threads/tasks. Prefer ``use_overrides`` for scoped overrides.
         """
-        parent = self._overrides.get()
-        merged: dict[Token[object], object] = dict(parent) if parent else {}
-        merged[cast(Token[object], token)] = value
-        self._overrides.set(merged)
+        parent = self._context_state.overrides.get()
+        merged = TypedRegistry[Token[Any], Any]()
+        if parent:
+            # Copy parent entries
+            for k, v in parent.items():
+                merged.set(k, v)
+        merged.set(token, value)
+        self._context_state.overrides.set(merged)
 
     def given(self, type_: type[U], provider: ProviderSync[U] | U) -> "Container":
         """Register a given instance for a type (Scala-style)."""
         if callable(provider):
-            self._given_providers[type_] = cast(ProviderSync[object], provider)
+            self._given_providers.set(type_, provider)
         else:
-            self._given_providers[type_] = lambda p=provider: p
+            self._given_providers.set(type_, lambda p=provider: p)
 
         return self
 
@@ -501,7 +544,7 @@ class Container:
         """Resolve a given instance by type."""
         provider = self._given_providers.get(type_)
         if provider:
-            return cast(ProviderSync[U], provider)()
+            return provider()  # TypedRegistry preserves types
         return None
 
     @contextmanager
@@ -516,7 +559,7 @@ class Container:
         keyword arguments that match type names previously registered
         via ``given()``.
         """
-        old_givens = self._given_providers.copy()
+        old_items = self._given_providers.items()
 
         if mapping:
             for t, instance in mapping.items():
@@ -533,22 +576,28 @@ class Container:
         try:
             yield self
         finally:
-            self._given_providers = old_givens
+            restored: TypedRegistry[type[Any], ProviderSync[Any]] = TypedRegistry()
+            for key, value in old_items:
+                restored.set(key, value)
+            self._given_providers = restored
 
     def _obj_token(self, token: Token[U]) -> Token[object]:
+        """Compatibility helper to expose object-typed tokens for tests."""
         return cast(Token[object], token)
 
-    def _get_singleton_lock(self, token: Token[object]) -> threading.Lock:
+    def _get_singleton_lock(self, token: Token[Any]) -> threading.Lock:
         """Get or create a singleton lock for the token, with cleanup after use."""
-        with self._lock:
-            if token not in self._singleton_locks:
-                self._singleton_locks[token] = threading.Lock()
-            return self._singleton_locks[token]
+        with self._runtime.lock:
+            lock = self._runtime.singleton_locks.get(token)
+            if lock is None:
+                lock = threading.Lock()
+                self._runtime.singleton_locks[token] = lock
+            return lock
 
-    def _cleanup_singleton_lock(self, token: Token[object]) -> None:
+    def _cleanup_singleton_lock(self, token: Token[Any]) -> None:
         """Remove singleton lock after successful initialization to prevent memory leak."""
-        with self._lock:
-            self._singleton_locks.pop(token, None)
+        with self._runtime.lock:
+            self._runtime.singleton_locks.pop(token, None)
 
     def _canonicalize(self, token: Token[U]) -> Token[U]:
         """Return the registered token that matches by name and type (ignore scope).
@@ -556,23 +605,21 @@ class Container:
         This allows callers to construct a token with the same name/type but different
         scope and still resolve the registered binding.
         """
-        obj_token = self._obj_token(token)
-        if obj_token in self._registry or obj_token in self._singletons:
+        if token in self._core.providers or token in self._runtime.singletons:
             return token
-        for t in self._registry.keys():
+        for t in self._core.providers.keys():
             if t.name == token.name and t.type_ == token.type_:
                 return cast(Token[U], t)
-        for t in self._singletons.keys():
+        for t in self._runtime.singletons.keys():
             if t.name == token.name and t.type_ == token.type_:
                 return cast(Token[U], t)
         return token
 
     def _get_provider(self, token: Token[U]) -> ProviderLike[U]:
         token = self._canonicalize(token)
-        obj_token = self._obj_token(token)
-        record = self._registry.get(obj_token)
+        record = self._core.providers.get(token)
         if record is None:
-            logger.error(f"No provider registered for token '{obj_token.name}'")
+            logger.error(f"No provider registered for token '{token.name}'")
             raise ResolutionError(
                 token,
                 [],
@@ -585,28 +632,49 @@ class Container:
 
     def _get_scope(self, token: Token[U]) -> Scope:
         token = self._canonicalize(token)
-        obj_token = self._obj_token(token)
-        record = self._registry.get(obj_token)
+        record = self._core.providers.get(token)
         if record is not None:
             return record.scope
         return token.scope
 
     def _get_singleton_cached(self, token: Token[U]) -> U | None:
         token = self._canonicalize(token)
-        obj_token = self._obj_token(token)
-        if obj_token in self._singletons:
-            return cast(U, self._singletons[obj_token])
-        return None
+        return self._runtime.singletons.get(token)
 
     def _set_singleton_cached(self, token: Token[U], value: U) -> None:
-        self._singletons[self._obj_token(token)] = value
+        self._runtime.singletons.set(token, value)
+
+    def _singletons_mapping(self) -> MappingProxyType[Token[Any], Any]:
+        """Expose singleton cache as a read-only mapping for scope chaining."""
+        return self._runtime.singletons.as_read_only()
+
+    def _clear_singletons(self) -> None:
+        """Clear singleton cache (used by contextual scope resets)."""
+        self._runtime.singletons.clear()
+
+    @property
+    def _singleton_locks(self) -> dict[Token[Any], threading.Lock]:
+        """Compatibility access to singleton locks storage."""
+        return self._runtime.singleton_locks
+
+    @_singleton_locks.setter
+    def _singleton_locks(self, value: dict[Token[Any], threading.Lock]) -> None:
+        self._runtime.singleton_locks = value
+
+    @property
+    def _async_locks(self) -> dict[Token[Any], asyncio.Lock]:
+        """Compatibility access to async singleton locks."""
+        return self._runtime.async_locks
+
+    @_async_locks.setter
+    def _async_locks(self, value: dict[Token[Any], asyncio.Lock]) -> None:
+        self._runtime.async_locks = value
 
     def _ensure_async_lock(self, token: Token[U]) -> asyncio.Lock:
-        obj_token = self._obj_token(token)
-        lock = self._async_locks.get(obj_token)
+        lock = self._runtime.async_locks.get(token)
         if lock is None:
             lock = asyncio.Lock()
-            self._async_locks[obj_token] = lock
+            self._runtime.async_locks[token] = lock
         return lock
 
     def get(self, token: Token[U] | type[U]) -> U:
@@ -630,7 +698,7 @@ class Container:
         token = self._prepare_token_for_resolution(token)
 
         # Standard resolution path
-        self._cache_misses += 1
+        self._runtime.cache_misses += 1
         with self._resolution_guard(token):
             if logger.isEnabledFor(logging.DEBUG):
                 log_resolution_path(token, list(_resolution_stack.get()))
@@ -655,7 +723,7 @@ class Container:
         if isinstance(token, type):
             given = self.resolve_given(token)
             if given is not None:
-                self._cache_hits += 1
+                self._runtime.cache_hits += 1
                 return given
 
         # Normalize and check overrides/context
@@ -665,13 +733,13 @@ class Container:
         # Check override
         override = self._get_override(normalized)
         if override is not None:
-            self._cache_hits += 1
+            self._runtime.cache_hits += 1
             return override
 
         # Check context
         instance = self.resolve_from_context(normalized)
         if instance is not None:
-            self._cache_hits += 1
+            self._runtime.cache_hits += 1
             return instance
 
         return None
@@ -700,8 +768,7 @@ class Container:
         Raises:
             ResolutionError: If resolution fails
         """
-        obj_token = cast(Token[object], token)
-        record = self._registry.get(obj_token)
+        record = self._core.providers.get(token)
         effective_scope = self._get_scope(token)
 
         # Dispatch based on registration type
@@ -718,7 +785,7 @@ class Container:
         return self._resolve_sync_provider(token, effective_scope)
 
     def _resolve_sync_context(
-        self, token: Token[U], record: ProviderRecord[object], scope: Scope
+        self, token: Token[U], record: ProviderSpec[object], scope: Scope
     ) -> U:
         """Resolve a sync context-managed dependency.
 
@@ -739,7 +806,7 @@ class Container:
                 return self._resolve_transient_context_sync(token, record)
 
     def _resolve_singleton_context_sync(
-        self, token: Token[U], record: ProviderRecord[object]
+        self, token: Token[U], record: ProviderSpec[object]
     ) -> U:
         """Resolve a singleton context-managed dependency.
 
@@ -756,8 +823,7 @@ class Container:
             return cached
 
         # Slow path: Need lock for creation
-        obj_token = self._obj_token(token)
-        with self._get_singleton_lock(obj_token):
+        with self._get_singleton_lock(token):
             # Double-check pattern (race condition protection)
             cached = self._get_singleton_cached(token)
             if cached is not None:
@@ -771,11 +837,11 @@ class Container:
             # Register cleanup
             self._register_singleton_context_cleanup(cm, value)
 
-        self._cleanup_singleton_lock(obj_token)
+        self._cleanup_singleton_lock(token)
         return value
 
     def _resolve_scoped_context_sync(
-        self, token: Token[U], record: ProviderRecord[object], scope: Scope
+        self, token: Token[U], record: ProviderSpec[object], scope: Scope
     ) -> U:
         """Resolve a scoped context-managed dependency.
 
@@ -807,7 +873,7 @@ class Container:
         return value
 
     def _resolve_transient_context_sync(
-        self, token: Token[U], record: ProviderRecord[object]
+        self, token: Token[U], record: ProviderSpec[object]
     ) -> U:
         """Resolve a transient context-managed dependency.
 
@@ -869,8 +935,7 @@ class Container:
             return cached
 
         # Slow path: Need lock for creation
-        obj_token = self._obj_token(token)
-        with self._get_singleton_lock(obj_token):
+        with self._get_singleton_lock(token):
             # Double-check pattern (race condition protection)
             cached = self._get_singleton_cached(token)
             if cached is not None:
@@ -881,7 +946,7 @@ class Container:
             self._validate_and_track(token, instance)
             self._set_singleton_cached(token, instance)
 
-        self._cleanup_singleton_lock(obj_token)
+        self._cleanup_singleton_lock(token)
         return instance
 
     def _resolve_scoped_sync(
@@ -929,7 +994,7 @@ class Container:
         def cleanup(cm: ContextManager[Any] = cm) -> None:
             cm.__exit__(None, None, None)
 
-        self._singleton_cleanup_sync.append(cleanup)
+        self._runtime.singleton_cleanup_sync.append(cleanup)
         self._track_resource(value)
 
     def _track_resource(self, value: Any) -> None:
@@ -939,7 +1004,7 @@ class Container:
             value: The value to track
         """
         if isinstance(value, (SupportsClose, SupportsAsyncClose)):
-            self._resources.append(value)
+            self._runtime.resources.append(value)
 
     async def aget(self, token: Token[U] | type[U]) -> U:
         """Resolve a dependency asynchronously.
@@ -956,7 +1021,7 @@ class Container:
         token = self._prepare_token_for_resolution(token)
 
         # Async resolution path
-        self._cache_misses += 1
+        self._runtime.cache_misses += 1
         with self._resolution_guard(token):
             return await self._resolve_async(token)
 
@@ -969,8 +1034,7 @@ class Container:
         Returns:
             The resolved instance
         """
-        obj_token = cast(Token[object], token)
-        record = self._registry.get(obj_token)
+        record = self._core.providers.get(token)
         effective_scope = self._get_scope(token)
 
         # Dispatch based on registration type
@@ -984,7 +1048,7 @@ class Container:
         return await self._resolve_async_provider(token, effective_scope)
 
     async def _resolve_async_context(
-        self, token: Token[U], record: ProviderRecord[object], scope: Scope
+        self, token: Token[U], record: ProviderSpec[object], scope: Scope
     ) -> U:
         """Resolve an async context-managed dependency.
 
@@ -1005,7 +1069,7 @@ class Container:
                 return await self._resolve_transient_context_async(token, record)
 
     async def _resolve_singleton_context_async(
-        self, token: Token[U], record: ProviderRecord[object]
+        self, token: Token[U], record: ProviderSpec[object]
     ) -> U:
         """Resolve a singleton async context-managed dependency.
 
@@ -1034,7 +1098,7 @@ class Container:
         return value
 
     async def _resolve_scoped_context_async(
-        self, token: Token[U], record: ProviderRecord[object], scope: Scope
+        self, token: Token[U], record: ProviderSpec[object], scope: Scope
     ) -> U:
         """Resolve a scoped async context-managed dependency.
 
@@ -1066,7 +1130,7 @@ class Container:
         return value
 
     async def _resolve_transient_context_async(
-        self, token: Token[U], record: ProviderRecord[object]
+        self, token: Token[U], record: ProviderSpec[object]
     ) -> U:
         """Resolve a transient async context-managed dependency.
 
@@ -1188,7 +1252,7 @@ class Container:
         async def cleanup(cm: AsyncContextManager[Any] = cm) -> None:
             await cm.__aexit__(None, None, None)
 
-        self._singleton_cleanup_async.append(cleanup)
+        self._runtime.singleton_cleanup_async.append(cleanup)
         self._track_resource(value)
 
     def batch_register(
@@ -1224,32 +1288,33 @@ class Container:
 
     @property
     def cache_hit_rate(self) -> float:
-        total = self._cache_hits + self._cache_misses
-        return 0.0 if total == 0 else self._cache_hits / total
+        total = self._runtime.cache_hits + self._runtime.cache_misses
+        return 0.0 if total == 0 else self._runtime.cache_hits / total
 
     def get_stats(self) -> dict[str, Any]:
         return {
-            "total_providers": len(self._registry),
-            "singletons": len(self._singletons),
-            "cache_hits": self._cache_hits,
-            "cache_misses": self._cache_misses,
+            "total_providers": len(self._core.providers),
+            "singletons": len(self._runtime.singletons),
+            "cache_hits": self._runtime.cache_hits,
+            "cache_misses": self._runtime.cache_misses,
             "cache_hit_rate": self.cache_hit_rate,
             "avg_resolution_time": (
-                sum(self._resolution_times) / len(self._resolution_times)
-                if self._resolution_times
+                sum(self._runtime.resolution_times)
+                / len(self._runtime.resolution_times)
+                if self._runtime.resolution_times
                 else 0
             ),
         }
 
     def get_providers_view(
         self,
-    ) -> MappingProxyType[Token[object], ProviderRecord[object]]:
+    ) -> MappingProxyType[Token[object], ProviderSpec[object]]:
         """Return a read-only view of registered providers."""
-        return MappingProxyType(self._registry)
+        return self._core.providers.as_read_only()
 
     def resources_view(self) -> tuple[SupportsClose | SupportsAsyncClose, ...]:
         """Return a read-only snapshot of tracked resources for tests/inspection."""
-        return tuple(self._resources)
+        return tuple(self._runtime.resources)
 
     def inject(
         self, func: Callable[..., Any] | None = None, *, cache: bool = True
@@ -1259,7 +1324,11 @@ class Container:
         Enables ``@container.inject`` usage in addition to
         ``@inject(container=container)``.
         """
-        from .injection import inject as _inject
+        # Import at function call time to avoid circular dependency
+        import importlib
+
+        injection_module = importlib.import_module("injx.injection")
+        _inject = injection_module.inject
 
         if func is None:
             return _inject(container=self, cache=cache)
@@ -1271,27 +1340,26 @@ class Container:
             if token in self._given_providers:
                 return True
             token = Token(token.__name__, token)
-        obj_token = cast(Token[object], token)
-        return obj_token in self._registry or obj_token in self._singletons
+        return token in self._core.providers or token in self._runtime.singletons
 
     def clear(self) -> None:
         """Clear caches and statistics; keep provider registrations intact."""
-        with self._lock:
-            self._singletons.clear()
+        with self._runtime.lock:
+            self._runtime.singletons.clear()
             self._given_providers.clear()
-            self._async_locks.clear()  # Clear async locks to prevent memory leak
-            self._singleton_locks.clear()  # Clear sync locks to prevent memory leak
-            self._type_index.clear()  # Clear type index to prevent memory leak
-            self._cache_hits = 0
-            self._cache_misses = 0
-            self._resolution_times.clear()
+            self._runtime.async_locks.clear()  # Clear async locks to prevent memory leak
+            self._runtime.singleton_locks.clear()  # Clear sync locks to prevent memory leak
+            self._core.type_index.clear()  # Clear type index to prevent memory leak
+            self._runtime.cache_hits = 0
+            self._runtime.cache_misses = 0
+            self._runtime.resolution_times.clear()
         self.clear_all_contexts()
 
     def __repr__(self) -> str:
         return (
             "Container("
-            f"providers={len(self._registry)}, "
-            f"singletons={len(self._singletons)}, "
+            f"providers={len(self._core.providers)}, "
+            f"singletons={len(self._runtime.singletons)}, "
             f"cache_hit_rate={self.cache_hit_rate:.2%})"
         )
 
@@ -1304,12 +1372,12 @@ class Container:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        if self._singleton_cleanup_async:
+        if self._runtime.singleton_cleanup_async:
             raise AsyncCleanupRequiredError(
                 "singleton",
                 "Use 'await container.aclose()' or an async scope.",
             )
-        for fn in reversed(self._singleton_cleanup_sync):
+        for fn in reversed(self._runtime.singleton_cleanup_sync):
             try:
                 fn()
             except Exception:
@@ -1324,16 +1392,16 @@ class Container:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        if self._singleton_cleanup_async:
-            tasks = [fn() for fn in reversed(self._singleton_cleanup_async)]
+        if self._runtime.singleton_cleanup_async:
+            tasks = [fn() for fn in reversed(self._runtime.singleton_cleanup_async)]
             await asyncio.gather(*tasks, return_exceptions=True)
-        for fn in reversed(self._singleton_cleanup_sync):
+        for fn in reversed(self._runtime.singleton_cleanup_sync):
             try:
                 fn()
             except Exception:
                 pass
         # Clear async locks after cleanup to prevent memory leak
-        self._async_locks.clear()
+        self._runtime.async_locks.clear()
 
     async def aclose(self) -> None:
         """Async close: close tracked resources and clear caches."""
@@ -1353,21 +1421,25 @@ class Container:
                 svc = container.get(SERVICE)
                 ...
         """
-        parent = self._overrides.get()
-        merged: dict[Token[object], object] = dict(parent) if parent else {}
-        merged.update(cast(dict[Token[object], object], mapping))
-        token: CtxToken[dict[Token[object], object] | None] = self._overrides.set(
-            merged
-        )
+        parent = self._context_state.overrides.get()
+        merged = TypedRegistry[Token[Any], Any]()
+        if parent:
+            # Copy parent entries
+            for k, v in parent.items():
+                merged.set(k, v)
+        # Add new overrides
+        for k, v in mapping.items():
+            merged.set(k, v)
+        token = self._context_state.overrides.set(merged)
         try:
             yield
         finally:
-            self._overrides.reset(token)
+            self._context_state.overrides.reset(token)
 
     def clear_overrides(self) -> None:
         """Clear all overrides for the current context."""
-        if self._overrides.get() is not None:
-            self._overrides.set(None)
+        if self._context_state.overrides.get() is not None:
+            self._context_state.overrides.set(None)
 
     def _validate_and_track(self, token: Token[Any], instance: object) -> None:
         if not token.validate(instance):

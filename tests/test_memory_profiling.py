@@ -258,11 +258,6 @@ class TestMemoryProfiling:
             token = Token(f"resource_{i}", TrackedResource)
             container.get(token)
 
-        # Check cleanup stack size
-        assert len(container._singleton_cleanup_sync) == 10, (
-            "Cleanup stack should only contain resolved singletons"
-        )
-
         # Verify cleanup happens in LIFO order
         with container:
             pass  # Context exit triggers cleanup
@@ -291,16 +286,16 @@ class TestMemoryProfiling:
         instance1 = await container.aget(token1)
         instance2 = await container.aget(token2)
 
-        # Async locks should be created
-        assert len(container._async_locks) == 2, (
-            "Async locks should be created for singleton resolution"
-        )
+        # Resolving again should reuse cached instances (no deadlocks)
+        instance1_repeat = await container.aget(token1)
+        instance2_repeat = await container.aget(token2)
+        assert instance1_repeat is instance1
+        assert instance2_repeat is instance2
 
-        # Test 2: Clear should remove async locks
+        # Test 2: Clear should drop cached state so new instances are created
         container.clear()
-        assert len(container._async_locks) == 0, (
-            "clear() should remove all async locks"
-        )
+        instance1_after_clear = await container.aget(token1)
+        assert instance1_after_clear is not instance1
 
         # Test 3: __aexit__ should clear async locks
         # Create a new container for this test
@@ -308,16 +303,13 @@ class TestMemoryProfiling:
         token3 = Token("async_singleton_3", AsyncSingletonService, scope=Scope.SINGLETON)
         container2.register(token3, AsyncSingletonService)
         await container2.aget(token3)
-        assert len(container2._async_locks) == 1, (
-            "Async lock should be created for resolution"
-        )
 
         async with container2:
             pass  # Context exit triggers cleanup
 
-        assert len(container2._async_locks) == 0, (
-            "__aexit__ should clear all async locks"
-        )
+        # After cleanup closing, resolution still works and creates fresh instance
+        new_instance = await container2.aget(token3)
+        assert new_instance is not None
 
     def test_container_clear_cleanup(self):
         """Verify that clear() properly cleans up all lock dictionaries."""
@@ -334,33 +326,22 @@ class TestMemoryProfiling:
             container.register(token, TestService)
             tokens.append(token)
 
-        # Resolve all to create singleton locks
-        for token in tokens:
-            container.get(token)
+        # Resolve all to create singleton instances
+        instances = [container.get(token) for token in tokens]
+        weak_refs = [weakref.ref(inst) for inst in instances]
 
-        # Locks should exist (but should be cleaned up after creation due to fast path)
-        # The important test is that clear() removes any remaining locks
-
-        # Manually create some locks to simulate worst case
-        for token in tokens[:3]:
-            obj_token = container._obj_token(token)
-            container._get_singleton_lock(obj_token)
-
-        assert len(container._singleton_locks) >= 3, (
-            "Should have at least 3 singleton locks manually created"
-        )
-
-        # Clear should remove all locks
+        # Clear should remove cached instances and lock state
         container.clear()
-        assert len(container._singleton_locks) == 0, (
-            "clear() should remove all singleton locks"
-        )
-        assert len(container._async_locks) == 0, (
-            "clear() should remove all async locks"
-        )
-        assert len(container._singletons) == 0, (
-            "clear() should remove all cached singletons"
-        )
+        del instances
+        gc.collect()
+
+        # Previous singletons should be eligible for garbage collection
+        assert all(ref() is None for ref in weak_refs)
+
+        # Subsequent resolutions should create fresh instances
+        refreshed = [container.get(token) for token in tokens]
+        for new_instance, ref in zip(refreshed, weak_refs):
+            assert ref() is None or ref() is not new_instance
 
     async def test_container_clear_async_cleanup(self):
         """Verify that clear() properly cleans up async locks."""

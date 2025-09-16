@@ -14,7 +14,6 @@ from enum import Enum, auto
 from functools import lru_cache, wraps
 from inspect import Parameter, iscoroutinefunction, signature
 from typing import (
-    TYPE_CHECKING,
     Annotated,
     Any,
     Awaitable,
@@ -34,7 +33,6 @@ from typing import (
     cast as tcast,
 )
 
-from .container import Container
 from .dependencies import Dependencies
 from .logging import log_performance_metric, logger
 from .tokens import Token
@@ -42,8 +40,23 @@ from .tokens import Token
 # Type alias for dependency types
 DependencyType = Union["DependencyRequest", type[Any], Token[object], "Inject[object]"]
 
-if TYPE_CHECKING:
-    pass
+# Note: Container import moved to _ContainerProxy to avoid circular imports
+
+
+class _ContainerProxy:
+    """Proxy for Container to avoid import cycles.
+
+    This class provides static methods that lazily import and delegate
+    to the real Container class, avoiding circular imports at module level.
+    """
+
+    @staticmethod
+    def get_active() -> Any:  # Returns Container, but typed as Any to avoid import
+        """Get the active container, importing lazily to avoid cycles."""
+        from .container import Container
+
+        return Container.get_active()
+
 
 __all__ = [
     "Depends",
@@ -644,7 +657,10 @@ def inject(
             if not deps:
                 return fn(*args, **kwargs)
 
-            active_container = container or Container.get_active()
+            if container is None:
+                active_container = _ContainerProxy.get_active()
+            else:
+                active_container = container
             overrides = _extract_overrides(deps, kwargs)
             resolved = resolve_dependencies(deps, active_container, overrides)
             final_kwargs = _rebuild_kwargs(fn, args, kwargs, resolved)
@@ -660,7 +676,10 @@ def inject(
             if not deps:
                 return await cast(Awaitable[R], fn(*args, **kwargs))
 
-            active_container = container or Container.get_active()
+            if container is None:
+                active_container = _ContainerProxy.get_active()
+            else:
+                active_container = container
             overrides = _extract_overrides(deps, kwargs)
             resolved = await aresolve_dependencies(deps, active_container, overrides)
             final_kwargs = _rebuild_kwargs(fn, args, kwargs, resolved)
