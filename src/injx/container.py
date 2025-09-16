@@ -63,15 +63,19 @@ _resolution_set: ContextVar[set[Token[Any]]] = ContextVar(
 )
 
 
-class Container(ContextualContainer):
+class Container:
     """Ergonomic, type-safe DI container with async support.
 
     Features:
     - O(1) lookups with a compact registry
     - Thread/async-safe singleton initialization
+    - Context-local active container management
     - Contextual scoping using ``contextvars`` (request/session)
     - Scala-inspired "given" instances for testability
     - Method chaining for concise setup and batch operations
+
+    Class-level active container management using ContextVar ensures
+    proper isolation between async tasks and threads.
 
     Example:
         container = Container()
@@ -83,10 +87,20 @@ class Container(ContextualContainer):
             logger.info("hello")
     """
 
+    # Class-level ContextVar for active container management
+    _active: ContextVar["Container | None"] = ContextVar(
+        "injx_active_container", default=None
+    )
+
     def __init__(self) -> None:
         """Initialize container."""
-        super().__init__()
         logger.info("Initializing container")
+
+        # Composition instead of inheritance
+        self._contextual = ContextualContainer()
+        # Set back-reference for contextual to access container methods
+        if hasattr(self._contextual, "_container"):
+            self._contextual._container = self
 
         self.tokens: TokenFactory = TokenFactory()
         self._given_providers: dict[type[object], ProviderSync[object]] = {}
@@ -1334,3 +1348,82 @@ class Container(ContextualContainer):
             raise TypeError(
                 f"Provider for token '{token.name}' returned {type(instance).__name__}, expected {token.type_.__name__}"
             )
+
+    @classmethod
+    def get_active(cls) -> "Container":
+        """Get or create the active container for the current context.
+
+        Uses ContextVar to ensure proper isolation between async tasks and threads.
+        Creates a new container on first access in each context.
+
+        Returns:
+            The active container for the current context
+        """
+        container = cls._active.get()
+        if container is None:
+            container = cls()
+            cls._active.set(container)
+        return container
+
+    @classmethod
+    def set_active(cls, container: "Container | None") -> None:
+        """Set the active container for the current context.
+
+        Args:
+            container: Container to set as active, or None to clear
+        """
+        cls._active.set(container)
+
+    def activate(self) -> ContextManager[None]:
+        """Context manager to activate this container.
+
+        Example:
+            container = Container()
+            with container.activate():
+                # This container is now active
+                service = some_injected_function()
+        """
+
+        @contextmanager
+        def _activate():
+            old = self._active.get()
+            self._active.set(self)
+            try:
+                yield
+            finally:
+                self._active.set(old)
+
+        return _activate()
+
+    # Delegate contextual methods to composed ContextualContainer
+    def request_scope(self):
+        """Create a request scope. Delegates to ContextualContainer."""
+        return self._contextual.request_scope()
+
+    def async_request_scope(self):
+        """Create an async request scope. Delegates to ContextualContainer."""
+        return self._contextual.async_request_scope()
+
+    def session_scope(self):
+        """Create a session scope. Delegates to ContextualContainer."""
+        return self._contextual.session_scope()
+
+    def resolve_from_context(self, token: Token[T]) -> T | None:
+        """Resolve from context. Delegates to ContextualContainer."""
+        return self._contextual.resolve_from_context(token)
+
+    def store_in_context(self, token: Token[T], instance: T) -> None:
+        """Store in context. Delegates to ContextualContainer."""
+        self._contextual.store_in_context(token, instance)
+
+    def clear_request_context(self) -> None:
+        """Clear request context. Delegates to ContextualContainer."""
+        self._contextual.clear_request_context()
+
+    def clear_session_context(self) -> None:
+        """Clear session context. Delegates to ContextualContainer."""
+        self._contextual.clear_session_context()
+
+    def clear_all_contexts(self) -> None:
+        """Clear all contexts. Delegates to ContextualContainer."""
+        self._contextual.clear_all_contexts()

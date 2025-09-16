@@ -33,7 +33,7 @@ from typing import (
     cast as tcast,
 )
 
-from .defaults import get_default_container
+from .container import Container
 from .logging import log_performance_metric, logger
 from .tokens import Token
 
@@ -627,7 +627,7 @@ def inject(
             if not deps:
                 return fn(*args, **kwargs)
 
-            active_container = container or get_default_container()
+            active_container = container or Container.get_active()
             overrides = _extract_overrides(deps, kwargs)
             resolved = resolve_dependencies(deps, active_container, overrides)
             final_kwargs = _rebuild_kwargs(fn, args, kwargs, resolved)
@@ -643,7 +643,7 @@ def inject(
             if not deps:
                 return await cast(Awaitable[R], fn(*args, **kwargs))
 
-            active_container = container or get_default_container()
+            active_container = container or Container.get_active()
             overrides = _extract_overrides(deps, kwargs)
             resolved = await aresolve_dependencies(deps, active_container, overrides)
             final_kwargs = _rebuild_kwargs(fn, args, kwargs, resolved)

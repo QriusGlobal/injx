@@ -24,7 +24,8 @@ from injx._metadata import __author__, __docs__, __email__, __org__, __repo__
 from injx._version import __version__
 from injx.container import Container
 from injx.contextual import ContextualContainer, RequestScope, SessionScope
-from injx.defaults import get_default_container, set_default_container
+
+# Compatibility imports - these will be deprecated
 from injx.exceptions import CircularDependencyError, InjxError, ResolutionError
 from injx.injection import Depends, Given, Inject, inject
 from injx.metaclasses import Injectable
@@ -59,3 +60,34 @@ __all__ = [
     "__org__",
     "__repo__",
 ]
+
+
+# Compatibility functions with deprecation warnings
+def get_default_container():
+    """Deprecated: Use Container.get_active() instead.
+
+    Will be removed in v2.0.0.
+    """
+    import warnings
+
+    warnings.warn(
+        "get_default_container() is deprecated. Use Container.get_active() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return Container.get_active()
+
+
+def set_default_container(container):
+    """Deprecated: Use Container.set_active() instead.
+
+    Will be removed in v2.0.0.
+    """
+    import warnings
+
+    warnings.warn(
+        "set_default_container() is deprecated. Use Container.set_active() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    Container.set_active(container)
