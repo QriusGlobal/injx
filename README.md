@@ -1271,6 +1271,30 @@ container.register_context_sync(DB_TOKEN, database_connection)
 - **Formatting**: Use `ruff format` (88 character lines)
 - **Performance**: Maintain O(1) lookup guarantees
 
+## Development Methodology
+
+### AI-Assisted Development
+
+This project has been developed with the assistance of AI Large Language Models (LLMs) following a **SPEC-driven development approach**. We believe in transparency about our development practices and the tools that help us deliver high-quality software.
+
+#### Our Approach
+
+- **Specification-First Design**: Every feature begins with clear, detailed specifications that define expected behavior, edge cases, and acceptance criteria
+- **AI Pair Programming**: LLMs assist in code generation, review, and optimization while maintaining human oversight and decision-making
+- **Test-Driven Validation**: All AI-generated code is validated through comprehensive test suites and human review
+- **Iterative Refinement**: Continuous improvement through AI-assisted code analysis and refactoring suggestions
+
+#### Benefits of AI-Assisted Development
+
+- **Accelerated Development**: Faster implementation of well-defined features
+- **Consistent Code Quality**: Adherence to established patterns and best practices
+- **Enhanced Documentation**: Comprehensive docstrings and inline documentation
+- **Reduced Boilerplate**: Efficient generation of repetitive code structures
+
+#### Human Oversight
+
+While AI tools significantly enhance our development workflow, all architectural decisions, API design choices, and critical implementation details are reviewed and approved by human developers. The AI serves as a powerful assistant, not a replacement for human expertise and judgment.
+
 ## License
 
 injx is licensed under the **Apache License 2.0**.
