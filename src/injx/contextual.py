@@ -26,6 +26,20 @@ __all__ = [
 
 T = TypeVar("T")
 
+# NOTE: ChainMap + MappingProxyType Type Ignore Pattern
+# Several locations in this file use `# type: ignore[arg-type]` when passing
+# MappingProxyType to ChainMap. This is intentional and correct:
+#
+# - ChainMap expects MutableMapping in its type signature
+# - MappingProxyType is not MutableMapping (it's read-only)
+# - However, ChainMap only needs the Mapping protocol at runtime
+# - MappingProxyType provides LIVE VIEW semantics essential for scope chaining
+# - Converting to dict() would create snapshots, breaking singleton propagation
+# - This pattern is critical for clear_all_contexts() and resource cleanup
+#
+# The type: ignore preserves correct runtime behavior while acknowledging the
+# type system limitation. This is a design decision, not a workaround.
+
 _context_stack: ContextVar[ChainMap[Token[Any], Any] | None] = ContextVar(
     "injx_context_stack", default=None
 )
@@ -100,7 +114,7 @@ class ContextualContainer:
     def _get_singleton_cached(self, token: Token[T]) -> T | None:
         if self._container_bridge is not None:
             return self._container_bridge._get_singleton_cached(token)
-        return cast(T, self._singletons.get(token))
+        return cast(T, self._singletons.get(cast(Token[object], token)))
 
     def _set_singleton_cached(self, token: Token[T], instance: T) -> None:
         if self._container_bridge is not None:
@@ -307,7 +321,7 @@ class ScopeManager:
         request_cleanup: deque[Callable[[], Any]] = deque()
         current = _context_stack.get()
         if current is None:
-            new_context = ChainMap(request_cache, self._container._singletons_mapping())
+            new_context = ChainMap(request_cache, self._container._singletons_mapping())  # type: ignore[arg-type]
         else:
             new_context = ChainMap(request_cache, *current.maps)
         token = _context_stack.set(new_context)
@@ -346,7 +360,7 @@ class ScopeManager:
         request_cleanup: deque[Callable[[], Any]] = deque()
         current = _context_stack.get()
         if current is None:
-            new_context = ChainMap(request_cache, self._container._singletons_mapping())
+            new_context = ChainMap(request_cache, self._container._singletons_mapping())  # type: ignore[arg-type]
         else:
             new_context = ChainMap(request_cache, *current.maps)
         token = _context_stack.set(new_context)
@@ -397,10 +411,10 @@ class ScopeManager:
             sess_async_token = None
         current = _context_stack.get()
         if current is None:
-            new_context = ChainMap(session_cache, self._container._singletons_mapping())
+            new_context = ChainMap(session_cache, self._container._singletons_mapping())  # type: ignore[arg-type]
         else:
             new_context = ChainMap(
-                current.maps[0], session_cache, self._container._singletons_mapping()
+                current.maps[0], session_cache, self._container._singletons_mapping()  # type: ignore[arg-type]
             )
         context_token = _context_stack.set(new_context)
         logger.info("Entering session scope")
