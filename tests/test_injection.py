@@ -404,7 +404,7 @@ class TestInjectDecorator:
 
     def test_inject_default_container(self):
         """Test @inject uses default container."""
-        with patch("injx.injection.get_default_container") as mock_get:
+        with patch("injx.injection.Container.get_active") as mock_get:
             mock_container = Mock()
             mock_container.get.return_value = Database()
             mock_get.return_value = mock_container

@@ -23,6 +23,7 @@ from typing import (
     Generic,
     ParamSpec,
     TypeVar,
+    Union,
     cast,
     get_args,
     get_origin,
@@ -30,11 +31,11 @@ from typing import (
     overload,
 )
 from typing import (
-    Union,
     cast as tcast,
 )
 
 from .container import Container
+from .dependencies import Dependencies
 from .logging import log_performance_metric, logger
 from .tokens import Token
 
@@ -155,6 +156,7 @@ class _DepKind(Enum):
     TOKEN = auto()
     TYPE = auto()
     INJECT = auto()
+    DEPENDENCIES = auto()
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,13 +227,23 @@ def analyze_dependencies(
             continue
 
         # For backward compatibility, return the original types
-        # Check for Token annotation first
+        # Check for Dependencies[T1, T2, ...] annotation first
+        origin = get_origin(annotation)
+        if origin is Dependencies:
+            dep_types = get_args(annotation)
+            # Store as DependencyRequest for consistency
+            deps[name] = DependencyRequest(
+                kind=_DepKind.DEPENDENCIES, key=dep_types, provider=None
+            )
+            continue
+
+        # Check for Token annotation
         if isinstance(annotation, Token):
             deps[name] = annotation
             continue
 
         # Check for Annotated[T, Token] or Annotated[T, Inject]
-        if get_origin(annotation) is Annotated:
+        if origin is Annotated:
             dep_type, *metadata = get_args(annotation)
             for meta in metadata:
                 if isinstance(meta, Token):
@@ -440,6 +452,9 @@ def resolve_dependencies(
 def _resolve_one(req: DependencyRequest, container: Any) -> object:
     """Resolve a single dependency synchronously."""
     match req.kind:
+        case _DepKind.DEPENDENCIES:
+            # Create Dependencies instance with all types
+            return Dependencies(container, req.key)
         case _DepKind.TOKEN:
             return container.get(req.key)
         case _DepKind.INJECT if req.provider:
@@ -463,6 +478,10 @@ async def _aresolve_one(req: DependencyRequest, container: Any) -> object:
         return await loop.run_in_executor(None, container.get, key)
 
     match req.kind:
+        case _DepKind.DEPENDENCIES:
+            # Dependencies uses sync resolution internally
+            # This is safe as individual deps can be async
+            return Dependencies(container, req.key)
         case _DepKind.TOKEN:
             return await _resolve_via_aget(req.key)
         case _DepKind.INJECT if req.provider:

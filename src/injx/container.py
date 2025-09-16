@@ -465,7 +465,13 @@ class Container:
         obj_token = cast(Token[object], token)
         if obj_token in self._registry or obj_token in self._singletons:
             raise ValueError(f"Token '{obj_token.name}' is already registered")
+
+        # Add to both _singletons and _registry
         self._singletons[obj_token] = value
+        # Create a provider record for the value
+        provider = lambda: value
+        record = ProviderRecord.create(provider, Scope.SINGLETON, ())
+        self._registry[obj_token] = record
         return self
 
     def override(self, token: Token[U], value: U) -> None:

@@ -24,6 +24,7 @@ from injx._metadata import __author__, __docs__, __email__, __org__, __repo__
 from injx._version import __version__
 from injx.container import Container
 from injx.contextual import ContextualContainer, RequestScope, SessionScope
+from injx.dependencies import Dependencies
 
 # Compatibility imports - these will be deprecated
 from injx.exceptions import CircularDependencyError, InjxError, ResolutionError
@@ -35,6 +36,7 @@ __all__ = [
     # Core classes
     "Container",
     "ContextualContainer",
+    "Dependencies",
     "Depends",
     "Given",
     "Inject",
