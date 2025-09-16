@@ -47,18 +47,15 @@ jobs:
       # Quality gates - fail fast, ordered by speed
       - name: Format check (ruff)
         run: |
-          source .venv/bin/activate
-          uv run ruff format --check src
+          uvx ruff format --check src
 
       - name: Lint (ruff)
         run: |
-          source .venv/bin/activate
-          uv run ruff check src
+          uvx ruff check src
 
       - name: Type check (basedpyright)
         run: |
-          source .venv/bin/activate
-          uv run basedpyright src
+          uvx basedpyright src
 
       # Run tests with coverage
       - name: Run tests with coverage
