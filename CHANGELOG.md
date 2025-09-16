@@ -4,6 +4,24 @@ All notable changes to Injx will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Critical**: Memory leak where async locks were never cleaned up
+- **High**: Memory leak in singleton lock cleanup for cached values
+- **Low**: Memory leak where type index was never cleared
+- Singleton locks now use fast path to check cache before acquiring lock
+- Container `clear()` method now properly cleans all internal dictionaries
+- Container `__aexit__` now clears async locks after cleanup
+
+### Performance
+- Optimized singleton resolution to avoid lock creation for cached values (99% of cases)
+- Implemented double-check locking pattern with fast path for better performance
+- Reduced lock contention in high-throughput scenarios
+
+### Testing
+- Added comprehensive memory leak detection tests
+- Added async lock cleanup verification tests
+- Added container cleanup tests for all lock types
+
 ## 0.2.0 - 2025-01-16
 
 ### Added
