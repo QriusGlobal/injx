@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from contextvars import Token as ContextToken
-from types import TracebackType
+from types import MappingProxyType, TracebackType
 from typing import Any, Awaitable, Callable, TypeVar, cast
 
 from .cleanup_strategy import CleanupStrategy
@@ -26,11 +26,11 @@ __all__ = [
 
 T = TypeVar("T")
 
-_context_stack: ContextVar[ChainMap[Token[object], object] | None] = ContextVar(
+_context_stack: ContextVar[ChainMap[Token[Any], Any] | None] = ContextVar(
     "injx_context_stack", default=None
 )
 
-_session_context: ContextVar[dict[Token[object], object] | None] = ContextVar(
+_session_context: ContextVar[dict[Token[Any], Any] | None] = ContextVar(
     "injx_session_context", default=None
 )
 
@@ -49,14 +49,14 @@ _session_cleanup_async: ContextVar[list[Callable[[], Awaitable[None]]] | None] =
 )
 
 
-def get_current_context() -> ChainMap[Token[object], object] | None:
+def get_current_context() -> ChainMap[Token[Any], Any] | None:
     """Get current dependency context."""
     return _context_stack.get()
 
 
 def set_context(
-    context: ChainMap[Token[object], object],
-) -> ContextToken[ChainMap[Token[object], object] | None]:
+    context: ChainMap[Token[Any], Any],
+) -> ContextToken[ChainMap[Token[Any], Any] | None]:
     """
     Set the current dependency context.
 
@@ -84,6 +84,35 @@ class ContextualContainer:
         # Use deque for LIFO cleanup ordering with precomputed strategies
         self._cleanup_stack: deque[CleanupStrategy] = deque()
         self._scope_manager = ScopeManager(self)
+        self._container_bridge: Any | None = None
+
+    def _set_container_bridge(self, container: Any) -> None:
+        """Connect to the main Container for shared singletons when available."""
+        self._container_bridge = container
+
+    def _singletons_mapping(
+        self,
+    ) -> MappingProxyType[Token[Any], Any] | dict[Token[Any], Any]:
+        if self._container_bridge is not None:
+            return self._container_bridge._singletons_mapping()
+        return MappingProxyType(self._singletons)
+
+    def _get_singleton_cached(self, token: Token[T]) -> T | None:
+        if self._container_bridge is not None:
+            return self._container_bridge._get_singleton_cached(token)
+        return cast(T, self._singletons.get(token))
+
+    def _set_singleton_cached(self, token: Token[T], instance: T) -> None:
+        if self._container_bridge is not None:
+            self._container_bridge._set_singleton_cached(token, instance)
+        else:
+            self._singletons[cast(Token[object], token)] = instance
+
+    def _clear_singletons(self) -> None:
+        if self._container_bridge is not None:
+            self._container_bridge._clear_singletons()
+        else:
+            self._singletons.clear()
 
     def _register_request_cleanup_sync(self, fn: Callable[[], None]) -> None:
         """Register a sync cleanup for the current request scope.
@@ -140,7 +169,7 @@ class ContextualContainer:
         context = _context_stack.get()
         if context is not None and hasattr(context, "maps") and len(context.maps) > 0:
             # The top-most map holds request-local values
-            context.maps[0][cast(Token[object], token)] = cast(object, instance)
+            context.maps[0][token] = instance
 
     @contextmanager
     def request_scope(self) -> Iterator[ContextualContainer]:
@@ -278,7 +307,7 @@ class ScopeManager:
         request_cleanup: deque[Callable[[], Any]] = deque()
         current = _context_stack.get()
         if current is None:
-            new_context = ChainMap(request_cache, self._container._singletons)
+            new_context = ChainMap(request_cache, self._container._singletons_mapping())
         else:
             new_context = ChainMap(request_cache, *current.maps)
         token = _context_stack.set(new_context)
@@ -317,7 +346,7 @@ class ScopeManager:
         request_cleanup: deque[Callable[[], Any]] = deque()
         current = _context_stack.get()
         if current is None:
-            new_context = ChainMap(request_cache, self._container._singletons)
+            new_context = ChainMap(request_cache, self._container._singletons_mapping())
         else:
             new_context = ChainMap(request_cache, *current.maps)
         token = _context_stack.set(new_context)
@@ -357,7 +386,7 @@ class ScopeManager:
     def session_scope(self) -> Iterator[None]:
         existing = _session_context.get()
         if existing is None:
-            session_cache: dict[Token[object], object] = {}
+            session_cache: dict[Token[Any], Any] = {}
             session_token = _session_context.set(session_cache)
             sess_sync_token = _session_cleanup_sync.set([])
             sess_async_token = _session_cleanup_async.set([])
@@ -368,10 +397,10 @@ class ScopeManager:
             sess_async_token = None
         current = _context_stack.get()
         if current is None:
-            new_context = ChainMap(session_cache, self._container._singletons)
+            new_context = ChainMap(session_cache, self._container._singletons_mapping())
         else:
             new_context = ChainMap(
-                current.maps[0], session_cache, self._container._singletons
+                current.maps[0], session_cache, self._container._singletons_mapping()
             )
         context_token = _context_stack.set(new_context)
         logger.info("Entering session scope")
@@ -401,29 +430,28 @@ class ScopeManager:
     def resolve_from_context(self, token: Token[T]) -> T | None:
         context = _context_stack.get()
         if context is not None:
-            key = cast(Token[object], token)
-            if key in context:
-                return cast(T, context[key])
+            if token in context:
+                return cast(T, context[token])
         if token.scope == Scope.SESSION:
             session = _session_context.get()
             if session and token in session:
-                return cast(T, session[cast(Token[object], token)])
-        if token.scope == Scope.SINGLETON and token in self._container._singletons:
-            return cast(T, self._container._singletons[cast(Token[object], token)])
+                return session[token]
+        if token.scope == Scope.SINGLETON:
+            cached = self._container._get_singleton_cached(token)
+            if cached is not None:
+                return cached
         # Transients are never cached - always return None to force new instance
         return None
 
     def store_in_context(self, token: Token[T], instance: T) -> None:
         if token.scope == Scope.SINGLETON:
-            self._container._singletons[cast(Token[object], token)] = cast(
-                object, instance
-            )
+            self._container._set_singleton_cached(token, instance)
         elif token.scope == Scope.REQUEST:
             self._container._put_in_current_request_cache(token, instance)
         elif token.scope == Scope.SESSION:
             session = _session_context.get()
             if session is not None:
-                session[cast(Token[object], token)] = cast(object, instance)
+                session[token] = instance
         elif token.scope == Scope.TRANSIENT:
             pass
 
@@ -438,7 +466,7 @@ class ScopeManager:
             session.clear()
 
     def clear_all_contexts(self) -> None:
-        self._container._singletons.clear()
+        self._container._clear_singletons()
         self.clear_request_context()
         self.clear_session_context()
 

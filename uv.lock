@@ -192,6 +192,11 @@ dev = [
     { name = "sqlalchemy" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "aiosqlite", marker = "extra == 'dev'", specifier = ">=0.19" },
@@ -204,6 +209,9 @@ requires-dist = [
     { name = "sqlalchemy", marker = "extra == 'dev'", specifier = ">=2.0" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.4.1" }]
 
 [[package]]
 name = "nodeenv"

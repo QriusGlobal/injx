@@ -39,7 +39,7 @@ All notable changes to Injx will be documented in this file.
 - Circular import between container.py and defaults.py (#PRD-001)
 - Type checking errors in injection.py (#PRD-002)
 - Thread-safety issues with global default container
-- `register_value` method now properly creates ProviderRecord
+- `register_value` method now properly creates ProviderSpec
 
 ### Deprecated
 - `get_default_container()` - use `Container.get_active()` instead (will be removed in v2.0.0)
