@@ -176,7 +176,7 @@ class DependencyRequest:
     """A structured request for a dependency."""
 
     kind: _DepKind
-    key: type[Any] | Token[Any]
+    key: type[Any] | Token[Any] | tuple[type[Any] | Token[Any], ...]  # Also support tuple for Dependencies
     provider: Callable[[], Any] | None = None
 
 
@@ -265,7 +265,7 @@ def analyze_dependencies(
                     inject_marker = cast(Inject[object], meta)
                     # Always set the type from Annotated[T, ...]
                     if hasattr(inject_marker, "set_type"):
-                        inject_marker.set_type(dep_type)
+                        inject_marker.set_type(cast(type[object], dep_type))
                     deps[name] = inject_marker
                     break
             if name in deps:
@@ -276,7 +276,10 @@ def analyze_dependencies(
             # For Inject[T], the annotation is a subclass with _inject_type attribute
             if isinstance(annotation, type) and issubclass(annotation, Inject):
                 # This is a dynamically created Inject[T] class
-                dep_type = getattr(annotation, "_inject_type", Any)
+                annotation_cast = cast(Any, annotation)
+                dep_type = getattr(annotation_cast, "_inject_type", None)
+                if dep_type is None:
+                    dep_type = Any
             else:
                 # Standard typing.Generic style (shouldn't happen but handle it)
                 args = get_args(annotation)
@@ -286,11 +289,11 @@ def analyze_dependencies(
                 # If there's an Inject default, use it with the type
                 inject_marker = cast(Inject[object], param.default)
                 if hasattr(inject_marker, "type") and not inject_marker.type:
-                    inject_marker.set_type(dep_type)
+                    inject_marker.set_type(cast(type[object], dep_type))
                 deps[name] = inject_marker
             else:
                 # Just the type annotation Inject[T], return the type
-                deps[name] = dep_type
+                deps[name] = cast(DependencyRequest | type[Any] | Token[object] | Inject[object], dep_type)
             continue
 
         # Check for Inject() default value
@@ -316,67 +319,6 @@ def analyze_dependencies(
     return deps
 
 
-def _extract_from_annotated(annotation: Any) -> DependencyRequest | None:
-    """Extract dependency from ``Annotated[T, ...]``."""
-    if get_origin(annotation) is not Annotated:
-        return None
-
-    dep_type, *metadata = get_args(annotation)
-    for meta in metadata:
-        if isinstance(meta, Token):
-            return DependencyRequest(kind=_DepKind.TOKEN, key=meta)
-        if isinstance(meta, Inject):
-            provider = meta.provider
-            return DependencyRequest(
-                kind=_DepKind.INJECT, key=dep_type, provider=provider
-            )
-    return None
-
-
-def _extract_from_inject_type(
-    annotation: Any, default: Any
-) -> DependencyRequest | None:
-    """Extract from ``Inject[T]`` or ``Given[T]``."""
-    if not _is_inject_type(annotation):
-        return None
-
-    args = get_args(annotation)
-    dep_type = args[0] if args else Any
-
-    # Ensure dep_type is a valid key type
-    if not isinstance(dep_type, type) and dep_type is not Any:
-        dep_type = cast(type[Any], dep_type)
-
-    provider: Callable[..., Any] | None = None
-    if isinstance(default, Inject) and default.provider:
-        provider = default.provider
-
-    return DependencyRequest(kind=_DepKind.INJECT, key=dep_type, provider=provider)
-
-
-def _extract_from_default(default: Any, annotation: Any) -> DependencyRequest | None:
-    """Extract from a default value like ``Inject()``."""
-    if not isinstance(default, Inject):
-        return None
-
-    dep_type = annotation if annotation is not Parameter.empty else Any
-
-    # Ensure dep_type is a valid key type
-    if not isinstance(dep_type, type) and dep_type is not Any:
-        dep_type = cast(type[Any], dep_type)
-
-    return DependencyRequest(
-        kind=_DepKind.INJECT, key=dep_type, provider=default.provider
-    )
-
-
-def _extract_from_token(annotation: Any) -> DependencyRequest | None:
-    """Extract from a ``Token`` annotation."""
-    if isinstance(annotation, Token):
-        return DependencyRequest(kind=_DepKind.TOKEN, key=annotation)
-    return None
-
-
 def _is_inject_type(annotation: Any) -> bool:
     """Check if an annotation is of type ``Inject[T]`` or ``Given[T]``."""
     # Check if it's a dynamically created Inject[T] subclass
@@ -385,7 +327,7 @@ def _is_inject_type(annotation: Any) -> bool:
     # Check for standard typing.Generic style
     origin = get_origin(annotation)
     return origin is Inject or (
-        hasattr(origin, "__name__") and origin.__name__ in ("Inject", "Given")
+        origin is not None and hasattr(origin, "__name__") and origin.__name__ in ("Inject", "Given")
     )
 
 
@@ -401,7 +343,7 @@ def _convert_to_dependency_request(
         # Get the type from the Inject instance if set
         dep_type = dep.type if hasattr(dep, "type") and dep.type else Any
         return DependencyRequest(
-            kind=_DepKind.INJECT, key=dep_type, provider=dep.provider
+            kind=_DepKind.INJECT, key=cast(type[Any] | Token[Any] | tuple[type[Any] | Token[Any], ...], dep_type), provider=dep.provider
         )
     if isinstance(dep, type):
         return DependencyRequest(kind=_DepKind.TYPE, key=dep)
@@ -461,14 +403,15 @@ def _resolve_one(req: DependencyRequest, container: Any) -> object:
     match req.kind:
         case _DepKind.DEPENDENCIES:
             # Create Dependencies instance with all types
-            return Dependencies(container, req.key)
+            # req.key is tuple[type[Any] | Token[Any], ...] but Dependencies expects tuple[type, ...]
+            return Dependencies(container, cast(tuple[type, ...], req.key))
         case _DepKind.TOKEN:
             return container.get(req.key)
         case _DepKind.INJECT if req.provider:
             return req.provider()
         case _DepKind.INJECT | _DepKind.TYPE:
             return container.get(req.key)
-        case _:
+        case _:  # type: ignore[misc]
             # This should be unreachable if analysis is correct
             raise TypeError(f"Unsupported dependency request: {req}")
 
@@ -488,7 +431,8 @@ async def _aresolve_one(req: DependencyRequest, container: Any) -> object:
         case _DepKind.DEPENDENCIES:
             # Dependencies uses sync resolution internally
             # This is safe as individual deps can be async
-            return Dependencies(container, req.key)
+            # req.key is tuple[type[Any] | Token[Any], ...] but Dependencies expects tuple[type, ...]
+            return Dependencies(container, cast(tuple[type, ...], req.key))
         case _DepKind.TOKEN:
             return await _resolve_via_aget(req.key)
         case _DepKind.INJECT if req.provider:
@@ -500,7 +444,7 @@ async def _aresolve_one(req: DependencyRequest, container: Any) -> object:
             return result
         case _DepKind.INJECT | _DepKind.TYPE:
             return await _resolve_via_aget(req.key)
-        case _:
+        case _:  # type: ignore[misc]
             # This should be unreachable if analysis is correct
             raise TypeError(f"Unsupported dependency request: {req}")
 
@@ -560,10 +504,10 @@ def inject(
 
 
 def _extract_overrides(
-    deps: dict[str, DependencyRequest], kwargs: dict[str, Any]
+    deps: dict[str, DependencyType], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
     """Extract explicit dependency overrides from keyword arguments."""
-    overrides = {}
+    overrides: dict[str, Any] = {}
     for name in deps:
         if name in kwargs:
             overrides[name] = kwargs.pop(name)
@@ -665,7 +609,7 @@ def inject(
             resolved = resolve_dependencies(deps, active_container, overrides)
             final_kwargs = _rebuild_kwargs(fn, args, kwargs, resolved)
 
-            return fn(**final_kwargs)
+            return fn(*args, **final_kwargs)  # type: ignore[arg-type]
 
         @wraps(fn)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
@@ -684,7 +628,7 @@ def inject(
             resolved = await aresolve_dependencies(deps, active_container, overrides)
             final_kwargs = _rebuild_kwargs(fn, args, kwargs, resolved)
 
-            return await cast(Awaitable[R], fn(**final_kwargs))
+            return await cast(Awaitable[R], fn(*args, **final_kwargs))  # type: ignore[arg-type]
 
         # NOTE: The sync/async wrapper duplication is intentional.
         # While metaprogramming could reduce duplication, it would:
