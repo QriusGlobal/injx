@@ -48,17 +48,17 @@ jobs:
       - name: Format check (ruff)
         run: |
           source .venv/bin/activate
-          ruff format --check src
+          uv run ruff format --check src
 
       - name: Lint (ruff)
         run: |
           source .venv/bin/activate
-          ruff check src
+          uv run ruff check src
 
       - name: Type check (basedpyright)
         run: |
           source .venv/bin/activate
-          basedpyright src
+          uv run basedpyright src
 
       # Run tests with coverage
       - name: Run tests with coverage
@@ -67,7 +67,7 @@ jobs:
         run: |
           source .venv/bin/activate
           mkdir -p reports
-          pytest -q -ra --maxfail=1 \
+          uv run pytest -q -ra --maxfail=1 \
             --junitxml=reports/junit.xml \
             --cov=src --cov-report=xml \
             -n auto
@@ -92,4 +92,4 @@ jobs:
       - name: Build docs (verification only)
         run: |
           source .venv/bin/activate
-          mkdocs build --strict
+          uv run mkdocs build --strict
