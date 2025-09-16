@@ -782,9 +782,9 @@ class Container:
 
         match scope:
             case Scope.REQUEST:
-                self._register_request_cleanup_sync(cleanup)
+                self._contextual._register_request_cleanup_sync(cleanup)
             case Scope.SESSION:
-                self._register_session_cleanup_sync(cleanup)
+                self._contextual._register_session_cleanup_sync(cleanup)
             case _:
                 pass  # SINGLETON and TRANSIENT don't need scoped cleanup
 
@@ -1035,9 +1035,9 @@ class Container:
 
         match scope:
             case Scope.REQUEST:
-                self._register_request_cleanup_async(cleanup)
+                self._contextual._register_request_cleanup_async(cleanup)
             case Scope.SESSION:
-                self._register_session_cleanup_async(cleanup)
+                self._contextual._register_session_cleanup_async(cleanup)
             case _:
                 pass  # SINGLETON and TRANSIENT don't need scoped cleanup
 

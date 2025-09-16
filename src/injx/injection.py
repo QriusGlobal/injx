@@ -30,12 +30,16 @@ from typing import (
     overload,
 )
 from typing import (
+    Union,
     cast as tcast,
 )
 
 from .container import Container
 from .logging import log_performance_metric, logger
 from .tokens import Token
+
+# Type alias for dependency types
+DependencyType = Union["DependencyRequest", type[Any], Token[object], "Inject[object]"]
 
 if TYPE_CHECKING:
     pass
@@ -158,14 +162,14 @@ class DependencyRequest:
     """A structured request for a dependency."""
 
     kind: _DepKind
-    key: type[Any] | Token[object]
+    key: type[Any] | Token[Any]
     provider: Callable[[], Any] | None = None
 
 
 @lru_cache(maxsize=256)
 def analyze_dependencies(
     func: Callable[..., Any],
-) -> dict[str, DependencyRequest | type[Any] | Token[object] | Inject[object]]:
+) -> dict[str, DependencyType]:
     """
     Analyze a function's signature to find injectable dependencies.
 
@@ -362,7 +366,7 @@ def _is_inject_type(annotation: Any) -> bool:
 
 
 def _convert_to_dependency_request(
-    dep: DependencyRequest | type[Any] | Token[object] | Inject[object],
+    dep: DependencyType,
 ) -> DependencyRequest:
     """Convert a dependency to a DependencyRequest for internal use."""
     if isinstance(dep, DependencyRequest):
@@ -398,7 +402,7 @@ class InjectionAnalyzer:
 
 
 def resolve_dependencies(
-    deps: dict[str, DependencyRequest | type[Any] | Token[object] | Inject[object]],
+    deps: dict[str, DependencyType],
     container: Any,
     overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
@@ -476,7 +480,7 @@ async def _aresolve_one(req: DependencyRequest, container: Any) -> object:
 
 
 async def aresolve_dependencies(
-    deps: dict[str, DependencyRequest | type[Any] | Token[object] | Inject[object]],
+    deps: dict[str, DependencyType],
     container: Any,
     overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
