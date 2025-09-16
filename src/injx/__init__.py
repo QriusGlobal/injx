@@ -77,7 +77,7 @@ __all__ = [
 
 
 # Compatibility functions with deprecation warnings
-def get_default_container():
+def get_default_container() -> Container:
     """Deprecated: Use Container.get_active() instead.
 
     Will be removed in v2.0.0.
@@ -93,7 +93,7 @@ def get_default_container():
     return Container.get_active()
 
 
-def set_default_container(container):
+def set_default_container(container: Container | None) -> None:
     """Deprecated: Use Container.set_active() instead.
 
     Will be removed in v2.0.0.

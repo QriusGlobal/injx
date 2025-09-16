@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
 from .cleanup_strategy import CleanupStrategy
 from .tokens import Scope
@@ -20,8 +20,8 @@ T = TypeVar("T")
 
 
 @dataclass(frozen=True, slots=True)
-class ProviderRecord(Generic[T]):
-    """Immutable provider metadata with precomputed cleanup strategy.
+class ProviderSpec(Generic[T]):
+    """Immutable provider specification with precomputed cleanup strategy.
 
     A frozen dataclass that stores provider information with its
     precomputed cleanup strategy and scope. Uses __slots__ to minimize
@@ -47,7 +47,7 @@ class ProviderRecord(Generic[T]):
 
     Example:
         >>> provider = lambda: Database()
-        >>> record = ProviderRecord.create(provider, Scope.SINGLETON)
+        >>> record = ProviderSpec.create(provider, Scope.SINGLETON)
         >>> assert record.cleanup == CleanupStrategy.CLOSE
         >>> assert not record.is_async
     """
@@ -56,16 +56,16 @@ class ProviderRecord(Generic[T]):
     cleanup: CleanupStrategy
     scope: Scope
     is_async: bool
-    dependencies: tuple["Token[object]", ...]
+    dependencies: tuple["Token[Any]", ...]
 
     @classmethod
     def create(
         cls,
         provider: Callable[..., T],
         scope: Scope,
-        dependencies: tuple["Token[object]", ...] | None = None,
-    ) -> ProviderRecord[T]:
-        """Create a ProviderRecord with precomputed metadata.
+        dependencies: tuple["Token[Any]", ...] | None = None,
+    ) -> "ProviderSpec[T]":
+        """Create a ProviderSpec with precomputed metadata.
 
         Factory method that analyzes the provider at registration time to
         determine its cleanup strategy and async nature. This eliminates
@@ -84,13 +84,13 @@ class ProviderRecord(Generic[T]):
                          an empty tuple.
 
         Returns:
-            ProviderRecord[T]: A new immutable record with precomputed
-                              metadata for efficient resource management.
+            ProviderSpec[T]: A new immutable specification with precomputed
+            metadata for efficient resource management.
 
         Example:
             >>> class Database:
             ...     def close(self): pass
-            >>> record = ProviderRecord.create(Database, Scope.SINGLETON)
+            >>> record = ProviderSpec.create(Database, Scope.SINGLETON)
             >>> assert record.cleanup == CleanupStrategy.CLOSE
             >>> assert not record.is_async
             >>> assert record.scope == Scope.SINGLETON

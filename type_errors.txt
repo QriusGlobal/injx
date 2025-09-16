@@ -1,0 +1,224 @@
+/Users/mishal/code/work/qrius-injx/src/injx/__init__.py
+  /Users/mishal/code/work/qrius-injx/src/injx/__init__.py: warning: Cycle detected in import chain
+    /Users/mishal/code/work/qrius-injx/src/injx/__init__.py
+    /Users/mishal/code/work/qrius-injx/src/injx/container.py (reportImportCycles)
+  /Users/mishal/code/work/qrius-injx/src/injx/__init__.py: warning: Cycle detected in import chain
+    /Users/mishal/code/work/qrius-injx/src/injx/__init__.py
+    /Users/mishal/code/work/qrius-injx/src/injx/injection.py
+    /Users/mishal/code/work/qrius-injx/src/injx/container.py (reportImportCycles)
+  /Users/mishal/code/work/qrius-injx/src/injx/__init__.py:96:27 - error: Type of parameter "container" is unknown (reportUnknownParameterType)
+  /Users/mishal/code/work/qrius-injx/src/injx/__init__.py:96:27 - error: Type annotation is missing for parameter "container" (reportMissingParameterType)
+  /Users/mishal/code/work/qrius-injx/src/injx/__init__.py:109:26 - error: Argument type is unknown
+    Argument corresponds to parameter "container" in function "set_active" (reportUnknownArgumentType)
+/Users/mishal/code/work/qrius-injx/src/injx/analyzer.py
+  /Users/mishal/code/work/qrius-injx/src/injx/analyzer.py:21:20 - warning: Type of "v" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/analyzer.py:57:23 - warning: Type of parameter "provider" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/analyzer.py:66:21 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "callable" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/analyzer.py:69:29 - warning: Type of parameter "token" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/analyzer.py:85:9 - warning: Type of "token_obj" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/analyzer.py:86:24 - warning: Argument type is Any
+    Argument corresponds to parameter "o" in function "getattr" (reportAny)
+/Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:42:22 - warning: Type of parameter "provider" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:77:20 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "hasattr" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:77:55 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "hasattr" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:79:20 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "hasattr" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:79:54 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "hasattr" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:81:20 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "hasattr" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:83:20 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "hasattr" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:89:14 - warning: Type of parameter "instance" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:119:21 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:121:28 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:121:36 - warning: Argument type is Any
+    Argument corresponds to parameter "o" in function "getattr" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:127:21 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:129:28 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:129:36 - warning: Argument type is Any
+    Argument corresponds to parameter "o" in function "getattr" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:135:21 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:137:28 - warning: Type of "__exit__" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:137:28 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:143:21 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:145:28 - warning: Type of "__aexit__" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/cleanup_strategy.py:145:28 - warning: Return type is Any (reportAny)
+/Users/mishal/code/work/qrius-injx/src/injx/container.py
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py: warning: Cycle detected in import chain
+    /Users/mishal/code/work/qrius-injx/src/injx/container.py
+    /Users/mishal/code/work/qrius-injx/src/injx/injection.py (reportImportCycles)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:103:30 - error: Cannot assign to attribute "_container" for class "ContextualContainer"
+    Attribute "_container" is unknown (reportAttributeAccessIssue)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:142:13 - warning: Type of "scope" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:146:50 - warning: Argument type is Any
+    Argument corresponds to parameter "scope" in function "register" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:290:16 - warning: Unnecessary isinstance call; "Token[U@register] | type[U@register]" is always an instance of "Token[Unknown] | type" (reportUnnecessaryIsInstance)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:391:16 - warning: Unnecessary isinstance call; "Token[U@register_context] | type[U@register_context]" is always an instance of "Token[Unknown] | type" (reportUnnecessaryIsInstance)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:476:9 - error: Type of "record" is partially unknown
+    Type of "record" is "ProviderRecord[Unknown]" (reportUnknownVariableType)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:800:34 - warning: "_register_request_cleanup_sync" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:802:34 - warning: "_register_session_cleanup_sync" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:920:40 - warning: Type of parameter "value" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:935:31 - warning: Type of parameter "value" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:1059:34 - warning: "_register_request_cleanup_async" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:1061:34 - warning: "_register_session_cleanup_async" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/container.py:1179:45 - warning: Type of parameter "value" is Any (reportAny)
+/Users/mishal/code/work/qrius-injx/src/injx/contextual.py
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:193:13 - warning: Type of "result" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:196:36 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "iscoroutine" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:218:13 - warning: Type of "result" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:220:36 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "iscoroutine" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:281:67 - warning: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:299:29 - warning: "_cleanup_scope" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:320:67 - warning: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:338:35 - warning: "_async_cleanup_scope" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:371:67 - warning: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:374:65 - warning: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:411:72 - warning: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:412:44 - warning: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:418:29 - warning: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:422:29 - warning: "_put_in_current_request_cache" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+  /Users/mishal/code/work/qrius-injx/src/injx/contextual.py:441:25 - warning: "_singletons" is protected and used outside of the class in which it is declared (reportPrivateUsage)
+/Users/mishal/code/work/qrius-injx/src/injx/dependencies.py
+  /Users/mishal/code/work/qrius-injx/src/injx/dependencies.py:57:9 - error: "__getitem__" is marked as overload, but additional overloads are missing (reportInconsistentOverload)
+  /Users/mishal/code/work/qrius-injx/src/injx/dependencies.py:59:9 - warning: Return type is Any (reportAny)
+/Users/mishal/code/work/qrius-injx/src/injx/injection.py
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:224:9 - warning: Type of "annotation" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:224:47 - warning: Type of "annotation" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:224:47 - warning: Argument type is Any
+    Argument corresponds to parameter "default" in function "get" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:230:9 - warning: Type of "origin" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:230:29 - warning: Argument type is Any
+    Argument corresponds to parameter "tp" in function "get_origin" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:235:49 - error: Argument of type "tuple[Any, ...]" cannot be assigned to parameter "key" of type "type[Any] | Token[Any]" in function "__init__"
+    Type "tuple[Any, ...]" is not assignable to type "type[Any] | Token[Any]"
+      "tuple[Any, ...]" is not assignable to "type[Any]"
+      "tuple[Any, ...]" is not assignable to "Token[Any]" (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:246:13 - warning: Type of "dep_type" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:247:17 - warning: Type of "meta" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:255:48 - warning: Argument type is Any
+    Argument corresponds to parameter "type_" in function "set_type" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:266:36 - error: Argument type is partially unknown
+    Argument corresponds to parameter "o" in function "getattr"
+    Argument type is "type[Inject[Unknown]]" (reportUnknownArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:272:27 - warning: Type of "default" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:276:44 - error: Argument of type "Any | type[Any]" cannot be assigned to parameter "type_" of type "type[object]" in function "set_type"
+    Type "Any | type[Any]" is not assignable to type "type[object]"
+      Type "type[Any]" is not assignable to type "type[object]" (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:280:17 - error: Argument of type "Any | type[Any]" cannot be assigned to parameter "value" of type "DependencyRequest | type[Any] | Token[object] | Inject[object]" in function "__setitem__"
+    Type "Any | type[Any]" is not assignable to type "DependencyRequest | type[Any] | Token[object] | Inject[object]"
+      Type "type[Any]" is not assignable to type "DependencyRequest | type[Any] | Token[object] | Inject[object]"
+        Type "type[Any]" is not assignable to type "DependencyRequest"
+        Type "type[Any]" is not assignable to type "Token[object]"
+        Type "type[Any]" is not assignable to type "Inject[object]" (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:284:23 - warning: Type of "default" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:288:44 - warning: Argument type is Any
+    Argument corresponds to parameter "type_" in function "set_type" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:306:5 - error: Function "_extract_from_annotated" is not accessed (reportUnusedFunction)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:306:29 - warning: Type of parameter "annotation" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:308:19 - warning: Argument type is Any
+    Argument corresponds to parameter "tp" in function "get_origin" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:311:5 - warning: Type of "dep_type" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:312:9 - warning: Type of "meta" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:314:63 - error: Argument type is partially unknown
+    Argument corresponds to parameter "key" in function "__init__"
+    Argument type is "Token[Unknown]" (reportUnknownArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:318:43 - warning: Argument type is Any
+    Argument corresponds to parameter "key" in function "__init__" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:323:5 - error: Function "_extract_from_inject_type" is not accessed (reportUnusedFunction)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:324:5 - warning: Type of parameter "annotation" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:324:22 - warning: Type of parameter "default" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:341:56 - error: Argument of type "type[Any] | type" cannot be assigned to parameter "key" of type "type[Any] | Token[Any]" in function "__init__"
+    Type "type[Any] | type" is not assignable to type "type[Any] | Token[Any]"
+      Type "type[Any]" is not assignable to type "type[Any] | Token[Any]"
+        Type "type[Any]" is not assignable to type "Token[Any]" (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:344:5 - error: Function "_extract_from_default" is not accessed (reportUnusedFunction)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:344:27 - warning: Type of parameter "default" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:344:41 - warning: Type of parameter "annotation" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:356:35 - error: Argument of type "type[Any] | type" cannot be assigned to parameter "key" of type "type[Any] | Token[Any]" in function "__init__"
+    Type "type[Any] | type" is not assignable to type "type[Any] | Token[Any]"
+      Type "type[Any]" is not assignable to type "type[Any] | Token[Any]"
+        Type "type[Any]" is not assignable to type "Token[Any]" (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:360:5 - error: Function "_extract_from_token" is not accessed (reportUnusedFunction)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:360:25 - warning: Type of parameter "annotation" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:363:59 - error: Argument type is partially unknown
+    Argument corresponds to parameter "key" in function "__init__"
+    Argument type is "Token[Unknown]" (reportUnknownArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:367:21 - warning: Type of parameter "annotation" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:375:41 - warning: Type of "__name__" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:375:48 - error: "__name__" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:391:39 - error: Argument of type "type[object] | type[Any]" cannot be assigned to parameter "key" of type "type[Any] | Token[Any]" in function "__init__"
+    Type "type[object] | type[Any]" is not assignable to type "type[Any] | Token[Any]"
+      Type "type[Any]" is not assignable to type "type[Any] | Token[Any]"
+        Type "type[Any]" is not assignable to type "Token[Any]" (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:393:8 - warning: Unnecessary isinstance call; "type[Any]" is always an instance of "type" (reportUnnecessaryIsInstance)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:399:25 - warning: Type of parameter "annotation" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:412:5 - warning: Type of parameter "container" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:446:42 - warning: Type of parameter "container" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:451:33 - warning: Argument type is Any
+    Argument corresponds to parameter "container" in function "__init__" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:451:44 - error: Argument of type "type[Any] | Token[Any]" cannot be assigned to parameter "types" of type "tuple[type, ...]" in function "__init__"
+    Type "type[Any] | Token[Any]" is not assignable to type "tuple[type, ...]"
+      "type[Any]" is not assignable to "tuple[type, ...]" (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:453:20 - warning: Type of "get" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:453:20 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:455:20 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:457:20 - warning: Type of "get" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:457:20 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:458:14 - error: Pattern will never be matched for subject type "Never" (reportUnnecessaryComparison)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:463:49 - warning: Type of parameter "container" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:465:20 - warning: Argument type is Any
+    Argument corresponds to parameter "o" in function "getattr" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:467:33 - warning: Type of parameter "key" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:468:41 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "iscoroutinefunction" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:469:20 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:472:49 - warning: Type of "get" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:472:49 - warning: Argument type is Any
+    Argument corresponds to parameter "func" in function "run_in_executor" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:478:33 - warning: Argument type is Any
+    Argument corresponds to parameter "container" in function "__init__" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:478:44 - error: Argument of type "type[Any] | Token[Any]" cannot be assigned to parameter "types" of type "tuple[type, ...]" in function "__init__"
+    Type "type[Any] | Token[Any]" is not assignable to type "tuple[type, ...]"
+      "type[Any]" is not assignable to "tuple[type, ...]" (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:483:24 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:484:13 - warning: Type of "result" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:485:36 - warning: Argument type is Any
+    Argument corresponds to parameter "obj" in function "iscoroutine" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:487:20 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:490:14 - error: Pattern will never be matched for subject type "Never" (reportUnnecessaryComparison)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:497:5 - warning: Type of parameter "container" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:557:12 - error: Return type, "dict[Unknown, Unknown]", is partially unknown (reportUnknownVariableType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:648:44 - error: Argument of type "dict[str, DependencyType]" cannot be assigned to parameter "deps" of type "dict[str, DependencyRequest]" in function "_extract_overrides"
+    "dict[str, DependencyType]" is not assignable to "dict[str, DependencyRequest]"
+      Type parameter "_VT@dict" is invariant, but "DependencyType" is not the same as "DependencyRequest"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:652:20 - error: Arguments for ParamSpec "P@inject" are missing (reportCallIssue)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:652:25 - warning: Argument type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:664:44 - error: Argument of type "dict[str, DependencyType]" cannot be assigned to parameter "deps" of type "dict[str, DependencyRequest]" in function "_extract_overrides"
+    "dict[str, DependencyType]" is not assignable to "dict[str, DependencyRequest]"
+      Type parameter "_VT@dict" is invariant, but "DependencyType" is not the same as "DependencyRequest"
+      Consider switching from "dict" to "Mapping" which is covariant in the value type (reportArgumentType)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:668:45 - error: Arguments for ParamSpec "P@inject" are missing (reportCallIssue)
+  /Users/mishal/code/work/qrius-injx/src/injx/injection.py:668:50 - warning: Argument type is Any (reportAny)
+/Users/mishal/code/work/qrius-injx/src/injx/metaclasses.py
+  /Users/mishal/code/work/qrius-injx/src/injx/metaclasses.py:33:11 - warning: Type of parameter "kwargs" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/metaclasses.py:50:13 - warning: Type of "token_name" is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/metaclasses.py:52:34 - warning: Argument type is Any
+    Argument corresponds to parameter "object" in function "__new__" (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/metaclasses.py:53:13 - warning: Type of "scope_val" is Any (reportAny)
+/Users/mishal/code/work/qrius-injx/src/injx/protocols/cleanup.py
+  /Users/mishal/code/work/qrius-injx/src/injx/protocols/cleanup.py:35:9 - warning: Return type is Any (reportAny)
+  /Users/mishal/code/work/qrius-injx/src/injx/protocols/cleanup.py:53:15 - warning: Return type is Any (reportAny)
+/Users/mishal/code/work/qrius-injx/src/injx/protocols/container.py
+  /Users/mishal/code/work/qrius-injx/src/injx/protocols/container.py:18:69 - error: Type of parameter "scope" is partially unknown
+    Parameter type is "Unknown | None" (reportUnknownParameterType)
+  /Users/mishal/code/work/qrius-injx/src/injx/protocols/container.py:18:69 - error: Type annotation is missing for parameter "scope" (reportMissingParameterType)
+31 errors, 110 warnings, 0 notes

@@ -2,7 +2,7 @@
 
 from typing import Callable, Protocol, TypeVar, runtime_checkable
 
-from ..tokens import Token
+from ..tokens import Scope, Token
 
 T = TypeVar("T")
 
@@ -15,7 +15,9 @@ class ContainerProtocol(Protocol):
         """Get a dependency from the container."""
         ...
 
-    def register(self, token: Token[T], provider: Callable[..., T], scope=None) -> None:
+    def register(
+        self, token: Token[T], provider: Callable[..., T], scope: Scope | None = None
+    ) -> None:
         """Register a provider in the container."""
         ...
 

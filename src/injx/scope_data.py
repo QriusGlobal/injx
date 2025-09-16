@@ -13,7 +13,7 @@ from typing import Awaitable, Callable, TypeVar, cast
 
 from .cleanup_strategy import CleanupStrategy
 from .exceptions import AsyncCleanupRequiredError
-from .provider_record import ProviderRecord
+from .provider_spec import ProviderSpec
 from .tokens import Token
 
 T = TypeVar("T")
@@ -41,7 +41,7 @@ class ScopeData:
         >>> scope = ScopeData()
         >>> token = Token("db", Database)
         >>> db = Database()
-        >>> record = ProviderRecord.create(Database, Scope.REQUEST)
+        >>> record = ProviderSpec.create(Database, Scope.REQUEST)
         >>> ScopeData.store(scope, token, db, record)
         >>> retrieved = ScopeData.get(scope, token)
         >>> assert retrieved is db
@@ -52,7 +52,7 @@ class ScopeData:
 
     @classmethod
     def store(
-        cls, scope: ScopeData, token: Token[T], instance: T, record: ProviderRecord[T]
+        cls, scope: ScopeData, token: Token[T], instance: T, record: ProviderSpec[T]
     ) -> None:
         """Store an instance in scope cache and register its cleanup task.
 
@@ -68,7 +68,7 @@ class ScopeData:
             scope: The scope data to modify (mutated in place)
             token: The token identifying this instance
             instance: The instance to store in the cache
-            record: The provider record containing cleanup strategy
+            record: The provider specification describing cleanup strategy
 
         Note:
             Type casts to Token[object] and object are necessary because

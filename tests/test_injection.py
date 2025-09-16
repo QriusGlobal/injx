@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from injx.container import Container
 from injx.injection import (
     DependencyRequest,
     Depends,
@@ -403,19 +404,24 @@ class TestInjectDecorator:
         assert result is db_instance
 
     def test_inject_default_container(self):
-        """Test @inject uses default container."""
-        with patch("injx.injection.Container.get_active") as mock_get:
-            mock_container = Mock()
-            mock_container.get.return_value = Database()
-            mock_get.return_value = mock_container
+        """Test @inject uses the active container when none provided."""
+        container = Container()
+        token = Token("db", Database)
+
+        # Register singleton to ensure same instance returned
+        container.register_singleton(token, Database)
+
+        Container.set_active(container)
+        try:
 
             @inject
             def handler(db: Inject[Database]):
                 return db
 
             result = cast(Callable[[], Any], handler)()
-            assert isinstance(result, Database)
-            mock_get.assert_called_once()
+            assert result is container.get(token)
+        finally:
+            Container.set_active(None)
 
     def test_inject_preserves_function_metadata(self):
         """Test @inject preserves function metadata."""
