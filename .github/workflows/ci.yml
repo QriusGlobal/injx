@@ -17,9 +17,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  gate:
+  ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
@@ -33,54 +33,40 @@ jobs:
           python-version: '3.13'
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
-          activate-environment: true
 
-      - name: Install project (dev)
+      - name: Create virtual environment
+        run: uv venv
+
+      - name: Install all dependencies
         run: |
+          source .venv/bin/activate
           uv pip install -e .[dev]
+          uv pip install mkdocs-material mkdocs-minify-plugin mkdocstrings[python] mike
 
+      # Quality gates - fail fast, ordered by speed
       - name: Format check (ruff)
         run: |
-          uvx ruff format --check src
+          source .venv/bin/activate
+          ruff format --check src
 
       - name: Lint (ruff)
         run: |
-          uvx ruff check src
+          source .venv/bin/activate
+          ruff check src
 
       - name: Type check (basedpyright)
         run: |
-          uvx basedpyright src
+          source .venv/bin/activate
+          basedpyright src
 
-  tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # Run in parallel with gate, not sequentially
-    steps:
-      - name: Checkout
-        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
-        with:
-          python-version: '3.13'
-          enable-cache: true
-          cache-dependency-glob: "**/pyproject.toml"
-          activate-environment: true
-
-      - name: Install project (dev)
-        run: |
-          uv pip install -e .[dev]
-
-      - name: Tests with coverage (pytest-cov)
+      # Run tests with coverage
+      - name: Run tests with coverage
         env:
           PYTHONPATH: src
         run: |
-          uv pip install pytest-cov pytest-xdist
+          source .venv/bin/activate
           mkdir -p reports
-          uv run pytest \
-            -q -ra --maxfail=1 \
+          pytest -q -ra --maxfail=1 \
             --junitxml=reports/junit.xml \
             --cov=src --cov-report=xml \
             -n auto
@@ -101,28 +87,8 @@ jobs:
           name: junit-report
           path: reports/junit.xml
 
-  docs:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Run in parallel with gate, not sequentially
-    steps:
-      - name: Checkout
-        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
-        with:
-          python-version: '3.13'
-          enable-cache: true
-          cache-dependency-glob: "**/pyproject.toml"
-          activate-environment: true
-
-      - name: Install docs dependencies
+      # Verify docs build (without deploying)
+      - name: Build docs (verification only)
         run: |
-          uv pip install mkdocs-material mkdocs-minify-plugin mkdocstrings[python] mike
-
-      - name: Build docs
-        run: |
-          uv run mkdocs build
+          source .venv/bin/activate
+          mkdocs build --strict
