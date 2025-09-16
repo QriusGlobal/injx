@@ -142,6 +142,38 @@ _session_context: ContextVar[dict[Token, Any]] = ContextVar('session_context')
 - No cross-contamination in async environments
 - Automatic cleanup when context exits
 
+### ChainMap Live-View Pattern
+
+The scope hierarchy is implemented using `ChainMap` with `MappingProxyType` to create a live-view architecture:
+
+```python
+# Scope chaining: request -> session -> singletons
+new_context = ChainMap(
+    request_cache,                              # Layer 1: Mutable request cache
+    session_cache,                              # Layer 2: Mutable session cache
+    container._singletons_mapping()             # Layer 3: Live view of singletons
+)  # type: ignore[arg-type]
+```
+
+**Live-View Semantics:**
+- `MappingProxyType` provides read-only, live view of singleton cache
+- `ChainMap` layers scopes without copying data
+- Changes to singletons immediately visible to all active scopes
+- Critical for `clear_all_contexts()` and resource cleanup
+
+**Type System Conflict:**
+- ChainMap expects `MutableMapping` in type signature
+- MappingProxyType is not MutableMapping (read-only)
+- Runtime compatibility: ChainMap only needs `Mapping` protocol
+- `type: ignore[arg-type]` preserves correct behavior vs. type checker
+
+**Why Not dict() Conversion:**
+- `dict(mapping_proxy)` creates snapshots, not live views
+- Cleared singletons would remain in scope snapshots
+- Memory leaks from unreachable cached instances
+- Inconsistent state across concurrent scopes
+- Resource cleanup failures
+
 ## Type Safety Architecture
 
 ### Protocol-Based Design
