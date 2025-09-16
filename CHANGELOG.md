@@ -4,6 +4,36 @@ All notable changes to Injx will be documented in this file.
 
 ## [Unreleased]
 
+## 0.2.0 - 2025-01-16
+
+### Added
+- `Dependencies` pattern for grouping multiple dependencies (#PRD-003)
+- `Container.get_active()` and `Container.set_active()` class methods (#PRD-001)
+- `ContainerProtocol` for type-safe contracts (#PRD-002)
+- `AsyncCleanupRequiredError` to exports
+
+### Changed
+- Container now uses composition instead of inheritance (#PRD-001)
+- Simplified module structure and exports (#PRD-004)
+- Strengthened deprecation warnings for v2.0.0
+
+### Fixed
+- Circular import between container.py and defaults.py (#PRD-001)
+- Type checking errors in injection.py (#PRD-002)
+- Thread-safety issues with global default container
+- `register_value` method now properly creates ProviderRecord
+
+### Deprecated
+- `get_default_container()` - use `Container.get_active()` instead (will be removed in v2.0.0)
+- `set_default_container()` - use `Container.set_active()` instead (will be removed in v2.0.0)
+
+### Removed
+- `defaults.py` module (functionality moved to Container)
+- `InjectionAnalyzer` class (use `analyze_dependencies()` function directly)
+
+### Security
+- Improved context isolation with ContextVar
+
 ## 0.1.0 - 2025-01-15
 
 ### First Official Release
