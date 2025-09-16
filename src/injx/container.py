@@ -1279,9 +1279,9 @@ class Container:
         with self._lock:
             self._singletons.clear()
             self._given_providers.clear()
-            self._async_locks.clear()      # Clear async locks to prevent memory leak
+            self._async_locks.clear()  # Clear async locks to prevent memory leak
             self._singleton_locks.clear()  # Clear sync locks to prevent memory leak
-            self._type_index.clear()       # Clear type index to prevent memory leak
+            self._type_index.clear()  # Clear type index to prevent memory leak
             self._cache_hits = 0
             self._cache_misses = 0
             self._resolution_times.clear()
