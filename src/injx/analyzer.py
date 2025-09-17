@@ -1,5 +1,9 @@
 """Pure dependency analysis functions for the container."""
 
+# pyright: reportAny=false
+# This module performs runtime type introspection on arbitrary user types.
+# The use of Any is unavoidable and intentional for dependency analysis.
+
 from __future__ import annotations
 
 from typing import Any, Optional, Type, get_type_hints

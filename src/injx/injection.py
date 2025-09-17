@@ -35,27 +35,42 @@ from typing import (
 
 from .dependencies import Dependencies
 from .logging import log_performance_metric, logger
+from .protocols.container import ContainerProtocol
 from .tokens import Token
 
 # Type alias for dependency types
 DependencyType = Union["DependencyRequest", type[Any], Token[object], "Inject[object]"]
 
-# Note: Container import moved to _ContainerProxy to avoid circular imports
+# Global resolver for the active container to avoid circular imports
+_active_container_resolver: Callable[[], ContainerProtocol] | None = None
 
 
-class _ContainerProxy:
-    """Proxy for Container to avoid import cycles.
+def set_container_resolver(resolver: Callable[[], ContainerProtocol]) -> None:
+    """Set the function that returns the active container.
 
-    This class provides static methods that lazily import and delegate
-    to the real Container class, avoiding circular imports at module level.
+    This is called by the Container module to register its get_active method,
+    avoiding circular imports while maintaining type safety.
     """
+    global _active_container_resolver
+    _active_container_resolver = resolver
 
-    @staticmethod
-    def get_active() -> Any:  # Returns Container, but typed as Any to avoid import
-        """Get the active container, importing lazily to avoid cycles."""
+
+def get_active_container() -> ContainerProtocol:
+    """Get the active container with proper typing.
+
+    Returns a ContainerProtocol to maintain type safety while avoiding
+    circular imports between injection.py and container.py.
+    """
+    if _active_container_resolver is None:
+        # Lazy import and setup on first use
         from .container import Container
 
-        return Container.get_active()
+        # Cast to match protocol type
+        set_container_resolver(
+            cast(Callable[[], ContainerProtocol], Container.get_active)
+        )
+    # Type checker can't see that we've set it above
+    return _active_container_resolver()  # type: ignore[misc]
 
 
 __all__ = [
@@ -176,7 +191,9 @@ class DependencyRequest:
     """A structured request for a dependency."""
 
     kind: _DepKind
-    key: type[Any] | Token[Any] | tuple[type[Any] | Token[Any], ...]  # Also support tuple for Dependencies
+    key: (
+        type[Any] | Token[Any] | tuple[type[Any] | Token[Any], ...]
+    )  # Also support tuple for Dependencies
     provider: Callable[[], Any] | None = None
 
 
@@ -293,7 +310,10 @@ def analyze_dependencies(
                 deps[name] = inject_marker
             else:
                 # Just the type annotation Inject[T], return the type
-                deps[name] = cast(DependencyRequest | type[Any] | Token[object] | Inject[object], dep_type)
+                deps[name] = cast(
+                    DependencyRequest | type[Any] | Token[object] | Inject[object],
+                    dep_type,
+                )
             continue
 
         # Check for Inject() default value
@@ -327,7 +347,9 @@ def _is_inject_type(annotation: Any) -> bool:
     # Check for standard typing.Generic style
     origin = get_origin(annotation)
     return origin is Inject or (
-        origin is not None and hasattr(origin, "__name__") and origin.__name__ in ("Inject", "Given")
+        origin is not None
+        and hasattr(origin, "__name__")
+        and origin.__name__ in ("Inject", "Given")
     )
 
 
@@ -343,7 +365,11 @@ def _convert_to_dependency_request(
         # Get the type from the Inject instance if set
         dep_type = dep.type if hasattr(dep, "type") and dep.type else Any
         return DependencyRequest(
-            kind=_DepKind.INJECT, key=cast(type[Any] | Token[Any] | tuple[type[Any] | Token[Any], ...], dep_type), provider=dep.provider
+            kind=_DepKind.INJECT,
+            key=cast(
+                type[Any] | Token[Any] | tuple[type[Any] | Token[Any], ...], dep_type
+            ),
+            provider=dep.provider,
         )
     if isinstance(dep, type):
         return DependencyRequest(kind=_DepKind.TYPE, key=dep)
@@ -364,7 +390,7 @@ def _should_auto_inject(annotation: Any) -> bool:
 
 def resolve_dependencies(
     deps: dict[str, DependencyType],
-    container: Any,
+    container: ContainerProtocol,
     overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """
@@ -398,7 +424,7 @@ def resolve_dependencies(
     return resolved
 
 
-def _resolve_one(req: DependencyRequest, container: Any) -> object:
+def _resolve_one(req: DependencyRequest, container: ContainerProtocol) -> object:
     """Resolve a single dependency synchronously."""
     match req.kind:
         case _DepKind.DEPENDENCIES:
@@ -406,17 +432,17 @@ def _resolve_one(req: DependencyRequest, container: Any) -> object:
             # req.key is tuple[type[Any] | Token[Any], ...] but Dependencies expects tuple[type, ...]
             return Dependencies(container, cast(tuple[type, ...], req.key))
         case _DepKind.TOKEN:
-            return container.get(req.key)
+            return container.get(cast(Token[Any] | type[Any], req.key))
         case _DepKind.INJECT if req.provider:
             return req.provider()
         case _DepKind.INJECT | _DepKind.TYPE:
-            return container.get(req.key)
+            return container.get(cast(Token[Any] | type[Any], req.key))
         case _:  # type: ignore[misc]
             # This should be unreachable if analysis is correct
             raise TypeError(f"Unsupported dependency request: {req}")
 
 
-async def _aresolve_one(req: DependencyRequest, container: Any) -> object:
+async def _aresolve_one(req: DependencyRequest, container: ContainerProtocol) -> object:
     """Resolve a single dependency asynchronously."""
     aget = getattr(container, "aget", None)
 
@@ -451,7 +477,7 @@ async def _aresolve_one(req: DependencyRequest, container: Any) -> object:
 
 async def aresolve_dependencies(
     deps: dict[str, DependencyType],
-    container: Any,
+    container: ContainerProtocol,
     overrides: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """
@@ -602,7 +628,7 @@ def inject(
                 return fn(*args, **kwargs)
 
             if container is None:
-                active_container = _ContainerProxy.get_active()
+                active_container = get_active_container()
             else:
                 active_container = container
             overrides = _extract_overrides(deps, kwargs)
@@ -621,7 +647,7 @@ def inject(
                 return await cast(Awaitable[R], fn(*args, **kwargs))
 
             if container is None:
-                active_container = _ContainerProxy.get_active()
+                active_container = get_active_container()
             else:
                 active_container = container
             overrides = _extract_overrides(deps, kwargs)

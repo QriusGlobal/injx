@@ -15,6 +15,10 @@ class ContainerProtocol(Protocol):
         """Get a dependency from the container."""
         ...
 
+    async def aget(self, token: Token[T] | type[T]) -> T:
+        """Get a dependency from the container asynchronously."""
+        ...
+
     def register(
         self, token: Token[T], provider: Callable[..., T], scope: Scope | None = None
     ) -> None:

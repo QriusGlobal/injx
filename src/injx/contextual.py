@@ -100,7 +100,7 @@ class ContextualContainer:
         self._scope_manager = ScopeManager(self)
         self._container_bridge: Any | None = None
 
-    def _set_container_bridge(self, container: Any) -> None:
+    def set_container_bridge(self, container: Any) -> None:
         """Connect to the main Container for shared singletons when available."""
         self._container_bridge = container
 
@@ -111,24 +111,24 @@ class ContextualContainer:
             return self._container_bridge._singletons_mapping()
         return MappingProxyType(self._singletons)
 
-    def _get_singleton_cached(self, token: Token[T]) -> T | None:
+    def get_singleton_cached(self, token: Token[T]) -> T | None:
         if self._container_bridge is not None:
-            return self._container_bridge._get_singleton_cached(token)
+            return self._container_bridge.get_singleton_cached(token)
         return cast(T, self._singletons.get(cast(Token[object], token)))
 
-    def _set_singleton_cached(self, token: Token[T], instance: T) -> None:
+    def set_singleton_cached(self, token: Token[T], instance: T) -> None:
         if self._container_bridge is not None:
-            self._container_bridge._set_singleton_cached(token, instance)
+            self._container_bridge.set_singleton_cached(token, instance)
         else:
             self._singletons[cast(Token[object], token)] = instance
 
-    def _clear_singletons(self) -> None:
+    def clear_singletons(self) -> None:
         if self._container_bridge is not None:
-            self._container_bridge._clear_singletons()
+            self._container_bridge.clear_singletons()
         else:
             self._singletons.clear()
 
-    def _register_request_cleanup_sync(self, fn: Callable[[], None]) -> None:
+    def register_request_cleanup_sync(self, fn: Callable[[], None]) -> None:
         """Register a sync cleanup for the current request scope.
 
         Internal API called by the container when a sync context-managed resource
@@ -139,9 +139,7 @@ class ContextualContainer:
             raise RuntimeError("No active request scope for registering cleanup")
         stack.append(fn)
 
-    def _register_request_cleanup_async(
-        self, fn: Callable[[], Awaitable[None]]
-    ) -> None:
+    def register_request_cleanup_async(self, fn: Callable[[], Awaitable[None]]) -> None:
         """Register an async cleanup for the current request scope.
 
         Internal API called by the container for async context-managed resources.
@@ -152,7 +150,7 @@ class ContextualContainer:
             raise RuntimeError("No active request scope for registering async cleanup")
         stack.append(fn)
 
-    def _register_session_cleanup_sync(self, fn: Callable[[], None]) -> None:
+    def register_session_cleanup_sync(self, fn: Callable[[], None]) -> None:
         """Register a sync cleanup for the active session scope.
 
         Internal API used for session-scoped sync context-managed resources.
@@ -162,9 +160,7 @@ class ContextualContainer:
             raise RuntimeError("No active session scope for registering cleanup")
         stack.append(fn)
 
-    def _register_session_cleanup_async(
-        self, fn: Callable[[], Awaitable[None]]
-    ) -> None:
+    def register_session_cleanup_async(self, fn: Callable[[], Awaitable[None]]) -> None:
         """Register an async cleanup for the active session scope.
 
         Internal API used for session-scoped async context-managed resources.
@@ -174,7 +170,7 @@ class ContextualContainer:
             raise RuntimeError("No active session scope for registering async cleanup")
         stack.append(fn)
 
-    def _put_in_current_request_cache(self, token: Token[T], instance: T) -> None:
+    def put_in_current_request_cache(self, token: Token[T], instance: T) -> None:
         """Insert a value into the current request cache unconditionally.
 
         This bypasses scope checks and is intended for temporary overrides
@@ -221,7 +217,7 @@ class ContextualContainer:
         with self._scope_manager.session_scope():
             yield self
 
-    def _cleanup_scope(self, cleanup_tasks: deque[Callable[[], Any]]) -> None:
+    def cleanup_scope(self, cleanup_tasks: deque[Callable[[], Any]]) -> None:
         """Clean up resources in LIFO order using cleanup tasks.
 
         This method uses tasks created at scope exit time,
@@ -242,7 +238,7 @@ class ContextualContainer:
                     "Use an async request/session scope.",
                 )
 
-    async def _async_cleanup_scope(
+    async def async_cleanup_scope(
         self, cleanup_tasks: deque[Callable[[], Any]]
     ) -> None:
         """Async cleanup of resources using cleanup tasks.
@@ -339,7 +335,7 @@ class ScopeManager:
                     task = CleanupStrategy.create_task(resource, strategy)
                     request_cleanup.append(task)
             # Clean up resources using cleanup tasks
-            self._container._cleanup_scope(request_cleanup)
+            self._container.cleanup_scope(request_cleanup)
             try:
                 sync_fns = _request_cleanup_sync.get() or []
                 for fn in reversed(sync_fns):
@@ -378,7 +374,7 @@ class ScopeManager:
                     task = CleanupStrategy.create_task(resource, strategy)
                     request_cleanup.append(task)
             # Clean up resources using cleanup tasks
-            await self._container._async_cleanup_scope(request_cleanup)
+            await self._container.async_cleanup_scope(request_cleanup)
             async_fns = _request_cleanup_async.get() or []
             if async_fns:
                 await asyncio.gather(
@@ -414,7 +410,9 @@ class ScopeManager:
             new_context = ChainMap(session_cache, self._container._singletons_mapping())  # type: ignore[arg-type]
         else:
             new_context = ChainMap(
-                current.maps[0], session_cache, self._container._singletons_mapping()  # type: ignore[arg-type]
+                current.maps[0],
+                session_cache,
+                self._container._singletons_mapping(),  # type: ignore[arg-type]
             )
         context_token = _context_stack.set(new_context)
         logger.info("Entering session scope")
@@ -451,7 +449,7 @@ class ScopeManager:
             if session and token in session:
                 return session[token]
         if token.scope == Scope.SINGLETON:
-            cached = self._container._get_singleton_cached(token)
+            cached = self._container.get_singleton_cached(token)
             if cached is not None:
                 return cached
         # Transients are never cached - always return None to force new instance
@@ -459,9 +457,9 @@ class ScopeManager:
 
     def store_in_context(self, token: Token[T], instance: T) -> None:
         if token.scope == Scope.SINGLETON:
-            self._container._set_singleton_cached(token, instance)
+            self._container.set_singleton_cached(token, instance)
         elif token.scope == Scope.REQUEST:
-            self._container._put_in_current_request_cache(token, instance)
+            self._container.put_in_current_request_cache(token, instance)
         elif token.scope == Scope.SESSION:
             session = _session_context.get()
             if session is not None:
@@ -480,7 +478,7 @@ class ScopeManager:
             session.clear()
 
     def clear_all_contexts(self) -> None:
-        self._container._clear_singletons()
+        self._container.clear_singletons()
         self.clear_request_context()
         self.clear_session_context()
 

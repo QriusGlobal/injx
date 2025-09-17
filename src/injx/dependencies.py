@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
     from .protocols.container import ContainerProtocol
@@ -53,10 +53,7 @@ class Dependencies(Generic[*Ts]):  # type: ignore
             # Map lowercase names for convenience
             self._type_map[t.__name__.lower()] = t
 
-    @overload
-    def __getitem__(self, key: type[T]) -> T: ...
-
-    def __getitem__(self, key: type) -> Any:
+    def __getitem__(self, key: type[T]) -> T:
         """
         Type-safe dependency access.
 

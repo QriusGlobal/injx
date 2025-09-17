@@ -10,6 +10,8 @@ from __future__ import annotations
 from enum import IntEnum
 from typing import Any, Awaitable, Callable
 
+from .protocols.resources import SupportsAsyncClose, SupportsClose
+
 
 class CleanupStrategy(IntEnum):
     """Memory-efficient cleanup strategy enumeration.
@@ -78,9 +80,10 @@ class CleanupStrategy(IntEnum):
             return cls.ASYNC_CONTEXT
         if hasattr(provider, "__exit__") and hasattr(provider, "__enter__"):
             return cls.CONTEXT
-        if hasattr(provider, "aclose"):
+        # Use protocol checks for typed cleanup detection
+        if isinstance(provider, SupportsAsyncClose):
             return cls.ACLOSE
-        if hasattr(provider, "close"):
+        if isinstance(provider, SupportsClose):
             return cls.CLOSE
         return cls.NONE
 

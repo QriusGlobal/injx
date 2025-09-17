@@ -158,8 +158,8 @@ class Container:
         # Composition instead of inheritance
         self._contextual = ContextualContainer()
         # Provide bridge for contextual scopes to share singleton state
-        if hasattr(self._contextual, "_set_container_bridge"):
-            self._contextual._set_container_bridge(self)
+        if hasattr(self._contextual, "set_container_bridge"):
+            self._contextual.set_container_bridge(self)
 
         self.tokens: TokenFactory = TokenFactory()
         self._given_providers: TypedRegistry[type[Any], ProviderSync[Any]] = (
@@ -183,7 +183,7 @@ class Container:
         registry = Injectable.get_registry()
 
         for cls, token in registry.items():
-            scope = analyzer.get_token_metadata(cls)[1]
+            scope: Scope = analyzer.get_token_metadata(cls)[1]
             deps = analyzer.analyze_dependencies(cls)
 
             provider = self._create_provider_for_class(cls, deps)
@@ -360,10 +360,13 @@ class Container:
             )
 
             # Create ProviderSpec with precomputed metadata
-            record = ProviderSpec.create(
-                provider=provider,
-                scope=actual_scope,
-                dependencies=(),  # TODO: Analyze dependencies when we have analyzer support
+            record = cast(
+                ProviderSpec[Any],
+                ProviderSpec.create(
+                    provider=provider,
+                    scope=actual_scope,
+                    dependencies=(),  # TODO: Analyze dependencies when we have analyzer support
+                ),
             )
             # All registry writes must go through typed helpers to honour the
             # single-cast guarantee in TypedRegistry. Never mutate registry._storage.
@@ -512,7 +515,9 @@ class Container:
         def provider():
             return value
 
-        record = ProviderSpec.create(provider, Scope.SINGLETON, ())
+        record = cast(
+            ProviderSpec[Any], ProviderSpec.create(provider, Scope.SINGLETON, ())
+        )
         self._core.providers.set(token, record)
         return self
 
@@ -637,18 +642,18 @@ class Container:
             return record.scope
         return token.scope
 
-    def _get_singleton_cached(self, token: Token[U]) -> U | None:
+    def get_singleton_cached(self, token: Token[U]) -> U | None:
         token = self._canonicalize(token)
         return self._runtime.singletons.get(token)
 
-    def _set_singleton_cached(self, token: Token[U], value: U) -> None:
+    def set_singleton_cached(self, token: Token[U], value: U) -> None:
         self._runtime.singletons.set(token, value)
 
     def _singletons_mapping(self) -> MappingProxyType[Token[Any], Any]:
         """Expose singleton cache as a read-only mapping for scope chaining."""
         return self._runtime.singletons.as_read_only()
 
-    def _clear_singletons(self) -> None:
+    def clear_singletons(self) -> None:
         """Clear singleton cache (used by contextual scope resets)."""
         self._runtime.singletons.clear()
 
@@ -818,21 +823,21 @@ class Container:
             The resolved instance
         """
         # Fast path: Check cache WITHOUT lock first
-        cached = self._get_singleton_cached(token)
+        cached = self.get_singleton_cached(token)
         if cached is not None:
             return cached
 
         # Slow path: Need lock for creation
         with self._get_singleton_lock(token):
             # Double-check pattern (race condition protection)
-            cached = self._get_singleton_cached(token)
+            cached = self.get_singleton_cached(token)
             if cached is not None:
                 return cached
 
             # Enter context and cache
             cm = cast(ContextManager[U], record.provider())
             value = cm.__enter__()
-            self._set_singleton_cached(token, value)
+            self.set_singleton_cached(token, value)
 
             # Register cleanup
             self._register_singleton_context_cleanup(cm, value)
@@ -863,9 +868,9 @@ class Container:
 
         match scope:
             case Scope.REQUEST:
-                self._contextual._register_request_cleanup_sync(cleanup)
+                self._contextual.register_request_cleanup_sync(cleanup)
             case Scope.SESSION:
-                self._contextual._register_session_cleanup_sync(cleanup)
+                self._contextual.register_session_cleanup_sync(cleanup)
             case _:
                 pass  # SINGLETON and TRANSIENT don't need scoped cleanup
 
@@ -930,21 +935,21 @@ class Container:
             The resolved instance
         """
         # Fast path: Check cache WITHOUT lock first
-        cached = self._get_singleton_cached(token)
+        cached = self.get_singleton_cached(token)
         if cached is not None:
             return cached
 
         # Slow path: Need lock for creation
         with self._get_singleton_lock(token):
             # Double-check pattern (race condition protection)
-            cached = self._get_singleton_cached(token)
+            cached = self.get_singleton_cached(token)
             if cached is not None:
                 return cached
 
             # Create and cache instance
             instance = cast(ProviderSync[U], provider)()
             self._validate_and_track(token, instance)
-            self._set_singleton_cached(token, instance)
+            self.set_singleton_cached(token, instance)
 
         self._cleanup_singleton_lock(token)
         return instance
@@ -1083,14 +1088,14 @@ class Container:
         lock = self._ensure_async_lock(token)
         async with lock:
             # Check cache inside lock
-            cached = self._get_singleton_cached(token)
+            cached = self.get_singleton_cached(token)
             if cached is not None:
                 return cached
 
             # Enter async context and cache
             cm = cast(AsyncContextManager[U], record.provider())
             value = await cm.__aenter__()
-            self._set_singleton_cached(token, value)
+            self.set_singleton_cached(token, value)
 
             # Register async cleanup
             await self._register_singleton_context_cleanup_async(cm, value)
@@ -1120,9 +1125,9 @@ class Container:
 
         match scope:
             case Scope.REQUEST:
-                self._contextual._register_request_cleanup_async(cleanup)
+                self._contextual.register_request_cleanup_async(cleanup)
             case Scope.SESSION:
-                self._contextual._register_session_cleanup_async(cleanup)
+                self._contextual.register_session_cleanup_async(cleanup)
             case _:
                 pass  # SINGLETON and TRANSIENT don't need scoped cleanup
 
@@ -1181,14 +1186,14 @@ class Container:
         lock = self._ensure_async_lock(token)
         async with lock:
             # Double-check pattern
-            cached = self._get_singleton_cached(token)
+            cached = self.get_singleton_cached(token)
             if cached is not None:
                 return cached
 
             # Create instance (async or sync)
             instance = await self._call_provider_async(provider)
             self._validate_and_track(token, instance)
-            self._set_singleton_cached(token, instance)
+            self.set_singleton_cached(token, instance)
 
         return instance
 
