@@ -33,7 +33,8 @@ jobs:
       - name: Install docs tooling
         run: |
           source .venv/bin/activate
-          uv pip install mkdocs-material mkdocs-minify-plugin mkdocstrings[python] mike mkdocs-llmstxt beautifulsoup4 html2text
+          uv pip install mkdocs-material mkdocs-minify-plugin mkdocstrings[python] \
+            mike mkdocs-llmstxt beautifulsoup4 html2text
 
       - name: Configure git
         run: |
