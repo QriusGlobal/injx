@@ -5,9 +5,15 @@ All notable changes to Injx will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **Critical**: Parameter resolution conflicts in `@inject` decorator causing "multiple values for argument" errors
+  - Fixed double parameter passing in sync and async injection wrappers
+  - Resolved 5 failing tests while maintaining all existing functionality
+  - No performance impact - minimal code changes required
 - **Critical**: Memory leak where async locks were never cleaned up
 - **High**: Memory leak in singleton lock cleanup for cached values
 - **Low**: Memory leak where type index was never cleared
+- **Low**: Test method name error calling non-existent `_clear_singletons()` method
+- **Low**: Remove invalid asyncio package from dev dependencies
 - Singleton locks now use fast path to check cache before acquiring lock
 - Container `clear()` method now properly cleans all internal dictionaries
 - Container `__aexit__` now clears async locks after cleanup
@@ -17,10 +23,23 @@ All notable changes to Injx will be documented in this file.
 - Implemented double-check locking pattern with fast path for better performance
 - Reduced lock contention in high-throughput scenarios
 
+### Development
+- Improved type safety following architectural guidance
+- Consolidated type checker configuration in pyproject.toml
+- Set reportImportCycles and reportAny as warnings instead of suppressions
+- Added .codecontext dev tool directory to .gitignore
+
 ### Testing
 - Added comprehensive memory leak detection tests
 - Added async lock cleanup verification tests
 - Added container cleanup tests for all lock types
+
+### Documentation
+- Documented ChainMap/MappingProxyType live-view architecture
+- Created comprehensive PRD for injection parameter resolution analysis
+
+### Breaking Changes
+- Removed `container.inject()` anti-pattern method (deprecated in favor of `@inject` decorator)
 
 ## 0.2.0 - 2025-01-16
 
