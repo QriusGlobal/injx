@@ -2,6 +2,38 @@
 
 All notable changes to Injx will be documented in this file.
 
+## [1.0.0](https://github.com/QriusGlobal/injx/compare/v0.2.1...v1.0.0) (2025-09-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* Removed container.inject() method to improve architecture
+
+### Bug Fixes
+
+* add pytest-cov and pytest-xdist to CI dependencies ([eb43de7](https://github.com/QriusGlobal/injx/commit/eb43de72584ae25576a925a8812f14b939a13a02))
+* consolidate CI workflow and fix venv issues ([b7585c2](https://github.com/QriusGlobal/injx/commit/b7585c2df205c9953e3bf4e3fd18fb36e3b142e7))
+* correct Release Please manifest to reflect actual version 0.2.1 ([d042455](https://github.com/QriusGlobal/injx/commit/d042455c4b9d8a54890d0adbd66f57bd4f790622))
+* remove invalid asyncio package from dev dependencies ([65287f2](https://github.com/QriusGlobal/injx/commit/65287f2a8dbf65eb4f22d2ceebed00f314a1eded))
+* resolve circular import between container and injection modules ([ef9871f](https://github.com/QriusGlobal/injx/commit/ef9871f2eee3bc7ebad19e363144bc4b635c12d6))
+* resolve parameter resolution conflicts in injection wrapper ([b44056c](https://github.com/QriusGlobal/injx/commit/b44056cc1f1d104e51162d34cd6ab099ec25dcae))
+* resolve type errors in injection and registry modules ([002ce00](https://github.com/QriusGlobal/injx/commit/002ce0075d27f229826798c9b3553e99658bb498))
+* set reportImportCycles and reportAny as warnings not suppressions ([89f2414](https://github.com/QriusGlobal/injx/commit/89f241431385c293b3f21eafe2bf373f27fd35cc))
+* update Release Please action to working SHA hash and fix YAML formatting ([90399f3](https://github.com/QriusGlobal/injx/commit/90399f3c8a9a8093e092da65693c8718fb7e9e9f))
+* use uv run for all commands to ensure tools are available ([882f26b](https://github.com/QriusGlobal/injx/commit/882f26b636a3b4e4307f4c4f0aaf15ce67871ab3))
+* use uvx for tools that don't need to be installed ([1f3a021](https://github.com/QriusGlobal/injx/commit/1f3a021d91838797fc9bccd22d9a600b4ad014d3))
+
+
+### Documentation
+
+* document ChainMap/MappingProxyType live-view architecture ([28aa7fd](https://github.com/QriusGlobal/injx/commit/28aa7fd4d59f8b4d2efb3d66dded3fc85eb09b83))
+* update CHANGELOG with recent fixes and improvements ([8a4cfb1](https://github.com/QriusGlobal/injx/commit/8a4cfb1810f6e39fd7b07ff5b8d4ca6da03873b3))
+
+
+### Code Refactoring
+
+* remove container.inject() anti-pattern ([3ffe736](https://github.com/QriusGlobal/injx/commit/3ffe73651bd341c5100345bc9f9ce172180ee555))
+
 ## [Unreleased]
 
 ### Fixed
