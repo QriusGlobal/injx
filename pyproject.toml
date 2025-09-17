@@ -67,10 +67,8 @@ reportUnusedFunction = "error"
 # Warning-level checks
 reportUnnecessaryIsInstance = "warning"
 reportPrivateUsage = "warning"
-
-# Suppressed false positives with explanations
-reportImportCycles = false  # Handled properly by lazy imports in _ContainerProxy
-reportAny = false           # DI containers require dynamic typing for flexibility
+reportImportCycles = "warning"  # Monitor but don't fail - handled by lazy imports
+reportAny = "warning"           # Monitor but don't fail - DI needs dynamic typing
 
 [tool.ruff]
 target-version = "py313"
