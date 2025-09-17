@@ -53,3 +53,5 @@ Thumbs.db
 # MkDocs build output (published separately via gh-pages)
 site/
 .basedpyright_full.txt
+.codecontext/cache/
+.codecontext/logs/
