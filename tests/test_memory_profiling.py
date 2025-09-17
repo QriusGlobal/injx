@@ -277,8 +277,12 @@ class TestMemoryProfiling:
                 self.value = "async_singleton"
 
         # Test 1: Async locks created during resolution
-        token1 = Token("async_singleton_1", AsyncSingletonService, scope=Scope.SINGLETON)
-        token2 = Token("async_singleton_2", AsyncSingletonService, scope=Scope.SINGLETON)
+        token1 = Token(
+            "async_singleton_1", AsyncSingletonService, scope=Scope.SINGLETON
+        )
+        token2 = Token(
+            "async_singleton_2", AsyncSingletonService, scope=Scope.SINGLETON
+        )
         container.register(token1, AsyncSingletonService)
         container.register(token2, AsyncSingletonService)
 
@@ -300,7 +304,9 @@ class TestMemoryProfiling:
         # Test 3: __aexit__ should clear async locks
         # Create a new container for this test
         container2 = Container()
-        token3 = Token("async_singleton_3", AsyncSingletonService, scope=Scope.SINGLETON)
+        token3 = Token(
+            "async_singleton_3", AsyncSingletonService, scope=Scope.SINGLETON
+        )
         container2.register(token3, AsyncSingletonService)
         await container2.aget(token3)
 
@@ -368,9 +374,7 @@ class TestMemoryProfiling:
 
         # Clear should remove async locks
         container.clear()
-        assert len(container._async_locks) == 0, (
-            "clear() should remove all async locks"
-        )
+        assert len(container._async_locks) == 0, "clear() should remove all async locks"
 
     def test_resolution_set_memory_efficiency(self):
         """Test that the new _resolution_set for O(1) cycle detection is memory efficient."""
