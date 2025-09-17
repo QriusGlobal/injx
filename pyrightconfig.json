@@ -1,0 +1,18 @@
+{
+  "include": ["src"],
+  "exclude": ["tests", "examples", "dist", "build"],
+  "pythonVersion": "3.13",
+  "venvPath": ".",
+  "venv": ".venv",
+  "stubPath": "typings",
+  "typeCheckingMode": "strict",
+
+  "reportMissingTypeStubs": "error",
+  "reportImportCycles": false,
+  "reportAny": false,
+  "reportUnusedImport": "error",
+  "reportUnusedClass": "error",
+  "reportUnusedFunction": "error",
+  "reportUnnecessaryIsInstance": "warning",
+  "reportPrivateUsage": "warning"
+}
