@@ -635,7 +635,7 @@ def inject(
             resolved = resolve_dependencies(deps, active_container, overrides)
             final_kwargs = _rebuild_kwargs(fn, args, kwargs, resolved)
 
-            return fn(*args, **final_kwargs)  # type: ignore[arg-type]
+            return fn(**final_kwargs)  # type: ignore[arg-type]
 
         @wraps(fn)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
@@ -654,7 +654,7 @@ def inject(
             resolved = await aresolve_dependencies(deps, active_container, overrides)
             final_kwargs = _rebuild_kwargs(fn, args, kwargs, resolved)
 
-            return await cast(Awaitable[R], fn(*args, **final_kwargs))  # type: ignore[arg-type]
+            return await cast(Awaitable[R], fn(**final_kwargs))  # type: ignore[arg-type]
 
         # NOTE: The sync/async wrapper duplication is intentional.
         # While metaprogramming could reduce duplication, it would:

@@ -271,13 +271,16 @@ class TestContextualContainer:
                 container.store_in_context(request_token, "request_value")
 
                 # Verify all three layers are accessible (ChainMap layering)
-                assert container.resolve_from_context(singleton_token) is singleton_instance
+                assert (
+                    container.resolve_from_context(singleton_token)
+                    is singleton_instance
+                )
                 assert container.resolve_from_context(session_token) == "session_value"
                 assert container.resolve_from_context(request_token) == "request_value"
 
                 # CRITICAL TEST: Clear singletons while in nested scopes
                 # This must affect the ChainMap immediately due to live-view semantics
-                container._clear_singletons()
+                container.clear_singletons()
 
                 # Singleton should now be None due to live-view (not snapshot) semantics
                 assert container.resolve_from_context(singleton_token) is None
