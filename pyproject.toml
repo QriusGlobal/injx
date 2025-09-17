@@ -122,11 +122,6 @@ packages = ["src/injx"]
 [tool.hatch.version]
 path = "src/injx/_version.py"
 
-[dependency-groups]
-dev = [
-    "pytest>=8.4.1",
-]
-
 [tool.hatch.build.targets.sdist]
 include = [
     "src/injx/py.typed",
