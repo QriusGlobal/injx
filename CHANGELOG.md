@@ -6,7 +6,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [0.2.1] - 2025-09-18
+### Features
+
+- `Dependencies` pattern for grouping multiple dependencies (#PRD-003)
+- `Container.get_active()` and `Container.set_active()` class methods (#PRD-001)
+- `ContainerProtocol` for type-safe contracts (#PRD-002)
+- `AsyncCleanupRequiredError` to exports
 
 ### Bug Fixes
 
@@ -19,6 +24,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Low**: Memory leak where type index was never cleared
 - **Low**: Test method name error calling non-existent `_clear_singletons()` method
 - **Low**: Remove invalid asyncio package from dev dependencies
+- Circular import between container.py and defaults.py (#PRD-001)
+- Type checking errors in injection.py (#PRD-002)
+- Thread-safety issues with global default container
+- `register_value` method now properly creates ProviderSpec
 - Singleton locks now use fast path to check cache before acquiring values (99% of cases)
 - Container `clear()` method now properly cleans all internal dictionaries
 - Container `__aexit__` now clears async locks after cleanup
@@ -31,6 +40,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Refactoring
 
+- Container now uses composition instead of inheritance (#PRD-001)
+- Simplified module structure and exports (#PRD-004)
+- Strengthened deprecation warnings for v2.0.0
 - Improved type safety following architectural guidance
 - Consolidated type checker configuration in pyproject.toml
 - Set reportImportCycles and reportAny as warnings instead of suppressions
@@ -47,32 +59,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Documented ChainMap/MappingProxyType live-view architecture
 - Created comprehensive PRD for injection parameter resolution analysis
 
-### Breaking Changes
-
-- Removed `container.inject()` anti-pattern method (deprecated in favor of `@inject` decorator)
-
-## [0.2.0] - 2025-01-16
-
-### Features
-
-- `Dependencies` pattern for grouping multiple dependencies (#PRD-003)
-- `Container.get_active()` and `Container.set_active()` class methods (#PRD-001)
-- `ContainerProtocol` for type-safe contracts (#PRD-002)
-- `AsyncCleanupRequiredError` to exports
-
-### Refactoring
-
-- Container now uses composition instead of inheritance (#PRD-001)
-- Simplified module structure and exports (#PRD-004)
-- Strengthened deprecation warnings for v2.0.0
-
-### Bug Fixes
-
-- Circular import between container.py and defaults.py (#PRD-001)
-- Type checking errors in injection.py (#PRD-002)
-- Thread-safety issues with global default container
-- `register_value` method now properly creates ProviderSpec
-
 ### Deprecated
 
 - `get_default_container()` - use `Container.get_active()` instead (will be removed in v2.0.0)
@@ -82,6 +68,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `defaults.py` module (functionality moved to Container)
 - `InjectionAnalyzer` class (use `analyze_dependencies()` function directly)
+
+### Breaking Changes
+
+- Removed `container.inject()` anti-pattern method (deprecated in favor of `@inject` decorator)
 
 ## [0.1.0] - 2025-01-15
 
