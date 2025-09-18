@@ -90,4 +90,3 @@ jobs:
         run: |
           source .venv/bin/activate
           uv run mkdocs build --strict
-
