@@ -34,9 +34,8 @@ jobs:
           fetch-depth: 0  # Required for semantic-release to analyze commits
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: '3.13'
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
@@ -75,9 +74,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: '3.13'
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
@@ -233,9 +231,8 @@ jobs:
           ref: main  # Get the latest with version bump
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: '3.13'
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
@@ -285,9 +282,8 @@ jobs:
           ref: main  # Get the latest with version bump
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: '3.13'
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
 
