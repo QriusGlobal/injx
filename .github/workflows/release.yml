@@ -139,11 +139,12 @@ jobs:
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             echo "DRY RUN - no actual release will be created"
 
-            # Dry run mode
+            # Dry run mode - just show what would be released
             if [[ "${{ inputs.release_type }}" == "auto" ]]; then
+              echo "Would create automatic release based on conventional commits:"
               uv run semantic-release version --print
-              uv run semantic-release changelog
             else
+              echo "Would create ${{ inputs.release_type }} release:"
               uv run semantic-release version --print --${{ inputs.release_type }}
             fi
 
