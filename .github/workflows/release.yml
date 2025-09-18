@@ -1,0 +1,259 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type (auto determines from commits)'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+      dry_run:
+        description: 'Dry run (no actual release)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
+        with:
+          fetch-depth: 0  # Required for semantic-release to analyze commits
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
+        with:
+          python-version: '3.13'
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Format check
+        run: uv run ruff format --check src tests
+
+      - name: Lint check
+        run: uv run ruff check src tests
+
+      - name: Type check
+        run: uv run basedpyright src
+
+      - name: Run tests
+        run: uv run pytest -q --maxfail=1
+
+  release:
+    name: Release
+    needs: quality-gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    permissions:
+      id-token: write  # OIDC for PyPI
+      contents: write  # Git operations
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      released: ${{ steps.release.outputs.released }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
+        with:
+          fetch-depth: 0  # Required for semantic-release
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
+        with:
+          python-version: '3.13'
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install release tools
+        run: |
+          uv sync --extra dev
+          uv pip install python-semantic-release
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine release version
+        id: check-version
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(uv run python -c "import tomllib; import pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Determine next version based on input
+          if [[ "${{ inputs.release_type }}" == "auto" ]]; then
+            # Let semantic-release determine from commits
+            NEXT_VERSION=$(uv run semantic-release version --print)
+          else
+            # Use specified bump type
+            NEXT_VERSION=$(uv run semantic-release version --print --${{ inputs.release_type }})
+          fi
+
+          if [[ "$NEXT_VERSION" == "$CURRENT_VERSION" ]]; then
+            echo "No release needed - no changes since last release"
+            echo "next_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "needs_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Will release version: $NEXT_VERSION"
+            echo "next_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+            echo "needs_release=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run semantic release
+        id: release
+        if: steps.check-version.outputs.needs_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "DRY RUN - no actual release will be created"
+
+            # Dry run mode
+            if [[ "${{ inputs.release_type }}" == "auto" ]]; then
+              uv run semantic-release version --print
+              uv run semantic-release changelog --unreleased
+            else
+              uv run semantic-release version --print --${{ inputs.release_type }}
+            fi
+
+            echo "version=${{ steps.check-version.outputs.next_version }}" >> $GITHUB_OUTPUT
+            echo "released=false" >> $GITHUB_OUTPUT
+          else
+            echo "Creating release..."
+
+            # Real release
+            if [[ "${{ inputs.release_type }}" == "auto" ]]; then
+              uv run semantic-release publish --verbose
+            else
+              uv run semantic-release publish --verbose --${{ inputs.release_type }}
+            fi
+
+            # Get the new version that was just released
+            NEW_VERSION=$(uv run python -c "import tomllib; import pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "released=true" >> $GITHUB_OUTPUT
+
+            # Push changes (version bump and changelog)
+            git push origin main --tags
+          fi
+
+      - name: Build distribution
+        if: steps.check-version.outputs.needs_release == 'true' && inputs.dry_run == false
+        run: |
+          rm -rf dist
+          uv build
+          echo "Built packages:"
+          ls -la dist/
+
+      - name: Create GitHub Release
+        if: steps.check-version.outputs.needs_release == 'true' && inputs.dry_run == false
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.release.outputs.version }}"
+          TAG="v$VERSION"
+
+          # Extract changelog for this version
+          CHANGELOG_SECTION=$(sed -n "/^## v$VERSION/,/^## v/p" CHANGELOG.md | sed '$d')
+          if [[ -z "$CHANGELOG_SECTION" ]]; then
+            CHANGELOG_SECTION="Release $VERSION"
+          fi
+
+          # Create GitHub release with artifacts
+          gh release create "$TAG" \
+            --title "Release $TAG" \
+            --notes "$CHANGELOG_SECTION" \
+            dist/*
+
+          echo "Created GitHub release: $TAG"
+
+      - name: Publish to PyPI
+        if: steps.check-version.outputs.needs_release == 'true' && inputs.dry_run == false
+        run: |
+          echo "Publishing to PyPI..."
+          uv publish --trusted-publishing always
+          echo "Published version ${{ steps.release.outputs.version }} to PyPI"
+
+      - name: Summary
+        if: always()
+        run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "## Dry Run Complete" >> $GITHUB_STEP_SUMMARY
+            echo "Would have released version: ${{ steps.check-version.outputs.next_version }}" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ steps.check-version.outputs.needs_release }}" == "false" ]]; then
+            echo "## No Release Needed" >> $GITHUB_STEP_SUMMARY
+            echo "No changes detected since last release." >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ steps.release.outputs.released }}" == "true" ]]; then
+            echo "## Release Complete" >> $GITHUB_STEP_SUMMARY
+            echo "Released version: ${{ steps.release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "- PyPI: https://pypi.org/project/injx/${{ steps.release.outputs.version }}/" >> $GITHUB_STEP_SUMMARY
+            echo "- GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Release Failed" >> $GITHUB_STEP_SUMMARY
+            echo "Check the logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  docs:
+    name: Deploy Documentation
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
+        with:
+          fetch-depth: 0  # Required for mike
+          ref: main  # Get the latest with version bump
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
+        with:
+          python-version: '3.13'
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install documentation dependencies
+        run: uv sync --extra docs
+
+      - name: Configure git for mike
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy versioned documentation
+        run: |
+          VERSION="${{ needs.release.outputs.version }}"
+
+          # Check if this is a pre-release
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # Stable release: update 'latest' alias
+            echo "Deploying docs for v$VERSION and updating 'latest'"
+            uv run mike deploy --push --branch gh-pages --update-aliases "$VERSION" latest
+          else
+            # Pre-release: don't update 'latest'
+            echo "Deploying pre-release docs for v$VERSION"
+            uv run mike deploy --push --branch gh-pages "$VERSION"
+          fi
+
+          echo "Documentation deployed successfully"

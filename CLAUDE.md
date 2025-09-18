@@ -164,28 +164,145 @@ uv pip show injx  # Show package details
 - Test coverage: Maintained but not strictly enforced
 - Documentation: All public APIs documented
 
+## Commit Standards for AI Agents
+
+### Overview
+This project follows the **semantic-release standard** (Angular Convention) for commit messages to automate semantic versioning and releases. Every commit message directly controls version bumps and changelog generation. AI agents MUST use the `/commit` command to ensure commits follow standards.
+
+**Note**: This project uses the semantic-release/Angular Convention where only `fix` and `feat` commits trigger releases. Performance improvements (`perf`) are treated as non-release commits.
+
+### Using the Commit Agent
+**ALWAYS use the `/commit` slash command for commits. Never use raw `git commit`.**
+
+```bash
+# After making changes:
+/commit
+
+# The agent will:
+# 1. Analyze your changes
+# 2. Propose conventional commit(s)
+# 3. Wait for your approval
+# 4. Execute the commit(s)
+```
+
+### Commit Types and Release Impact
+
+| Type | Description | Version Impact | Example |
+|------|-------------|----------------|---------|
+| `fix` | Bug fixes | Patch (0.2.1 → 0.2.2) | `fix(container): resolve memory leak` |
+| `feat` | New features | Minor (0.2.1 → 0.3.0) | `feat(tokens): add token validation` |
+| `docs` | Documentation | None | `docs: update API guide` |
+| `style` | Formatting | None | `style: apply ruff formatting` |
+| `refactor` | Code restructuring | None | `refactor(core): simplify logic` |
+| `test` | Test changes | None | `test: add edge case coverage` |
+| `chore` | Maintenance | None | `chore: update dependencies` |
+| `ci` | CI/CD changes | None | `ci: optimize workflow caching` |
+| `perf` | Performance improvements | None | `perf: optimize hash computation` |
+| `build` | Build system changes | None | `build: update package config` |
+
+### Breaking Changes
+Use `!` after type or `BREAKING CHANGE:` in footer for major version bumps:
+```
+feat(api)!: remove deprecated methods
+
+BREAKING CHANGE: Removed string-based token support.
+Use Token instances instead.
+```
+
+### Commit Message Format
+
+#### Standard Format
+```
+type(scope): subject
+
+[optional body]
+
+[optional footer]
+```
+
+#### Rules
+- **Subject**: Max 50 chars, imperative mood, no period
+- **Body**: Wrap at 72 chars, explain what and why
+- **Scope**: Module name (container, tokens, injection, etc.)
+- **Footer**: Breaking changes, issue references
+
+### Examples
+
+#### Bug Fix
+```
+fix(container): prevent singleton initialization race condition
+
+Thread-safe double-checked locking ensures singleton providers
+initialize exactly once even under concurrent access.
+
+Fixes #123
+```
+
+#### Feature Addition
+```
+feat(injection): support optional dependencies with Optional[T]
+
+Optional dependencies return None when not registered instead
+of raising ResolutionError. Enables graceful degradation.
+```
+
+#### Multiple Related Changes
+```
+refactor(tokens): consolidate token validation logic
+
+- Move validation to tokens.py
+- Add comprehensive error messages
+- Improve performance with caching
+```
+
+### AI Agent Workflow
+
+1. **Make changes**: Implement the required functionality
+2. **Run `/commit`**: Triggers the conventional commit agent
+3. **Review proposal**: Agent analyzes changes and proposes commit(s)
+4. **Approve/Edit**: Confirm or modify the proposed commit
+5. **Automatic execution**: Agent creates the commit with proper format
+
+### Common Mistakes to Avoid
+
+- **DON'T** mix unrelated changes in one commit
+- **DON'T** use past tense ("fixed" vs "fix")
+- **DON'T** exceed 50 characters in subject
+- **DON'T** forget scope for module-specific changes
+- **DON'T** commit without running tests
+- **DON'T** use vague messages like "update files"
+
+### Testing Commit Impact
+
+Before committing, consider:
+- Will this trigger the right version bump?
+- Is the scope accurate?
+- Are related tests included?
+- Is the message clear for the changelog?
+
+Remember: Your commits control the automated release pipeline. Accuracy matters.
+
 ## Release Strategy
 
 ### Release Automation
-- **Release Please**: Google's automated release management
-- **Conventional Commits**: Semantic versioning from commit messages
+- **python-semantic-release**: Automated versioning from conventional commits
+- **workflow_dispatch**: Manual trigger with human control over timing
+- **Conventional Commits**: Determines version bumps automatically
 - **Automated changelog**: Generated from commit history
-- **Direct from main**: No separate release branches needed
+- **Trunk-based development**: All work on `main`, no release branches
 
 ### Version Management
 - **SemVer compliance**: MAJOR.MINOR.PATCH versioning
 - **Pre-release tags**: `a` (alpha), `b` (beta), `rc` (release candidate)
-- **Version locations**:
-  - `pyproject.toml`: `[project].version`
-  - `src/injx/__init__.py`: `__version__`
-  - `.release-please-manifest.json`: Current version tracker
+- **Single source of truth**: Version in `pyproject.toml`
+- **Runtime access**: Via `importlib.metadata.version("injx")`
 
 ### Publishing Process
-1. Conventional commits accumulate on `main`
-2. Release Please creates PR with version bumps
-3. Merging PR creates GitHub Release and tag
-4. Tag triggers publish workflow (OIDC trusted publishing)
-5. Package published to PyPI automatically
+1. Developers push conventional commits to `main`
+2. Every push to `main` publishes to TestPyPI for validation
+3. When ready, trigger release workflow via GitHub Actions
+4. Workflow calculates version from commits since last release
+5. Automated: version bump → changelog → tag → PyPI publish → docs deploy
 
 ### PyPI Considerations
 - **Immutable versions**: Cannot overwrite published versions
