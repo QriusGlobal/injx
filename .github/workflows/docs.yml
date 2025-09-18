@@ -29,9 +29,6 @@ jobs:
             **/uv.lock
           prune-cache: false
 
-      - name: Create virtual environment
-        run: uv venv
-
       - name: Install docs dependencies
         run: uv sync --extra docs
 
@@ -41,6 +38,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Deploy dev docs to 'next'
-        run: |
-          source .venv/bin/activate
-          mike deploy --push --branch gh-pages next
+        run: uv run mike deploy --push --branch gh-pages next
