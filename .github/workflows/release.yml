@@ -144,7 +144,7 @@ jobs:
               uv run semantic-release version --print
               uv run semantic-release changelog
             else
-              uv run semantic-release version --print --"${{ inputs.release_type }}"
+              uv run semantic-release version --print --${{ inputs.release_type }}
             fi
 
             echo "version=${{ steps.check-version.outputs.next_version }}" >> "$GITHUB_OUTPUT"
@@ -154,9 +154,9 @@ jobs:
 
             # Real release
             if [[ "${{ inputs.release_type }}" == "auto" ]]; then
-              uv run semantic-release version --push --vcs-release --verbose
+              uv run semantic-release -v version --push --vcs-release
             else
-              uv run semantic-release version --push --vcs-release --verbose --"${{ inputs.release_type }}"
+              uv run semantic-release -v version --push --vcs-release --${{ inputs.release_type }}
             fi
 
             # Get the new version that was just released
