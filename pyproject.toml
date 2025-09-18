@@ -148,6 +148,7 @@ branch = "main"
 commit_message = "chore(release): v{version} [skip ci]"
 commit_parser = "conventional"
 major_on_zero = false
+allow_zero_version = true  # Enable pre-1.0 development (breaking changes → minor bumps)
 tag_format = "v{version}"
 upload_to_pypi = false  # Controlled via workflow
 upload_to_repository = false
