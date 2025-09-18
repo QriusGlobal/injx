@@ -243,7 +243,7 @@ jobs:
       - name: Publish to TestPyPI
         run: |
           echo "Publishing to TestPyPI to test release process..."
-          uv publish --repository-url https://test.pypi.org/legacy/ --trusted-publishing always
+          uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always
           echo "Published version ${{ needs.release.outputs.version }} to TestPyPI"
           echo "View at: https://test.pypi.org/project/injx/${{ needs.release.outputs.version }}/"
 
