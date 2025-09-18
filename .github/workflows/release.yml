@@ -95,7 +95,9 @@ jobs:
         id: check-version
         run: |
           # Get current version
-          CURRENT_VERSION=$(uv run python -c "import tomllib; import pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          CURRENT_VERSION=$(uv run python -c \
+            "import tomllib; import pathlib; \
+            print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
           echo "Current version: $CURRENT_VERSION"
 
           # Determine next version based on input
@@ -104,17 +106,17 @@ jobs:
             NEXT_VERSION=$(uv run semantic-release version --print)
           else
             # Use specified bump type
-            NEXT_VERSION=$(uv run semantic-release version --print --${{ inputs.release_type }})
+            NEXT_VERSION=$(uv run semantic-release version --print --"${{ inputs.release_type }}")
           fi
 
           if [[ "$NEXT_VERSION" == "$CURRENT_VERSION" ]]; then
             echo "No release needed - no changes since last release"
-            echo "next_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            echo "needs_release=false" >> $GITHUB_OUTPUT
+            echo "next_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+            echo "needs_release=false" >> "$GITHUB_OUTPUT"
           else
             echo "Will release version: $NEXT_VERSION"
-            echo "next_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
-            echo "needs_release=true" >> $GITHUB_OUTPUT
+            echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+            echo "needs_release=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Run semantic release
@@ -129,13 +131,13 @@ jobs:
             # Dry run mode
             if [[ "${{ inputs.release_type }}" == "auto" ]]; then
               uv run semantic-release version --print
-              uv run semantic-release changelog --unreleased
+              uv run semantic-release changelog
             else
-              uv run semantic-release version --print --${{ inputs.release_type }}
+              uv run semantic-release version --print --"${{ inputs.release_type }}"
             fi
 
-            echo "version=${{ steps.check-version.outputs.next_version }}" >> $GITHUB_OUTPUT
-            echo "released=false" >> $GITHUB_OUTPUT
+            echo "version=${{ steps.check-version.outputs.next_version }}" >> "$GITHUB_OUTPUT"
+            echo "released=false" >> "$GITHUB_OUTPUT"
           else
             echo "Creating release..."
 
@@ -143,13 +145,15 @@ jobs:
             if [[ "${{ inputs.release_type }}" == "auto" ]]; then
               uv run semantic-release publish --verbose
             else
-              uv run semantic-release publish --verbose --${{ inputs.release_type }}
+              uv run semantic-release publish --verbose --"${{ inputs.release_type }}"
             fi
 
             # Get the new version that was just released
-            NEW_VERSION=$(uv run python -c "import tomllib; import pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
-            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-            echo "released=true" >> $GITHUB_OUTPUT
+            NEW_VERSION=$(uv run python -c \
+              "import tomllib; import pathlib; \
+              print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+            echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+            echo "released=true" >> "$GITHUB_OUTPUT"
 
             # Push changes (version bump and changelog)
             git push origin main --tags
@@ -196,19 +200,27 @@ jobs:
         if: always()
         run: |
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            echo "## Dry Run Complete" >> $GITHUB_STEP_SUMMARY
-            echo "Would have released version: ${{ steps.check-version.outputs.next_version }}" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "## Dry Run Complete"
+              echo "Would have released version: ${{ steps.check-version.outputs.next_version }}"
+            } >> "$GITHUB_STEP_SUMMARY"
           elif [[ "${{ steps.check-version.outputs.needs_release }}" == "false" ]]; then
-            echo "## No Release Needed" >> $GITHUB_STEP_SUMMARY
-            echo "No changes detected since last release." >> $GITHUB_STEP_SUMMARY
+            {
+              echo "## No Release Needed"
+              echo "No changes detected since last release."
+            } >> "$GITHUB_STEP_SUMMARY"
           elif [[ "${{ steps.release.outputs.released }}" == "true" ]]; then
-            echo "## Release Complete" >> $GITHUB_STEP_SUMMARY
-            echo "Released version: ${{ steps.release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-            echo "- PyPI: https://pypi.org/project/injx/${{ steps.release.outputs.version }}/" >> $GITHUB_STEP_SUMMARY
-            echo "- GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "## Release Complete"
+              echo "Released version: ${{ steps.release.outputs.version }}"
+              echo "- PyPI: https://pypi.org/project/injx/${{ steps.release.outputs.version }}/"
+              echo "- GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.release.outputs.version }}"
+            } >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "## Release Failed" >> $GITHUB_STEP_SUMMARY
-            echo "Check the logs for details." >> $GITHUB_STEP_SUMMARY
+            {
+              echo "## Release Failed"
+              echo "Check the logs for details."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
   docs:
