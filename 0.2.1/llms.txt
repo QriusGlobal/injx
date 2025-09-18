@@ -1,0 +1,373 @@
+# injx - Type-safe Dependency Injection for Python 3.13+
+
+injx is a lightweight, type-safe dependency injection container designed for modern Python applications. It provides O(1) lookup performance, full static type safety, and zero external dependencies.
+
+## Core Architecture
+
+- **Container**: Main DI container managing service lifecycles
+- **Token[T]**: Typed identifiers with pre-computed hashes for O(1) lookups
+- **Scopes**: SINGLETON (process), SESSION (user context), REQUEST (per-call), TRANSIENT (new each time)
+- **Provider**: Functions that create service instances
+- **Injection**: Automatic dependency resolution via decorators
+
+## Basic Usage
+
+```python
+from injx import Container, Token, Scope, inject
+
+# Create container and tokens
+container = Container()
+DB_TOKEN = Token[Database]("database", scope=Scope.SINGLETON)
+LOGGER_TOKEN = Token[Logger]("logger", scope=Scope.SINGLETON)
+
+# Register providers
+container.register(DB_TOKEN, lambda: PostgreSQLDatabase("connection_string"))
+container.register(LOGGER_TOKEN, lambda: ConsoleLogger(level="INFO"))
+
+# Inject dependencies
+@inject(container=container)
+def create_user(name: str, db: Database, logger: Logger) -> User:
+    logger.info(f"Creating user: {name}")
+    user = User(name=name)
+    db.save(user)
+    return user
+```
+
+## Advanced Patterns
+
+### Context-Managed Resources
+
+```python
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def database_context():
+    db = await AsyncDatabase.connect()
+    try:
+        yield db
+    finally:
+        await db.close()
+
+container.register_context_async(DB_TOKEN, lambda: database_context())
+```
+
+### Request Scoping
+
+```python
+async def handle_request(request_data: dict) -> dict:
+    async with container.async_request_scope():
+        # REQUEST-scoped dependencies isolated per request
+        user_service = await container.aget(USER_SERVICE_TOKEN)
+        return await user_service.process(request_data)
+```
+
+### Type-Safe Overrides (Testing)
+
+```python
+def test_user_creation():
+    mock_db = Mock(spec=Database)
+    with container.use_overrides({DB_TOKEN: mock_db}):
+        result = create_user("test_user")
+        mock_db.save.assert_called_once()
+```
+
+## Framework Integration
+
+### FastAPI
+
+```python
+from fastapi import FastAPI, Depends
+from injx import Depends as injxDepends
+
+app = FastAPI()
+
+@app.post("/users")
+async def create_user_endpoint(
+    user_data: UserCreate,
+    db: Database = injxDepends(lambda: container.get(DB_TOKEN))
+):
+    return await create_user(user_data.name, db)
+```
+
+### Django
+
+```python
+# settings.py
+from injx import Container, set_default_container
+
+container = Container()
+# Register services...
+set_default_container(container)
+
+# views.py
+from injx import inject
+
+@inject
+def user_list_view(request, user_service: UserService):
+    users = user_service.get_all()
+    return render(request, "users.html", {"users": users})
+```
+
+### Flask
+
+```python
+from flask import Flask
+from injx import inject
+
+app = Flask(__name__)
+
+@app.route("/api/users", methods=["POST"])
+@inject(container=container)
+def create_user_api(db: Database, logger: Logger):
+    data = request.get_json()
+    logger.info(f"Creating user: {data['name']}")
+    user = User(name=data["name"])
+    db.save(user)
+    return {"id": user.id, "name": user.name}
+```
+
+## Type Safety Features
+
+### Protocol-Based Typing
+
+```python
+from typing import Protocol, runtime_checkable
+
+@runtime_checkable
+class Logger(Protocol):
+    def info(self, message: str) -> None: ...
+    def error(self, message: str) -> None: ...
+
+class ConsoleLogger:
+    def info(self, message: str) -> None:
+        print(f"INFO: {message}")
+    
+    def error(self, message: str) -> None:
+        print(f"ERROR: {message}")
+
+# Type-safe registration
+LOGGER = Token[Logger]("logger")
+container.register(LOGGER, ConsoleLogger)  # ✓ Type matches
+```
+
+### Generic Support
+
+```python
+from typing import Generic, TypeVar
+
+T = TypeVar('T')
+
+class Repository(Protocol, Generic[T]):
+    def save(self, entity: T) -> None: ...
+    def find_by_id(self, id: int) -> T | None: ...
+
+USER_REPO = Token[Repository[User]]("user_repo")
+container.register(USER_REPO, UserRepository)
+```
+
+## Common Patterns
+
+### Service Layer Architecture
+
+```python
+# Tokens
+DATABASE = Token[Database]("database", scope=Scope.SINGLETON)
+USER_REPO = Token[UserRepository]("user_repo", scope=Scope.SINGLETON)  
+USER_SERVICE = Token[UserService]("user_service", scope=Scope.SINGLETON)
+EMAIL_SERVICE = Token[EmailService]("email_service", scope=Scope.SINGLETON)
+
+# Registrations
+container.register(DATABASE, lambda: PostgreSQLDatabase(DATABASE_URL))
+container.register(USER_REPO, lambda: UserRepository(container.get(DATABASE)))
+container.register(USER_SERVICE, lambda: UserService(
+    container.get(USER_REPO),
+    container.get(EMAIL_SERVICE)
+))
+container.register(EMAIL_SERVICE, lambda: SMTPEmailService(SMTP_CONFIG))
+```
+
+### Configuration Injection
+
+```python
+from dataclasses import dataclass
+
+@dataclass
+class Config:
+    database_url: str
+    api_key: str
+    debug: bool
+
+CONFIG = Token[Config]("config", scope=Scope.SINGLETON)
+container.register(CONFIG, lambda: Config(
+    database_url=os.getenv("DATABASE_URL"),
+    api_key=os.getenv("API_KEY"), 
+    debug=os.getenv("DEBUG", "false").lower() == "true"
+))
+```
+
+## Error Handling
+
+### Resolution Errors
+
+```python
+from injx.exceptions import ResolutionError, CircularDependencyError
+
+try:
+    service = container.get(MISSING_TOKEN)
+except ResolutionError as e:
+    print(f"Cannot resolve {e.token.name}: {e.cause}")
+    print(f"Resolution chain: {[t.name for t in e.chain]}")
+```
+
+### Circular Dependencies
+
+```python
+# This will raise CircularDependencyError
+SERVICE_A = Token[ServiceA]("service_a")
+SERVICE_B = Token[ServiceB]("service_b")
+
+container.register(SERVICE_A, lambda: ServiceA(container.get(SERVICE_B)))
+container.register(SERVICE_B, lambda: ServiceB(container.get(SERVICE_A)))  # ✗ Circular
+```
+
+## Testing Patterns
+
+### Scoped Test Isolation
+
+```python
+import pytest
+from injx import Container
+
+@pytest.fixture
+def container():
+    test_container = Container()
+    # Register test services
+    test_container.register(DB_TOKEN, lambda: InMemoryDatabase())
+    return test_container
+
+def test_user_creation(container):
+    user_service = container.get(USER_SERVICE_TOKEN)
+    user = user_service.create("test_user")
+    assert user.name == "test_user"
+```
+
+### Mock Integration
+
+```python
+from unittest.mock import Mock, AsyncMock
+
+def test_async_service():
+    mock_http = AsyncMock(spec=HttpClient)
+    mock_http.post.return_value = {"status": "success"}
+    
+    with container.use_overrides({HTTP_CLIENT_TOKEN: mock_http}):
+        result = await api_service.call_external()
+        mock_http.post.assert_called_once()
+```
+
+## Performance Considerations
+
+- **Token Creation**: Pre-compute tokens at module level for O(1) lookups
+- **Scope Selection**: Use SINGLETON for stateless services, REQUEST for request-specific data
+- **Provider Efficiency**: Keep provider functions lightweight; heavy initialization should be lazy
+- **Memory Usage**: ~500 bytes overhead per registered service
+
+## Best Practices
+
+### DO
+- Use `Token[T]` for type-safe dependency identification
+- Prefer protocol-based typing over concrete classes
+- Use appropriate scopes (SINGLETON for stateless, REQUEST for per-request)
+- Register context managers for resources requiring cleanup
+- Test with scoped overrides
+
+### DON'T
+- Re-register tokens (registrations are immutable)
+- Mix sync/async contexts incorrectly
+- Create circular dependencies
+- Use string-based tokens
+- Store container references in service instances
+
+## Migration from Other Libraries
+
+### From dependency-injector
+```python
+# Old
+from dependency_injector import containers, providers
+
+class Container(containers.DeclarativeContainer):
+    config = providers.Singleton(Config)
+    database = providers.Singleton(Database, config.database_url)
+
+# New
+from injx import Container, Token
+
+container = Container()
+CONFIG = Token[Config]("config", scope=Scope.SINGLETON)
+DATABASE = Token[Database]("database", scope=Scope.SINGLETON)
+
+container.register(CONFIG, lambda: Config())
+container.register(DATABASE, lambda: Database(container.get(CONFIG).database_url))
+```
+
+## Async Resource Management
+
+```python
+# Async cleanup required
+@asynccontextmanager
+async def redis_connection():
+    redis = await aioredis.create_redis_pool("redis://localhost")
+    try:
+        yield redis
+    finally:
+        redis.close()
+        await redis.wait_closed()
+
+REDIS = Token[Redis]("redis", scope=Scope.SINGLETON)
+container.register_context_async(REDIS, lambda: redis_connection())
+
+# Proper cleanup
+async def shutdown():
+    await container.aclose()  # Cleans up all async resources
+```
+
+## Integration Examples
+
+### Microservice Setup
+
+```python
+from injx import Container, TokenFactory
+
+# Use TokenFactory for consistent token creation
+factory = TokenFactory()
+
+# Core services
+CONFIG = factory.singleton("config", Config)
+LOGGER = factory.singleton("logger", Logger) 
+DATABASE = factory.singleton("database", Database)
+CACHE = factory.singleton("cache", Cache)
+
+# Business services  
+USER_SERVICE = factory.singleton("user_service", UserService)
+AUTH_SERVICE = factory.singleton("auth_service", AuthService)
+NOTIFICATION_SERVICE = factory.singleton("notification_service", NotificationService)
+
+# Register with dependency injection
+container.register(CONFIG, load_config)
+container.register(LOGGER, lambda: setup_logger(container.get(CONFIG)))
+container.register(DATABASE, lambda: connect_database(container.get(CONFIG)))
+container.register(CACHE, lambda: connect_redis(container.get(CONFIG)))
+
+container.register(USER_SERVICE, lambda: UserService(
+    container.get(DATABASE),
+    container.get(LOGGER)
+))
+
+container.register(AUTH_SERVICE, lambda: AuthService(
+    container.get(USER_SERVICE),
+    container.get(CACHE),
+    container.get(CONFIG)
+))
+```
+
+This provides a comprehensive reference for using injx in LLM-driven development projects.
