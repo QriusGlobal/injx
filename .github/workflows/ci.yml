@@ -91,37 +91,3 @@ jobs:
           source .venv/bin/activate
           uv run mkdocs build --strict
 
-  testpypi:
-    name: Publish to TestPyPI
-    needs: ci
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: test-release
-    permissions:
-      id-token: write  # OIDC for TestPyPI
-    steps:
-      - name: Checkout
-        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@3b9817b1bf26186f03ab8277bab9b827ea5cc254  # v6.0.0
-        with:
-          python-version: '3.13'
-          enable-cache: true
-          cache-dependency-glob: "**/pyproject.toml"
-
-      - name: Build distribution
-        run: |
-          # Build distribution for TestPyPI
-          uv build
-
-          echo "Built packages for TestPyPI:"
-          ls -la dist/
-
-      - name: Publish to TestPyPI
-        run: |
-          echo "Publishing to TestPyPI..."
-          uv publish --repository-url https://test.pypi.org/legacy/ --trusted-publishing always
-          echo "Published to TestPyPI"
-          echo "View at: https://test.pypi.org/project/injx/"
