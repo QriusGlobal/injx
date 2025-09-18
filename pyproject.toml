@@ -146,6 +146,7 @@ packages = ["src/injx"]
 version_toml = ["pyproject.toml:project.version"]
 branch = "main"
 commit_message = "chore(release): v{version} [skip ci]"
+commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
 commit_parser = "conventional"
 major_on_zero = false
 allow_zero_version = true  # Enable pre-1.0 development (breaking changes → minor bumps)
@@ -163,6 +164,15 @@ changelog_sections = [
     {type = "test", section = "Testing"},
     {type = "ci", section = "CI/CD"},
 ]
+
+[tool.semantic_release.remote]
+type = "github"
+name = "origin"
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["build", "chore", "ci", "docs", "feat", "fix", "perf", "style", "refactor", "test"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
