@@ -1,4 +1,11 @@
 repos:
+  # Conventional commits enforcement
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.30.1
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.9
     hooks:

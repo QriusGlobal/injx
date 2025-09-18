@@ -1,0 +1,11 @@
+{
+  "commands": {
+    "/commit": {
+      "description": "Create conventional commit with AI analysis",
+      "agent": "conventional-commit",
+      "model": "claude-3-5-sonnet-20241022",
+      "interactive": false,
+      "requires_confirmation": false
+    }
+  }
+}

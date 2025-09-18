@@ -20,8 +20,20 @@ Quick start:
     # ... use db ...
 """
 
-from injx._metadata import __author__, __docs__, __email__, __org__, __repo__
-from injx._version import __version__
+# Version from package metadata (single source of truth: pyproject.toml)
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("injx")
+except PackageNotFoundError:
+    __version__ = "0.0.0+unknown"
+
+# Package metadata
+__org__ = "QriusGlobal"
+__author__ = "Qrius Global"
+__email__ = "mishal@qrius.global"
+__repo__ = "https://github.com/QriusGlobal/injx"
+__docs__ = "https://qriusglobal.github.io/injx/"
 from injx.container import Container
 from injx.contextual import ContextualContainer, RequestScope, SessionScope
 from injx.dependencies import Dependencies
