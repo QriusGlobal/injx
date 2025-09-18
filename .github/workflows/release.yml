@@ -19,13 +19,13 @@ name: Release
         default: false
         type: boolean
       target_environment:
-        description: 'Release target environment'
+        description: 'Release target environment (release=production, testpypi=testing)'
         required: true
         default: 'testpypi'
         type: choice
         options:
           - testpypi
-          - production
+          - release
 
 permissions:
   contents: read
@@ -70,7 +70,7 @@ jobs:
     needs: quality-gates
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: ${{ inputs.target_environment == 'production' && 'release' || 'testpypi' }}
+    environment: ${{ inputs.target_environment }}
     permissions:
       id-token: write  # OIDC for PyPI
       contents: write  # Git operations
@@ -117,7 +117,7 @@ jobs:
             NEXT_VERSION=$(uv run semantic-release version --print)
           else
             # Use specified bump type
-            NEXT_VERSION=$(uv run semantic-release version --print --"${{ inputs.release_type }}")
+            NEXT_VERSION=$(uv run semantic-release version --print --${{ inputs.release_type }})
           fi
 
           if [[ "$NEXT_VERSION" == "$CURRENT_VERSION" ]]; then
