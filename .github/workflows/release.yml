@@ -176,27 +176,7 @@ jobs:
           echo "Built packages:"
           ls -la dist/
 
-      - name: Create GitHub Release
-        if: steps.check-version.outputs.needs_release == 'true' && inputs.dry_run == false
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          VERSION="${{ steps.release.outputs.version }}"
-          TAG="v$VERSION"
-
-          # Extract changelog for this version
-          CHANGELOG_SECTION=$(sed -n "/^## v$VERSION/,/^## v/p" CHANGELOG.md | sed '$d')
-          if [[ -z "$CHANGELOG_SECTION" ]]; then
-            CHANGELOG_SECTION="Release $VERSION"
-          fi
-
-          # Create GitHub release with artifacts
-          gh release create "$TAG" \
-            --title "Release $TAG" \
-            --notes "$CHANGELOG_SECTION" \
-            dist/*
-
-          echo "Created GitHub release: $TAG"
+      # Note: GitHub release is created by semantic-release --vcs-release above
 
 
       - name: Summary
