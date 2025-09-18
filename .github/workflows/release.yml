@@ -153,11 +153,21 @@ jobs:
           else
             echo "Creating release..."
 
-            # Real release
-            if [[ "${{ inputs.release_type }}" == "auto" ]]; then
-              uv run semantic-release -v version --push --vcs-release
+            # Real release - different behavior for TestPyPI vs Production
+            if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
+              # TestPyPI: No Git tags, no push to avoid polluting version history
+              if [[ "${{ inputs.release_type }}" == "auto" ]]; then
+                uv run semantic-release -v version --no-push --no-vcs-release
+              else
+                uv run semantic-release -v version --no-push --no-vcs-release --${{ inputs.release_type }}
+              fi
             else
-              uv run semantic-release -v version --push --vcs-release --${{ inputs.release_type }}
+              # Production: Create Git tags and push for real releases
+              if [[ "${{ inputs.release_type }}" == "auto" ]]; then
+                uv run semantic-release -v version --push --vcs-release
+              else
+                uv run semantic-release -v version --push --vcs-release --${{ inputs.release_type }}
+              fi
             fi
 
             # Get the new version that was just released
