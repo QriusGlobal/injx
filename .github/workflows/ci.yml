@@ -40,11 +40,7 @@ jobs:
         run: uv venv
 
       - name: Install all dependencies
-        run: |
-          source .venv/bin/activate
-          uv pip install -e .[dev]
-          uv pip install pytest-cov pytest-xdist
-          uv pip install mkdocs-material mkdocs-minify-plugin mkdocstrings[python] mike
+        run: uv sync --extra dev --extra docs
 
       # Quality gates - fail fast, ordered by speed
       - name: Format check (ruff)

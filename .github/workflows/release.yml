@@ -1,6 +1,6 @@
 name: Release
 
-on:
+'on':
   workflow_dispatch:
     inputs:
       release_type:
@@ -18,6 +18,14 @@ on:
         required: false
         default: false
         type: boolean
+      target_environment:
+        description: 'Release target environment'
+        required: true
+        default: 'testpypi'
+        type: choice
+        options:
+          - testpypi
+          - production
 
 permissions:
   contents: read
@@ -62,7 +70,7 @@ jobs:
     needs: quality-gates
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: release
+    environment: ${{ inputs.target_environment == 'production' && 'release' || 'testpypi' }}
     permissions:
       id-token: write  # OIDC for PyPI
       contents: write  # Git operations
@@ -225,7 +233,7 @@ jobs:
   test-pypi:
     name: Test Release on TestPyPI
     needs: release
-    if: needs.release.outputs.released == 'true'
+    if: needs.release.outputs.released == 'true' && inputs.target_environment == 'testpypi'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: testpypi
