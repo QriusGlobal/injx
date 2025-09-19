@@ -23,6 +23,10 @@ wheels/
 .installed.cfg
 *.egg
 
+# Node.js (for commit validation system)
+node_modules/
+package-lock.json
+
 # Testing
 .tox/
 .coverage
@@ -48,8 +52,7 @@ env/
 # OS
 .DS_Store
 Thumbs.db
-.tools/
- 
+
 # MkDocs build output (published separately via gh-pages)
 site/
 .basedpyright_full.txt

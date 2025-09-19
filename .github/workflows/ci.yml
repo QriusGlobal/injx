@@ -26,6 +26,7 @@ jobs:
         with:
           # For PRs, check out the PR head exactly; for pushes, use the push SHA
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0  # Fetch all history for commit validation
 
       - name: Setup uv
         uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4  # v6.7.0
@@ -60,15 +61,13 @@ jobs:
             --cov=src --cov-report=xml \
             -n auto
 
-      # Validate commit message rules (regression protection)
-      - name: Test commit validation rules
-        run: uv run pytest tests/test_commit_message_rules.py -v
-
-      # Check commit messages since main (CI backstop)
+      # Validate commit messages using commitizen (CI backstop)
       - name: Validate recent commit messages
         if: github.event_name == 'pull_request'
         run: |
-          # Check commits in this PR branch
+          echo "Validating commits in range: origin/main..HEAD"
+          git log --oneline origin/main..HEAD
+          echo ""
           uv run cz check --rev-range origin/main..HEAD
 
       - name: Upload coverage to Codecov
