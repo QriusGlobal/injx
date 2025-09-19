@@ -70,7 +70,7 @@ def classify_files(file_statuses: List[Tuple[str, str]]) -> dict:
             continue
 
         # Categorize by path (same logic as validator)
-        if filename.startswith('src/'):
+        if filename.lower().startswith('src/'):
             categories['src'].add(filename)
         elif filename in high_impact_patterns:
             categories['high_impact_config'].add(filename)

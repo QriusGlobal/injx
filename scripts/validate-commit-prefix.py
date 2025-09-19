@@ -117,7 +117,7 @@ def classify_files(file_statuses: List[Tuple[str, str]]) -> dict:
             continue
 
         # Categorize by path
-        if filename.startswith('src/'):
+        if filename.lower().startswith('src/'):
             categories['src'].add(filename)
         elif filename in high_impact_patterns:
             categories['high_impact_config'].add(filename)
@@ -155,20 +155,21 @@ def validate_commit_prefix(prefix: str, file_categories: dict) -> Tuple[bool, st
         if prefix in library_prefixes:
             return True, ""
         return False, (
-            f"src/ changes require library prefix: {sorted(library_prefixes)}, got '{prefix}'"
+            f"src/ changes require a library prefix: {sorted(library_prefixes)}, but got '{prefix}'"
         )
 
-    # Priority 2: Infrastructure changes - requires infrastructure prefix
+    # Priority 2: High-impact config files (e.g., pyproject.toml) - allows any prefix
+    # This allows 'feat(deps):' when adding a dependency, even if docs are also changed.
+    if file_categories['high_impact_config']:
+        return True, ""
+
+    # Priority 3 (LOWEST): Infrastructure-only changes - requires infrastructure prefix
     if file_categories['infrastructure']:
         if prefix in infrastructure_prefixes:
             return True, ""
         return False, (
-            f"Infrastructure changes require: {sorted(infrastructure_prefixes)}, got '{prefix}'"
+            f"Infrastructure-only changes require an infrastructure prefix: {sorted(infrastructure_prefixes)}, but got '{prefix}'"
         )
-
-    # Priority 3 (LOWEST): ONLY high-impact config files - allows any prefix
-    if file_categories['high_impact_config']:
-        return True, ""
 
     return True, ""
 
@@ -180,9 +181,9 @@ def print_validation_guidance(prefix: str, file_categories: dict, files: List[st
     print(f"   Files changed: {sorted(files)}")
     print()
     print("📋 Strict Priority Hierarchy (highest priority wins):")
-    print("   1. src/ changes → feat, fix, perf, refactor (HIGHEST PRIORITY)")
-    print("   2. Infrastructure → chore, ci, docs, test, build, style")
-    print("   3. Config files → any prefix allowed (LOWEST PRIORITY)")
+    print("   1. src/ changes         → feat, fix, perf, refactor (HIGHEST)")
+    print("   2. Config file changes  → any prefix allowed (e.g., 'feat' for deps)")
+    print("   3. Infrastructure only  → chore, ci, docs, test, build, style (LOWEST)")
     print()
     print("🔧 Categories found:")
     for category, files_in_cat in file_categories.items():
@@ -204,8 +205,8 @@ def main() -> int:
 
     file_statuses = get_staged_file_status()
     if not file_statuses:
-        print("✅ No staged files, allowing commit")
-        return 0
+        print("❌ No staged files found. Empty commits are not allowed.")
+        return 1
 
     commit_message = get_commit_message()
     if not commit_message:
