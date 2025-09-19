@@ -66,13 +66,13 @@ jobs:
         run: uv run pytest -q --maxfail=1
 
   release:
-    name: Release
+    name: ${{ inputs.target_environment == 'testpypi' && 'Test Release (TestPyPI)' || 'Production Release (PyPI)' }}
     needs: quality-gates
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: ${{ inputs.target_environment }}
     permissions:
-      id-token: write  # OIDC for PyPI
+      id-token: write  # OIDC for PyPI/TestPyPI
       contents: write  # Git operations
     outputs:
       version: ${{ steps.release.outputs.version }}
@@ -130,87 +130,106 @@ jobs:
             echo "needs_release=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run semantic release
+      - name: Version and build
         id: release
-        if: steps.check-version.outputs.needs_release == 'true'
+        if: steps.check-version.outputs.needs_release == 'true' && inputs.dry_run == false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            echo "DRY RUN - no actual release will be created"
+          echo "Creating ${{ inputs.target_environment == 'testpypi' && 'TestPyPI' || 'production' }} release..."
 
-            # Dry run mode - just show what would be released
+          # Run semantic-release with environment-specific flags
+          if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
+            # TestPyPI: No Git tags, no push to avoid polluting version history
             if [[ "${{ inputs.release_type }}" == "auto" ]]; then
-              echo "Would create automatic release based on conventional commits:"
-              uv run semantic-release version --print
+              uv run semantic-release -v version --no-push --no-vcs-release
             else
-              echo "Would create ${{ inputs.release_type }} release:"
-              uv run semantic-release version --print --${{ inputs.release_type }}
+              uv run semantic-release -v version --no-push --no-vcs-release --${{ inputs.release_type }}
             fi
-
-            echo "version=${{ steps.check-version.outputs.next_version }}" >> "$GITHUB_OUTPUT"
-            echo "released=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Creating release..."
-
-            # Real release - different behavior for TestPyPI vs Production
-            if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
-              # TestPyPI: No Git tags, no push to avoid polluting version history
-              if [[ "${{ inputs.release_type }}" == "auto" ]]; then
-                uv run semantic-release -v version --no-push --no-vcs-release
-              else
-                uv run semantic-release -v version --no-push --no-vcs-release --${{ inputs.release_type }}
-              fi
+            # Production: Create Git tags and push for real releases
+            if [[ "${{ inputs.release_type }}" == "auto" ]]; then
+              uv run semantic-release -v version --push --vcs-release
             else
-              # Production: Create Git tags and push for real releases
-              if [[ "${{ inputs.release_type }}" == "auto" ]]; then
-                uv run semantic-release -v version --push --vcs-release
-              else
-                uv run semantic-release -v version --push --vcs-release --${{ inputs.release_type }}
-              fi
+              uv run semantic-release -v version --push --vcs-release --${{ inputs.release_type }}
             fi
-
-            # Get the new version that was just released
-            NEW_VERSION=$(uv run python -c \
-              "import tomllib; import pathlib; \
-              print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
-            echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-            echo "released=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build distribution
-        if: steps.check-version.outputs.needs_release == 'true' && inputs.dry_run == false
-        run: |
+          # Build packages with updated version
           rm -rf dist
           uv build
           echo "Built packages:"
           ls -la dist/
 
-      # Note: GitHub release is created by semantic-release --vcs-release above
+          # Get the new version that was just set
+          NEW_VERSION=$(uv run python -c \
+            "import tomllib; import pathlib; \
+            print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "released=true" >> "$GITHUB_OUTPUT"
 
-
-      - name: Summary
-        if: always()
+      - name: Dry run summary
+        if: inputs.dry_run == true
         run: |
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            {
-              echo "## Dry Run Complete"
-              echo "Would have released version: ${{ steps.check-version.outputs.next_version }}"
-            } >> "$GITHUB_STEP_SUMMARY"
-          elif [[ "${{ steps.check-version.outputs.needs_release }}" == "false" ]]; then
+          echo "version=${{ steps.check-version.outputs.next_version }}" >> "$GITHUB_OUTPUT"
+          echo "released=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Dry Run Complete"
+            echo "Would have released version: ${{ steps.check-version.outputs.next_version }}"
+            echo "Target: ${{ inputs.target_environment == 'testpypi' && 'TestPyPI' || 'Production PyPI' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to TestPyPI
+        if: >-
+          steps.check-version.outputs.needs_release == 'true' &&
+          inputs.dry_run == false &&
+          inputs.target_environment == 'testpypi'
+        run: |
+          echo "Publishing to TestPyPI to test release process..."
+          uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always
+          echo "Published version ${{ steps.release.outputs.version }} to TestPyPI"
+
+      - name: Publish to PyPI
+        if: >-
+          steps.check-version.outputs.needs_release == 'true' &&
+          inputs.dry_run == false &&
+          inputs.target_environment == 'release'
+        run: |
+          echo "Publishing to production PyPI..."
+          uv publish --trusted-publishing always
+          echo "Published version ${{ steps.release.outputs.version }} to PyPI"
+
+      - name: Release summary
+        if: always() && inputs.dry_run == false
+        run: |
+          if [[ "${{ steps.check-version.outputs.needs_release }}" == "false" ]]; then
             {
               echo "## No Release Needed"
               echo "No changes detected since last release."
             } >> "$GITHUB_STEP_SUMMARY"
           elif [[ "${{ steps.release.outputs.released }}" == "true" ]]; then
+            VERSION="${{ steps.release.outputs.version }}"
+            REPO="${{ github.repository }}"
+
             {
-              echo "## Release Complete"
-              echo "Released version: ${{ steps.release.outputs.version }}"
-              echo "- PyPI: https://pypi.org/project/injx/${{ steps.release.outputs.version }}/"
-              REPO="${{ github.repository }}"
-              VERSION="${{ steps.release.outputs.version }}"
-              GITHUB_URL="https://github.com/$REPO/releases/tag/v$VERSION"
-              echo "- GitHub: $GITHUB_URL"
+              echo "## ${{ inputs.target_environment == 'testpypi' && 'TestPyPI' || 'Production' }} Release Complete"
+              echo "Released version: $VERSION"
+
+              if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
+                echo "- TestPyPI: https://test.pypi.org/project/injx/$VERSION/"
+                echo ""
+                echo "**Test the release:**"
+                echo "\`\`\`bash"
+                echo "pip install -i https://test.pypi.org/simple/ injx==$VERSION"
+                echo "\`\`\`"
+                echo ""
+                echo "**If tests pass, create production release:**"
+                echo "Run this workflow again with \`target_environment: release\`"
+              else
+                echo "- PyPI: https://pypi.org/project/injx/$VERSION/"
+                GITHUB_URL="https://github.com/$REPO/releases/tag/v$VERSION"
+                echo "- GitHub: $GITHUB_URL"
+              fi
             } >> "$GITHUB_STEP_SUMMARY"
           else
             {
@@ -219,64 +238,10 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  test-pypi:
-    name: Test Release on TestPyPI
-    needs: release
-    if: needs.release.outputs.released == 'true' && inputs.target_environment == 'testpypi'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: testpypi
-    permissions:
-      id-token: write  # OIDC for TestPyPI
-    steps:
-      - name: Checkout
-        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
-        with:
-          ref: main  # Get the latest with version bump
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4  # v6.7.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: |
-            **/pyproject.toml
-            **/uv.lock
-          prune-cache: false
-
-      - name: Build distribution for TestPyPI
-        run: |
-          rm -rf dist
-          uv build
-          echo "Built packages for TestPyPI:"
-          ls -la dist/
-
-      - name: Publish to TestPyPI
-        run: |
-          echo "Publishing to TestPyPI to test release process..."
-          uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always
-          echo "Published version ${{ needs.release.outputs.version }} to TestPyPI"
-          echo "View at: https://test.pypi.org/project/injx/${{ needs.release.outputs.version }}/"
-
-      - name: TestPyPI Summary
-        run: |
-          {
-            echo "## TestPyPI Release Complete"
-            echo "Released version: ${{ needs.release.outputs.version }}"
-            echo "- TestPyPI: https://test.pypi.org/project/injx/${{ needs.release.outputs.version }}/"
-            GITHUB_URL="https://github.com/${{ github.repository }}/releases/tag/v${{ needs.release.outputs.version }}"
-            echo "- GitHub: $GITHUB_URL"
-            echo ""
-            echo "**Next Steps:**"
-            echo "1. Test the TestPyPI package:"
-            echo "   \`pip install -i https://test.pypi.org/simple/ injx==${{ needs.release.outputs.version }}\`"
-            echo "2. If everything works correctly, manually publish to production PyPI"
-            echo "3. Use: \`uv publish --trusted-publishing always\` in a separate workflow/action"
-          } >> "$GITHUB_STEP_SUMMARY"
-
   docs:
     name: Deploy Documentation
     needs: release
-    if: needs.release.outputs.released == 'true'
+    if: needs.release.outputs.released == 'true' && inputs.target_environment == 'release'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
