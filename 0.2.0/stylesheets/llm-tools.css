@@ -1,0 +1,112 @@
+/* Additional styles for LLM Tools Widget */
+
+/* Ensure widget doesn't interfere with main content */
+.llm-tools-widget {
+  font-family: var(--md-text-font-family);
+}
+
+/* Smooth transitions for theme changes */
+.llm-tools-trigger,
+.llm-tools-menu {
+  transition: background-color 0.25s, border-color 0.25s;
+}
+
+/* Dark theme adjustments */
+[data-md-color-scheme="slate"] .llm-tools-trigger {
+  background: var(--md-primary-fg-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-md-color-scheme="slate"] .llm-tools-menu {
+  background: var(--md-default-bg-color);
+  border-color: var(--md-default-fg-color--lighter);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Icon improvements */
+.llm-tools-trigger svg {
+  width: 24px;
+  height: 24px;
+}
+
+.llm-tools-menu button svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.llm-tools-menu button:hover svg {
+  opacity: 1;
+}
+
+/* Active state for trigger */
+.llm-tools-trigger:active {
+  transform: scale(0.95);
+}
+
+/* Disabled state */
+.llm-tools-menu button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Focus styles for accessibility */
+.llm-tools-trigger:focus-visible,
+.llm-tools-menu button:focus-visible {
+  outline: 2px solid var(--md-accent-fg-color);
+  outline-offset: 2px;
+}
+
+/* Hide on print */
+@media print {
+  .llm-tools-widget {
+    display: none !important;
+  }
+}
+
+/* Widget should be visible by default */
+.llm-tools-widget {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure widget stays above other fixed elements */
+.llm-tools-widget {
+  z-index: 999;
+}
+
+/* Adjust position when search is open */
+.md-search--active ~ .llm-tools-widget {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Pulse animation for first-time users */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.llm-tools-trigger.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* Stop pulsing after hover */
+.llm-tools-trigger:hover {
+  animation: none;
+}
