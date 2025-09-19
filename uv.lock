@@ -3,6 +3,12 @@ revision = 3
 requires-python = ">=3.13"
 
 [[package]]
+name = "actionlint-py"
+version = "1.7.7.23"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/12/88/0c37fc8d91bd53c191c6299fcfe16dc76d31e5230c3aae7bf73956f9d65f/actionlint_py-1.7.7.23.tar.gz", hash = "sha256:698e2d35833bd9f80f527d129df8816ce9de07ff6bdec90fae178181de385f73", size = 11881, upload-time = "2025-01-20T07:08:45.145Z" }
+
+[[package]]
 name = "aiosqlite"
 version = "0.21.0"
 source = { registry = "https://pypi.org/simple" }
@@ -511,6 +517,7 @@ source = { editable = "." }
 
 [package.optional-dependencies]
 dev = [
+    { name = "actionlint-py" },
     { name = "aiosqlite" },
     { name = "asyncpg" },
     { name = "basedpyright" },
@@ -545,6 +552,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "actionlint-py", marker = "extra == 'dev'", specifier = ">=1.7.7" },
     { name = "aiosqlite", marker = "extra == 'dev'", specifier = ">=0.19" },
     { name = "asyncpg", marker = "extra == 'dev'", specifier = ">=0.29" },
     { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.23.0" },

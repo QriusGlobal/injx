@@ -1,10 +1,14 @@
 repos:
-  # Conventional commits enforcement
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v3.30.1
+  # Smart commit message validation with hierarchical rules (replaces standard commitlint)
+  - repo: local
     hooks:
-      - id: commitizen
+      - id: validate-commit
+        name: Validate commit message with hierarchical rules
+        entry: bun run scripts/validate-commit.js
+        language: system
         stages: [commit-msg]
+        files: '^$'  # Run for all commits, not file-based
+        additional_dependencies: []
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.9
@@ -29,23 +33,12 @@ repos:
 
       - id: actionlint
         name: actionlint (GitHub Actions)
-        entry: bash -lc scripts/lint-workflows.sh
+        entry: uv run actionlint
         language: system
         files: ^.github/workflows/
+        pass_filenames: true
 
-      - id: prepare-commit-msg
-        name: prepare commit message
-        entry: scripts/prepare-commit-msg.py
-        language: python
-        stages: [prepare-commit-msg]
-        pass_filenames: false
-
-      - id: commit-prefix-validator
-        name: commit prefix validator
-        entry: scripts/validate-commit-prefix.py
-        language: python
-        stages: [commit-msg]
-        pass_filenames: false
+      # Custom commit hooks removed - using commitizen only
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1

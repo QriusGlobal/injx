@@ -1,0 +1,15 @@
+{
+  "name": "injx-commit-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Commit validation tools for injx",
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.2.2"
+  },
+  "scripts": {
+    "commitlint": "commitlint",
+    "validate-commit": "bun run scripts/validate-commit.js",
+    "prepare": "echo 'Use: uv run pre-commit install --hook-type prepare-commit-msg --hook-type commit-msg'"
+  }
+}

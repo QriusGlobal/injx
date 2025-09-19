@@ -282,31 +282,32 @@ Before committing, consider:
 
 Remember: Your commits control the automated release pipeline. Accuracy matters.
 
-### Bulletproof Commit Validation System
+### Modernized Commit Validation System
 
-This project enforces semantic versioning through a comprehensive commit validation system that provides **proactive guidance** and **strict enforcement** to prevent classification errors.
+This project enforces semantic versioning through an industry-standard commit validation system using **commitizen + commitlint** with a custom Node.js validation script that maintains our strict file-based hierarchy rules.
 
-#### Complete Hook Installation
+#### System Architecture
+
+**Industry-Standard Foundation:**
+- **commitizen**: Enhanced commit authoring experience with `cz commit`
+- **commitlint**: Robust validation engine via `@commitlint/lint` API
+- **Custom router**: Smart file analysis and dynamic ruleset selection
+
+#### Single Hook Installation
 
 **REQUIRED for all developers and agents:**
 ```bash
-# Install both hook types (order matters)
-uv run pre-commit install --hook-type prepare-commit-msg
+# Install modernized validation hook
 uv run pre-commit install --hook-type commit-msg
 ```
 
-#### Two-Stage Validation Process
+#### Validation Process
 
-**Stage 1: Proactive Guidance (`prepare-commit-msg`)**
-- Analyzes staged files automatically
-- Pre-fills correct commit prefix based on file categories
-- Saves developers from guessing
-- Environment overrides: `INJX_COMMIT_TYPE=feat INJX_COMMIT_SCOPE=container git commit`
-
-**Stage 2: Strict Enforcement (`commit-msg`)**
-- Validates final commit message against strict priority hierarchy
-- Blocks invalid combinations with clear guidance
-- No loopholes for mixed commits
+**Smart Validation (`scripts/validate-commit.js`)**
+- Analyzes staged files to determine context (src/, infrastructure, config)
+- Dynamically applies appropriate commitlint ruleset based on strict hierarchy
+- Provides clear, standardized error messages from commitlint engine
+- ~75 lines of custom logic vs. previous 500+ lines
 
 #### Strict Priority Hierarchy (No Loopholes)
 
@@ -361,38 +362,45 @@ git commit -m "feat(workflows): add workflow"  # ← BLOCKED ✅
 INJX_COMMIT_TYPE=fix INJX_COMMIT_SCOPE=security git commit
 ```
 
-#### Examples with Mixed Commits
+#### Examples with Modern Validation
 
 ```bash
-# ✅ Priority 1: src/ changes always win
+# ✅ Priority 1: src/ changes - library prefixes required
 feat(container): add async support
 # Files: src/container.py, tests/test_container.py, docs/api.md
+# [injx-validator] Applying "Source Code" validation rules.
 
-# ✅ Priority 2: Infrastructure beats config
+# ✅ Priority 2: Infrastructure changes - infrastructure prefixes required
 ci(workflows): update release process
 # Files: .github/workflows/release.yml, pyproject.toml
+# [injx-validator] Applying "Infrastructure" validation rules.
 
-# ✅ Priority 3: Config only allows any prefix
+# ✅ Priority 3: Config only - any prefix allowed
 feat(deps): add new dependency
 # Files: pyproject.toml (only)
+# [injx-validator] Applying "Configuration" validation rules.
 
 # ❌ BLOCKED: Infrastructure with library prefix
 feat(workflows): add CI workflow  # Should be 'ci' or 'chore'
-# Files: .github/workflows/test.yml
+# [injx-validator] Applying "Infrastructure" validation rules.
+# ❌ Commit message validation failed:
+#   - type must be one of [chore, ci, docs, test, build, style, refactor]
 
 # ❌ BLOCKED: src/ with infrastructure prefix
 chore(container): add new feature  # Should be 'feat'
-# Files: src/container.py
+# [injx-validator] Applying "Source Code" validation rules.
+# ❌ Commit message validation failed:
+#   - type must be one of [feat, fix, perf, refactor]
 ```
 
 #### Agent Integration Instructions
 
 **For AI Agents using this codebase:**
-1. **Install hooks**: `uv run pre-commit install --hook-type prepare-commit-msg --hook-type commit-msg`
-2. **Let hooks guide**: Don't manually write commit prefixes - let prepare hook suggest
-3. **Check suggestions**: Review the pre-filled prefix before completing message
-4. **Handle failures**: If validation fails, read the priority hierarchy guidance
-5. **Emergency bypass**: Use `git commit --no-verify` only with `Bypass-Validation: [reason]` footer
+1. **Install hooks**: `uv run pre-commit install --hook-type commit-msg`
+2. **Use cz commit**: Run `uv run cz commit` for interactive commit authoring
+3. **Handle failures**: Review commitlint error messages for specific guidance
+4. **Emergency bypass**: Use `git commit --no-verify` only with documented reason
+5. **Dependencies**: Node.js dependencies managed automatically by pre-commit
 
 #### Escape Hatch (Audited)
 - **Local bypass**: `git commit --no-verify` for exceptional cases

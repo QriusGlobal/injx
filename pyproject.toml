@@ -52,6 +52,7 @@ dev = [
     "pre-commit>=3.7",
     "python-semantic-release>=9.0",
     "commitizen>=3.30",
+    "actionlint-py>=1.7.7",
 ]
 
 docs = [
@@ -183,6 +184,15 @@ version_provider = "project"
 tag_format = "v$version"
 version_scheme = "semver"
 bump_message = "chore(release): v$new_version"
+use_shortcuts = true
+allow_abort = false
+
+# Enhanced commitizen configuration for better validation
+[tool.commitizen.settings]
+allowed_prefixes = ["feat", "fix", "docs", "style", "refactor", "perf", "test", "build", "ci", "chore"]
+commit_retry = true
+encoding = "utf-8"
+
 
 [tool.hatch.build.targets.sdist]
 include = [
