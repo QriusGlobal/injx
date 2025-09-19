@@ -3,21 +3,6 @@ name: Release
 'on':
   workflow_dispatch:
     inputs:
-      release_type:
-        description: 'Release type (auto determines from commits)'
-        required: true
-        default: 'auto'
-        type: choice
-        options:
-          - auto
-          - patch
-          - minor
-          - major
-      dry_run:
-        description: 'Dry run (no actual release)'
-        required: false
-        default: false
-        type: boolean
       target_environment:
         description: 'Release target environment (release=production, testpypi=testing)'
         required: true
@@ -26,6 +11,11 @@ name: Release
         options:
           - testpypi
           - release
+      dry_run:
+        description: 'Dry run (test without releasing)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -111,14 +101,8 @@ jobs:
             print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
           echo "Current version: $CURRENT_VERSION"
 
-          # Determine next version based on input
-          if [[ "${{ inputs.release_type }}" == "auto" ]]; then
-            # Let semantic-release determine from commits
-            NEXT_VERSION=$(uv run semantic-release version --print)
-          else
-            # Use specified bump type
-            NEXT_VERSION=$(uv run semantic-release version --print --${{ inputs.release_type }})
-          fi
+          # Always determine version from commits (no manual overrides)
+          NEXT_VERSION=$(uv run semantic-release version --print)
 
           if [[ "$NEXT_VERSION" == "$CURRENT_VERSION" ]]; then
             echo "No release needed - no changes since last release"
@@ -129,6 +113,27 @@ jobs:
             echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
             echo "needs_release=true" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Test git push capability (dry-run)
+        id: git-test
+        if: steps.check-version.outputs.needs_release == 'true'
+        continue-on-error: true
+        run: |
+          echo "::group::Testing git push capability"
+          if git push --dry-run origin main 2>&1 | tee push-test.log | \
+            grep -q "protected branch\|permission denied\|forbidden"; then
+            echo "::warning title=Branch Protection Active::Production releases require PR workflow"
+            echo "::warning::Use 'release-pr.yml' workflow for production releases with branch protection"
+            echo "branch_protected=true" >> "$GITHUB_OUTPUT"
+            if [[ "${{ inputs.target_environment }}" == "release" ]]; then
+              echo "::error::Cannot push to protected main branch. Use PR-based workflow instead."
+              exit 1
+            fi
+          else
+            echo "✅ Direct git push available"
+            echo "branch_protected=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "::endgroup::"
 
       - name: Version and build
         id: release
@@ -141,18 +146,12 @@ jobs:
           # Run semantic-release with environment-specific flags
           if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
             # TestPyPI: No Git tags, no push to avoid polluting version history
-            if [[ "${{ inputs.release_type }}" == "auto" ]]; then
-              uv run semantic-release -v version --no-push --no-vcs-release
-            else
-              uv run semantic-release -v version --no-push --no-vcs-release --${{ inputs.release_type }}
-            fi
+            echo "TestPyPI release: updating version locally only (no git push)"
+            uv run semantic-release -v version --no-push --no-vcs-release
           else
             # Production: Create Git tags and push for real releases
-            if [[ "${{ inputs.release_type }}" == "auto" ]]; then
-              uv run semantic-release -v version --push --vcs-release
-            else
-              uv run semantic-release -v version --push --vcs-release --${{ inputs.release_type }}
-            fi
+            echo "Production release: creating git tags and pushing"
+            uv run semantic-release -v version --push --vcs-release
           fi
 
           # Build packages with updated version
@@ -177,6 +176,11 @@ jobs:
             echo "## Dry Run Complete"
             echo "Would have released version: ${{ steps.check-version.outputs.next_version }}"
             echo "Target: ${{ inputs.target_environment == 'testpypi' && 'TestPyPI' || 'Production PyPI' }}"
+            if [[ "${{ steps.git-test.outputs.branch_protected }}" == "true" ]]; then
+              echo ""
+              echo "⚠️ **Branch Protection Detected**"
+              echo "Production releases will require PR-based workflow."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Publish to TestPyPI

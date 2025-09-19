@@ -8,7 +8,7 @@ Injx uses **trunk-based development** where all work happens on the `main` branc
 - **Simplifies development**: Single branch to maintain
 - **Enables fast iteration**: Changes integrate immediately
 - **Follows industry standards**: Used by major Python libraries (numpy, requests, flask)
-- **Provides continuous validation**: Every push to `main` publishes to TestPyPI
+- **Supports TestPyPI validation**: Manual releases to TestPyPI for testing
 
 Release branches are not used because:
 - The library does not maintain multiple major versions simultaneously
@@ -77,27 +77,38 @@ Every push to `main` automatically publishes to TestPyPI:
 
 ### 3. Creating a Release
 
-Releases are triggered manually through GitHub Actions:
+#### Option A: Direct Release (when branch protection is disabled)
+Use the standard release workflow:
 
 1. Go to [Actions → Release workflow](../../actions/workflows/release.yml)
 2. Click "Run workflow"
 3. Select options:
-   - **Release type**:
-     - `auto` - Determine from commits (recommended)
-     - `patch` - Force patch version bump
-     - `minor` - Force minor version bump
-     - `major` - Force major version bump
+   - **Target environment**: `testpypi` or `release`
    - **Dry run**: Test the release without publishing
 
-4. The workflow:
-   - Runs all quality gates (format, lint, type check, tests)
-   - Calculates the next version from commits since last release
-   - Updates `pyproject.toml` with new version
-   - Generates/updates `CHANGELOG.md`
-   - Creates git tag
-   - Builds and publishes to PyPI
-   - Creates GitHub Release
-   - Deploys documentation
+#### Option B: PR-Based Release (when branch protection is enabled)
+Use the PR-based workflow for secure releases:
+
+1. Go to [Actions → Create Release PR](../../actions/workflows/release-pr.yml)
+2. Click "Run workflow"
+3. Select target environment (`testpypi` or `release`)
+4. Review and merge the created PR
+5. Release publishes automatically after PR merge
+
+#### How Versions Are Determined
+**Version bumps are ALWAYS determined from commit messages** (no manual overrides):
+- `feat:` commits → minor version bump
+- `fix:` commits → patch version bump
+- `BREAKING CHANGE:` or `!` → major version bump
+- Other commits (docs, test, chore) → no version change
+
+#### Release Process
+1. **Quality Gates**: Format, lint, type check, tests
+2. **Version Calculation**: Automatic from conventional commits
+3. **Environment-Specific Actions**:
+   - **TestPyPI**: Updates version locally, publishes package (no git tags)
+   - **Production**: Creates git tag, publishes to PyPI, creates GitHub release
+4. **Documentation**: Auto-deployed for production releases
 
 ## Release Cadence Guidelines
 
@@ -178,6 +189,18 @@ If you need to add manual content:
 TestPyPI publishes fail when:
 - Version already exists (TestPyPI prohibits overwriting)
 - OIDC trust is not configured (contact repository admin)
+
+### Branch Protection Issues
+If production releases fail with "protected branch" errors:
+- Branch protection is enabled on main
+- Use the PR-based release workflow instead (`release-pr.yml`)
+- This creates a PR with version updates that can be reviewed and merged
+
+### Version Determination
+Versions are calculated from commits - **no manual overrides**:
+- Write proper conventional commit messages
+- Use `git rebase -i` to fix commit messages if needed
+- Emergency overrides encourage bad practices and are not supported
 
 ### Pre-commit Hook Issues
 If commit fails validation:
