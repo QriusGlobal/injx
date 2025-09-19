@@ -282,6 +282,49 @@ Before committing, consider:
 
 Remember: Your commits control the automated release pipeline. Accuracy matters.
 
+### Automated Commit Prefix Validation
+
+This project enforces commit message consistency through automated path-based validation. The validation system implements "Guidance over Gatekeeping" philosophy.
+
+#### Validation Rules (Priority Order)
+1. **Primary Rule**: ANY `src/` changes → require `feat`, `fix`, `perf`, `refactor`
+2. **High-Impact Config**: ONLY config files → allow any prefix
+3. **Infrastructure Rule**: ONLY docs/tests/other → require `chore`, `ci`, `docs`, `test`, `build`, `style`
+
+#### File Classifications
+- **Library Code**: `src/` directory → Library prefixes required
+- **High-Impact Config**: `pyproject.toml`, `uv.lock`, `.github/workflows/`, `Dockerfile` → Any prefix allowed
+- **Infrastructure**: `tests/`, `docs/`, `scripts/`, `*.md` → Infrastructure prefixes required
+
+#### Examples
+```bash
+# ✅ Correct - src/ change with library prefix
+feat(container): add async provider support
+
+# ✅ Correct - config change can be feature
+feat(deps): add pytest-asyncio for async testing
+
+# ✅ Correct - infrastructure change with infra prefix
+chore(workflows): update GitHub Actions versions
+
+# ❌ Incorrect - src/ change with infrastructure prefix
+chore(container): add new feature  # Should be 'feat'
+
+# ❌ Incorrect - workflow change with library prefix
+feat(workflows): fix CI timeout  # Should be 'chore' or 'ci'
+```
+
+#### Escape Hatch for Edge Cases
+- **Local bypass**: Use `git commit --no-verify` for exceptional cases
+- **CI bypass**: Add `Bypass-Validation: [reason]` to commit body
+- **Auditing**: All bypasses are tracked and require justification in commit message
+
+#### Implementation Details
+- **Pre-commit hook**: Runs on `commit-msg` stage (cannot be bypassed accidentally)
+- **Git nuances**: Handles merge commits, renames, deletions correctly
+- **Clear guidance**: Helpful error messages explain exactly what's wrong
+- **Performance**: Fast validation using git diff analysis
+
 ## Release Strategy
 
 ### Release Automation

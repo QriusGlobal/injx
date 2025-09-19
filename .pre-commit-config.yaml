@@ -33,6 +33,13 @@ repos:
         language: system
         files: ^.github/workflows/
 
+      - id: commit-prefix-validator
+        name: commit prefix validator
+        entry: scripts/validate-commit-prefix.py
+        language: python
+        stages: [commit-msg]
+        pass_filenames: false
+
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1
     hooks:
