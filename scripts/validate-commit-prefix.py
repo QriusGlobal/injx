@@ -14,7 +14,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Set, List, Tuple
+from typing import List, Tuple
 
 
 def is_merge_commit() -> bool:
@@ -105,8 +105,9 @@ def classify_files(file_statuses: List[Tuple[str, str]]) -> dict:
         'Dockerfile', 'docker-compose.yml', 'requirements.txt'
     }
 
-    high_impact_dirs = {
-        '.github/workflows/'
+    # Infrastructure directories that require infrastructure prefixes
+    infrastructure_dirs = {
+        '.github/workflows/', 'tests/', 'docs/', 'scripts/'
     }
 
     for status, filename in file_statuses:
@@ -120,8 +121,10 @@ def classify_files(file_statuses: List[Tuple[str, str]]) -> dict:
             categories['src'].add(filename)
         elif filename in high_impact_patterns:
             categories['high_impact_config'].add(filename)
-        elif any(filename.startswith(dir_) for dir_ in high_impact_dirs):
-            categories['high_impact_config'].add(filename)
+        elif any(filename.startswith(dir_) for dir_ in infrastructure_dirs):
+            categories['infrastructure'].add(filename)
+        elif filename.endswith(('.md', '.rst', '.txt')):
+            categories['infrastructure'].add(filename)
         else:
             categories['infrastructure'].add(filename)
 

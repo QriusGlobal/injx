@@ -292,9 +292,9 @@ This project enforces commit message consistency through automated path-based va
 3. **Infrastructure Rule**: ONLY docs/tests/other → require `chore`, `ci`, `docs`, `test`, `build`, `style`
 
 #### File Classifications
-- **Library Code**: `src/` directory → Library prefixes required
-- **High-Impact Config**: `pyproject.toml`, `uv.lock`, `.github/workflows/`, `Dockerfile` → Any prefix allowed
-- **Infrastructure**: `tests/`, `docs/`, `scripts/`, `*.md` → Infrastructure prefixes required
+- **Library Code**: `src/` directory → Library prefixes required (`feat`, `fix`, `perf`, `refactor`)
+- **High-Impact Config**: `pyproject.toml`, `uv.lock`, `Dockerfile` → Any prefix allowed
+- **Infrastructure**: `.github/workflows/`, `tests/`, `docs/`, `scripts/`, `*.md` → Infrastructure prefixes required (`chore`, `ci`, `docs`, `test`, `build`, `style`)
 
 #### Examples
 ```bash
@@ -307,11 +307,14 @@ feat(deps): add pytest-asyncio for async testing
 # ✅ Correct - infrastructure change with infra prefix
 chore(workflows): update GitHub Actions versions
 
+# ✅ Correct - workflow change with infrastructure prefix
+ci(workflows): fix CI timeout
+
 # ❌ Incorrect - src/ change with infrastructure prefix
 chore(container): add new feature  # Should be 'feat'
 
 # ❌ Incorrect - workflow change with library prefix
-feat(workflows): fix CI timeout  # Should be 'chore' or 'ci'
+feat(workflows): add new workflow  # Should be 'chore' or 'ci'
 ```
 
 #### Escape Hatch for Edge Cases
