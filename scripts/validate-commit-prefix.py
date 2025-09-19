@@ -132,7 +132,7 @@ def classify_files(file_statuses: List[Tuple[str, str]]) -> dict:
 
 
 def validate_commit_prefix(prefix: str, file_categories: dict) -> Tuple[bool, str]:
-    """Validate commit prefix using tiered rules."""
+    """Validate commit prefix using strict priority hierarchy."""
 
     # All allowed prefixes
     library_prefixes = {'feat', 'fix', 'perf', 'refactor'}
@@ -148,30 +148,26 @@ def validate_commit_prefix(prefix: str, file_categories: dict) -> Tuple[bool, st
             return True, ""
         return False, f"File renames should use 'refactor' or 'chore', got '{prefix}'"
 
-    # Rule 1: Primary Rule - ANY src/ changes
+    # STRICT PRIORITY HIERARCHY (highest priority wins)
+
+    # Priority 1 (HIGHEST): ANY src/ changes - requires library prefix
     if file_categories['src']:
         if prefix in library_prefixes:
             return True, ""
         return False, (
-            f"Changes to src/ require library prefix: {sorted(library_prefixes)}, got '{prefix}'"
+            f"src/ changes require library prefix: {sorted(library_prefixes)}, got '{prefix}'"
         )
 
-    # Rule 2: High-Impact Config Rule - ONLY high-impact config files
-    if file_categories['high_impact_config'] and not file_categories['infrastructure']:
-        # Allow both library and infrastructure prefixes for config files
-        if prefix in all_prefixes:
-            return True, ""
-
-    # Rule 3: Infrastructure Rule - ONLY infrastructure files
-    if file_categories['infrastructure'] and not file_categories['high_impact_config']:
+    # Priority 2: Infrastructure changes - requires infrastructure prefix
+    if file_categories['infrastructure']:
         if prefix in infrastructure_prefixes:
             return True, ""
         return False, (
             f"Infrastructure changes require: {sorted(infrastructure_prefixes)}, got '{prefix}'"
         )
 
-    # Mixed high-impact config + infrastructure: Allow any prefix
-    if file_categories['high_impact_config'] and file_categories['infrastructure']:
+    # Priority 3 (LOWEST): ONLY high-impact config files - allows any prefix
+    if file_categories['high_impact_config']:
         return True, ""
 
     return True, ""
@@ -183,16 +179,17 @@ def print_validation_guidance(prefix: str, file_categories: dict, files: List[st
     print(f"   Prefix: '{prefix}'")
     print(f"   Files changed: {sorted(files)}")
     print()
-    print("📋 Tiered Validation Rules:")
-    print("   1. ANY src/ changes → feat, fix, perf, refactor")
-    print("   2. ONLY config files → any prefix allowed")
-    print("   3. ONLY infrastructure → chore, ci, docs, test, build, style")
+    print("📋 Strict Priority Hierarchy (highest priority wins):")
+    print("   1. src/ changes → feat, fix, perf, refactor (HIGHEST PRIORITY)")
+    print("   2. Infrastructure → chore, ci, docs, test, build, style")
+    print("   3. Config files → any prefix allowed (LOWEST PRIORITY)")
     print()
     print("🔧 Categories found:")
     for category, files_in_cat in file_categories.items():
         if files_in_cat:
             print(f"   • {category}: {sorted(files_in_cat)}")
     print()
+    print("⚠️  Mixed commits: Highest priority category determines required prefix")
     print("🚪 Escape hatch: Use 'git commit --no-verify' for edge cases")
     print("   (Bypasses will be audited by CI)")
 

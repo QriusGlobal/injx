@@ -282,51 +282,129 @@ Before committing, consider:
 
 Remember: Your commits control the automated release pipeline. Accuracy matters.
 
-### Automated Commit Prefix Validation
+### Bulletproof Commit Validation System
 
-This project enforces commit message consistency through automated path-based validation. The validation system implements "Guidance over Gatekeeping" philosophy.
+This project enforces semantic versioning through a comprehensive commit validation system that provides **proactive guidance** and **strict enforcement** to prevent classification errors.
 
-#### Validation Rules (Priority Order)
-1. **Primary Rule**: ANY `src/` changes → require `feat`, `fix`, `perf`, `refactor`
-2. **High-Impact Config**: ONLY config files → allow any prefix
-3. **Infrastructure Rule**: ONLY docs/tests/other → require `chore`, `ci`, `docs`, `test`, `build`, `style`
+#### Complete Hook Installation
 
-#### File Classifications
-- **Library Code**: `src/` directory → Library prefixes required (`feat`, `fix`, `perf`, `refactor`)
-- **High-Impact Config**: `pyproject.toml`, `uv.lock`, `Dockerfile` → Any prefix allowed
-- **Infrastructure**: `.github/workflows/`, `tests/`, `docs/`, `scripts/`, `*.md` → Infrastructure prefixes required (`chore`, `ci`, `docs`, `test`, `build`, `style`)
-
-#### Examples
+**REQUIRED for all developers and agents:**
 ```bash
-# ✅ Correct - src/ change with library prefix
-feat(container): add async provider support
-
-# ✅ Correct - config change can be feature
-feat(deps): add pytest-asyncio for async testing
-
-# ✅ Correct - infrastructure change with infra prefix
-chore(workflows): update GitHub Actions versions
-
-# ✅ Correct - workflow change with infrastructure prefix
-ci(workflows): fix CI timeout
-
-# ❌ Incorrect - src/ change with infrastructure prefix
-chore(container): add new feature  # Should be 'feat'
-
-# ❌ Incorrect - workflow change with library prefix
-feat(workflows): add new workflow  # Should be 'chore' or 'ci'
+# Install both hook types (order matters)
+uv run pre-commit install --hook-type prepare-commit-msg
+uv run pre-commit install --hook-type commit-msg
 ```
 
-#### Escape Hatch for Edge Cases
-- **Local bypass**: Use `git commit --no-verify` for exceptional cases
-- **CI bypass**: Add `Bypass-Validation: [reason]` to commit body
-- **Auditing**: All bypasses are tracked and require justification in commit message
+#### Two-Stage Validation Process
+
+**Stage 1: Proactive Guidance (`prepare-commit-msg`)**
+- Analyzes staged files automatically
+- Pre-fills correct commit prefix based on file categories
+- Saves developers from guessing
+- Environment overrides: `INJX_COMMIT_TYPE=feat INJX_COMMIT_SCOPE=container git commit`
+
+**Stage 2: Strict Enforcement (`commit-msg`)**
+- Validates final commit message against strict priority hierarchy
+- Blocks invalid combinations with clear guidance
+- No loopholes for mixed commits
+
+#### Strict Priority Hierarchy (No Loopholes)
+
+**Priority 1 (HIGHEST): src/ Changes**
+- **Files**: Any file in `src/` directory
+- **Required Prefixes**: `feat`, `fix`, `perf`, `refactor`
+- **Beats Everything**: Even if mixed with infrastructure/config
+
+**Priority 2: Infrastructure Changes**
+- **Files**: `.github/workflows/`, `tests/`, `docs/`, `scripts/`, `*.md`
+- **Required Prefixes**: `chore`, `ci`, `docs`, `test`, `build`, `style`
+- **Beats Config**: Infrastructure rules override config rules
+
+**Priority 3 (LOWEST): Config Files Only**
+- **Files**: `pyproject.toml`, `uv.lock`, `Dockerfile`
+- **Allowed Prefixes**: Any (both library and infrastructure)
+- **Lowest Priority**: Only applies when no src/ or infrastructure files
+
+#### Critical Mixed Commits Behavior
+
+```bash
+# ✅ src/ + anything = library prefix required
+git add src/container.py .github/workflows/ci.yml pyproject.toml
+git commit -m "feat(container): add feature"  # ← ALLOWED
+
+# ❌ src/ + anything ≠ infrastructure prefix
+git add src/container.py .github/workflows/ci.yml
+git commit -m "ci(workflows): update"  # ← BLOCKED
+
+# ✅ Infrastructure + config = infrastructure prefix required
+git add .github/workflows/ci.yml pyproject.toml
+git commit -m "ci(workflows): update workflow"  # ← ALLOWED
+
+# ❌ Infrastructure + config ≠ library prefix (THE FIXED VULNERABILITY)
+git add .github/workflows/ci.yml pyproject.toml
+git commit -m "feat(workflows): add workflow"  # ← BLOCKED ✅
+```
+
+#### Automatic Prefix Suggestions
+
+**The prepare hook suggests:**
+- `feat(container): ` for src/container.py changes
+- `ci(workflows): ` for .github/workflows/ changes
+- `test: ` for tests/ changes
+- `docs: ` for documentation changes
+- `chore(deps): ` for pyproject.toml changes
+
+#### Environment Overrides for Edge Cases
+
+```bash
+# Manual override for complex scenarios
+INJX_COMMIT_TYPE=fix INJX_COMMIT_SCOPE=security git commit
+```
+
+#### Examples with Mixed Commits
+
+```bash
+# ✅ Priority 1: src/ changes always win
+feat(container): add async support
+# Files: src/container.py, tests/test_container.py, docs/api.md
+
+# ✅ Priority 2: Infrastructure beats config
+ci(workflows): update release process
+# Files: .github/workflows/release.yml, pyproject.toml
+
+# ✅ Priority 3: Config only allows any prefix
+feat(deps): add new dependency
+# Files: pyproject.toml (only)
+
+# ❌ BLOCKED: Infrastructure with library prefix
+feat(workflows): add CI workflow  # Should be 'ci' or 'chore'
+# Files: .github/workflows/test.yml
+
+# ❌ BLOCKED: src/ with infrastructure prefix
+chore(container): add new feature  # Should be 'feat'
+# Files: src/container.py
+```
+
+#### Agent Integration Instructions
+
+**For AI Agents using this codebase:**
+1. **Install hooks**: `uv run pre-commit install --hook-type prepare-commit-msg --hook-type commit-msg`
+2. **Let hooks guide**: Don't manually write commit prefixes - let prepare hook suggest
+3. **Check suggestions**: Review the pre-filled prefix before completing message
+4. **Handle failures**: If validation fails, read the priority hierarchy guidance
+5. **Emergency bypass**: Use `git commit --no-verify` only with `Bypass-Validation: [reason]` footer
+
+#### Escape Hatch (Audited)
+- **Local bypass**: `git commit --no-verify` for exceptional cases
+- **CI auditing**: Add `Bypass-Validation: [reason]` to commit body for review
+- **Justification required**: All bypasses must explain why rules don't apply
 
 #### Implementation Details
-- **Pre-commit hook**: Runs on `commit-msg` stage (cannot be bypassed accidentally)
-- **Git nuances**: Handles merge commits, renames, deletions correctly
-- **Clear guidance**: Helpful error messages explain exactly what's wrong
-- **Performance**: Fast validation using git diff analysis
+- **Two hooks**: prepare-commit-msg + commit-msg for complete coverage
+- **No loopholes**: Strict priority hierarchy eliminates mixed commit vulnerabilities
+- **Regression protection**: Comprehensive test suite prevents rule weakening
+- **Clear guidance**: Detailed error messages with specific fix instructions
+- **Performance**: Fast file classification using git diff analysis
 
 ## Release Strategy
 

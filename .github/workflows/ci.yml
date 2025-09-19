@@ -60,6 +60,17 @@ jobs:
             --cov=src --cov-report=xml \
             -n auto
 
+      # Validate commit message rules (regression protection)
+      - name: Test commit validation rules
+        run: uv run pytest tests/test_commit_message_rules.py -v
+
+      # Check commit messages since main (CI backstop)
+      - name: Validate recent commit messages
+        if: github.event_name == 'pull_request'
+        run: |
+          # Check commits in this PR branch
+          uv run cz check --rev-range origin/main..HEAD
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a  # v4.5.0
         with:

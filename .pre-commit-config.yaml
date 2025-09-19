@@ -33,6 +33,13 @@ repos:
         language: system
         files: ^.github/workflows/
 
+      - id: prepare-commit-msg
+        name: prepare commit message
+        entry: scripts/prepare-commit-msg.py
+        language: python
+        stages: [prepare-commit-msg]
+        pass_filenames: false
+
       - id: commit-prefix-validator
         name: commit prefix validator
         entry: scripts/validate-commit-prefix.py
