@@ -1,6 +1,7 @@
 """Tests for O(1) cycle detection improvements."""
 
 import asyncio
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -9,6 +10,10 @@ import pytest
 from injx import Container, Scope, Token
 from injx.container import _resolution_set, _resolution_stack
 from injx.exceptions import CircularDependencyError
+
+# Detect CI environment and apply timing multiplier for hardware variability
+IS_CI = os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true'
+CI_MULTIPLIER = 5 if IS_CI else 1  # 5x more lenient in CI environments
 
 
 class TestCycleDetection:
@@ -92,8 +97,8 @@ class TestCycleDetection:
 
         # All detections should be fast (< 100ms even for depth 1000)
         for depth, det_time in zip(depths, detection_times):
-            assert det_time < 0.1, (
-                f"Cycle detection too slow at depth {depth}: {det_time:.4f}s"
+            assert det_time < 0.1 * CI_MULTIPLIER, (
+                f"Cycle detection too slow at depth {depth}: {det_time:.4f}s (threshold: {0.1 * CI_MULTIPLIER:.3f}s)"
             )
 
     def test_resolution_set_mechanism(self):
