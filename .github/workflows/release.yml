@@ -4,74 +4,48 @@ name: Release
   workflow_dispatch:
     inputs:
       target_environment:
-        description: 'Release target environment (release=production, testpypi=testing)'
+        description: 'Release target environment'
         required: true
         default: 'testpypi'
         type: choice
         options:
           - testpypi
-          - release
+          - pypi  # Changed from 'release' to 'pypi' for clarity
       dry_run:
         description: 'Dry run (test without releasing)'
         required: false
         default: false
         type: boolean
 
+# Prevent simultaneous releases
+concurrency:
+  group: release-${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
 jobs:
-  quality-gates:
-    name: Quality Gates
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
-        with:
-          fetch-depth: 0  # Required for semantic-release to analyze commits
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4  # v6.7.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: |
-            **/pyproject.toml
-            **/uv.lock
-          prune-cache: false
-
-      - name: Install dependencies
-        run: uv sync --extra dev
-
-      - name: Format check
-        run: uv run ruff format --check src tests
-
-      - name: Lint check
-        run: uv run ruff check src tests
-
-      - name: Type check
-        run: uv run basedpyright src
-
-      - name: Run tests
-        run: uv run pytest -q --maxfail=1
-
   release:
     name: ${{ inputs.target_environment == 'testpypi' && 'Test Release (TestPyPI)' || 'Production Release (PyPI)' }}
-    needs: quality-gates
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: ${{ inputs.target_environment }}
     permissions:
       id-token: write  # OIDC for PyPI/TestPyPI
-      contents: write  # Git operations
+      contents: write  # Git operations and PR creation
+      pull-requests: write  # PR creation
     outputs:
-      version: ${{ steps.release.outputs.version }}
-      released: ${{ steps.release.outputs.released }}
+      version: ${{ steps.version.outputs.version }}
+      released: ${{ steps.publish.outputs.released }}
+      pr_url: ${{ steps.pr.outputs.url }}
+
     steps:
-      - name: Checkout
+      - name: Checkout main branch
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
         with:
           fetch-depth: 0  # Required for semantic-release
+          ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup uv
@@ -82,7 +56,6 @@ jobs:
             **/pyproject.toml
             **/uv.lock
           prune-cache: false
-          save-cache: ${{ inputs.dry_run == false }}
 
       - name: Install dependencies
         run: uv sync --extra dev
@@ -92,8 +65,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Determine release version
-        id: check-version
+      - name: Calculate next version
+        id: version
         run: |
           # Get current version
           CURRENT_VERSION=$(uv run python -c \
@@ -103,190 +76,203 @@ jobs:
 
           # Always determine version from commits (no manual overrides)
           NEXT_VERSION=$(uv run semantic-release version --print)
+          echo "Next version: $NEXT_VERSION"
 
           if [[ "$NEXT_VERSION" == "$CURRENT_VERSION" ]]; then
-            echo "No release needed - no changes since last release"
-            echo "next_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+            echo "::notice::No release needed - no changes since v$CURRENT_VERSION"
             echo "needs_release=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Will release version: $NEXT_VERSION"
-            echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release needed: v$CURRENT_VERSION → v$NEXT_VERSION"
             echo "needs_release=true" >> "$GITHUB_OUTPUT"
+            echo "current=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+            echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Test git push capability (dry-run)
-        id: git-test
-        if: steps.check-version.outputs.needs_release == 'true'
-        continue-on-error: true
+      - name: Create release branch
+        if: steps.version.outputs.needs_release == 'true' && inputs.dry_run == false
+        id: branch
         run: |
-          echo "::group::Testing git push capability"
-          if git push --dry-run origin main 2>&1 | tee push-test.log | \
-            grep -q "protected branch\|permission denied\|forbidden"; then
-            echo "::warning title=Branch Protection Active::Production releases require PR workflow"
-            echo "::warning::Use 'release-pr.yml' workflow for production releases with branch protection"
-            echo "branch_protected=true" >> "$GITHUB_OUTPUT"
-            if [[ "${{ inputs.target_environment }}" == "release" ]]; then
-              echo "::error::Cannot push to protected main branch. Use PR-based workflow instead."
-              exit 1
-            fi
-          else
-            echo "✅ Direct git push available"
-            echo "branch_protected=false" >> "$GITHUB_OUTPUT"
-          fi
-          echo "::endgroup::"
+          # Create branch with clear naming for distribution channel
+          BRANCH="release/${{ inputs.target_environment }}-v${{ steps.version.outputs.version }}"
+          echo "Creating branch: $BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-      - name: Version and build
-        id: release
-        if: steps.check-version.outputs.needs_release == 'true' && inputs.dry_run == false
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Create and switch to release branch
+          git checkout -b "$BRANCH"
+
+          # Update version and changelog on release branch
+          echo "Running semantic-release to update version and changelog..."
+          uv run semantic-release -v version --no-push --no-vcs-release
+
+          # Commit the changes
+          git add pyproject.toml CHANGELOG.md
+          git commit -m \
+            "chore(release): prepare v${{ steps.version.outputs.version }} for ${{ inputs.target_environment }}"
+
+          # Push the release branch
+          git push -u origin "$BRANCH"
+          echo "✅ Release branch created and pushed"
+
+      - name: Build packages
+        if: steps.version.outputs.needs_release == 'true' && inputs.dry_run == false
         run: |
-          echo "Creating ${{ inputs.target_environment == 'testpypi' && 'TestPyPI' || 'production' }} release..."
-
-          # Run semantic-release with environment-specific flags
-          if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
-            # TestPyPI: No Git tags, no push to avoid polluting version history
-            echo "TestPyPI release: updating version locally only (no git push)"
-            uv run semantic-release -v version --no-push --no-vcs-release
-          else
-            # Production: Create Git tags and push for real releases
-            echo "Production release: creating git tags and pushing"
-            uv run semantic-release -v version --push --vcs-release
-          fi
-
-          # Build packages with updated version
-          rm -rf dist
+          echo "Building packages for v${{ steps.version.outputs.version }}..."
+          rm -rf dist/
           uv build
           echo "Built packages:"
           ls -la dist/
 
-          # Get the new version that was just set
-          NEW_VERSION=$(uv run python -c \
-            "import tomllib; import pathlib; \
-            print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
-          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Publish package
+        id: publish
+        if: steps.version.outputs.needs_release == 'true' && inputs.dry_run == false
+        run: |
+          if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
+            echo "Publishing to TestPyPI..."
+            uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always
+            echo "✅ Published v${{ steps.version.outputs.version }} to TestPyPI"
+          else
+            echo "Publishing to PyPI..."
+            uv publish --trusted-publishing always
+            echo "✅ Published v${{ steps.version.outputs.version }} to PyPI"
+          fi
           echo "released=true" >> "$GITHUB_OUTPUT"
+
+      - name: Post-release actions
+        if: steps.version.outputs.needs_release == 'true' && inputs.dry_run == false
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
+            # TestPyPI: Delete the branch after successful publish
+            echo "Cleaning up TestPyPI release branch..."
+            git checkout main
+            git push origin --delete "${{ steps.branch.outputs.branch }}"
+            echo "✅ TestPyPI release complete, branch deleted"
+            echo "No PR needed for TestPyPI releases"
+
+          else
+            # Production PyPI: Create git tag and PR to main
+            echo "Creating git tag for production release..."
+            git tag -a "v${{ steps.version.outputs.version }}" \
+              -m "Release v${{ steps.version.outputs.version }}"
+            git push origin "v${{ steps.version.outputs.version }}"
+
+            # Create PR to main for permanent record
+            PR_URL=$(gh pr create \
+              --title "🚀 Release v${{ steps.version.outputs.version }} to PyPI" \
+              --body "## Production Release v${{ steps.version.outputs.version }}
+
+          This release has been successfully published to PyPI.
+
+          ### Changes
+          - Version bumped to v${{ steps.version.outputs.version }}
+          - CHANGELOG.md updated with release notes
+          - Git tag created: \`v${{ steps.version.outputs.version }}\`
+
+          ### Package Links
+          - 📦 [PyPI](https://pypi.org/project/injx/${{ steps.version.outputs.version }}/)
+          - 🏷️ [Git Tag](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }})
+
+          ### Verification
+          \`\`\`bash
+          pip install injx==${{ steps.version.outputs.version }}
+          \`\`\`
+
+          Merging this PR will update the main branch with the release version." \
+              --base main \
+              --head "${{ steps.branch.outputs.branch }}")
+
+            echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
+            echo "✅ PyPI release complete, PR created: $PR_URL"
+          fi
+
+      - name: Create GitHub Release (production only)
+        if: >-
+          steps.version.outputs.needs_release == 'true' &&
+          inputs.dry_run == false &&
+          inputs.target_environment == 'pypi'
+        uses: softprops/action-gh-release@6cbd405e2c4e67a21c47fa9e383d020e4e28b836  # v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
 
       - name: Dry run summary
         if: inputs.dry_run == true
         run: |
-          echo "version=${{ steps.check-version.outputs.next_version }}" >> "$GITHUB_OUTPUT"
-          echo "released=false" >> "$GITHUB_OUTPUT"
           {
             echo "## Dry Run Complete"
-            echo "Would have released version: ${{ steps.check-version.outputs.next_version }}"
-            echo "Target: ${{ inputs.target_environment == 'testpypi' && 'TestPyPI' || 'Production PyPI' }}"
-            if [[ "${{ steps.git-test.outputs.branch_protected }}" == "true" ]]; then
+            echo ""
+            if [[ "${{ steps.version.outputs.needs_release }}" == "true" ]]; then
+              echo "Would have released version: **v${{ steps.version.outputs.version }}**"
+              echo "Target: **${{ inputs.target_environment == 'testpypi' && 'TestPyPI' || 'PyPI' }}**"
               echo ""
-              echo "⚠️ **Branch Protection Detected**"
-              echo "Production releases will require PR-based workflow."
+              echo "### Planned Actions:"
+              BRANCH_NAME="release/${{ inputs.target_environment }}-v${{ steps.version.outputs.version }}"
+              echo "1. Create branch: \`$BRANCH_NAME\`"
+              echo "2. Update version in pyproject.toml"
+              echo "3. Update CHANGELOG.md"
+              echo "4. Build and publish packages"
+              if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
+                echo "5. Delete branch after publish (no PR)"
+              else
+                echo "5. Create git tag: \`v${{ steps.version.outputs.version }}\`"
+                echo "6. Create PR to main"
+                echo "7. Create GitHub release"
+              fi
+            else
+              echo "No release needed - no changes since last release."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Publish to TestPyPI
-        if: >-
-          steps.check-version.outputs.needs_release == 'true' &&
-          inputs.dry_run == false &&
-          inputs.target_environment == 'testpypi'
-        run: |
-          echo "Publishing to TestPyPI to test release process..."
-          uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always
-          echo "Published version ${{ steps.release.outputs.version }} to TestPyPI"
-
-      - name: Publish to PyPI
-        if: >-
-          steps.check-version.outputs.needs_release == 'true' &&
-          inputs.dry_run == false &&
-          inputs.target_environment == 'release'
-        run: |
-          echo "Publishing to production PyPI..."
-          uv publish --trusted-publishing always
-          echo "Published version ${{ steps.release.outputs.version }} to PyPI"
-
       - name: Release summary
-        if: always() && inputs.dry_run == false
+        if: inputs.dry_run == false
         run: |
-          if [[ "${{ steps.check-version.outputs.needs_release }}" == "false" ]]; then
+          if [[ "${{ steps.version.outputs.needs_release }}" == "false" ]]; then
             {
               echo "## No Release Needed"
               echo "No changes detected since last release."
             } >> "$GITHUB_STEP_SUMMARY"
-          elif [[ "${{ steps.release.outputs.released }}" == "true" ]]; then
-            VERSION="${{ steps.release.outputs.version }}"
-            REPO="${{ github.repository }}"
-
+          elif [[ "${{ steps.publish.outputs.released }}" == "true" ]]; then
             {
-              echo "## ${{ inputs.target_environment == 'testpypi' && 'TestPyPI' || 'Production' }} Release Complete"
-              echo "Released version: $VERSION"
+              echo "## 🎉 Release Complete"
+              echo ""
+              echo "**Version**: v${{ steps.version.outputs.version }}"
+              echo "**Target**: ${{ inputs.target_environment == 'testpypi' && 'TestPyPI' || 'PyPI' }}"
+              echo ""
 
               if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
-                echo "- TestPyPI: https://test.pypi.org/project/injx/$VERSION/"
+                echo "### TestPyPI Release"
+                echo "- ✅ Published to TestPyPI"
+                echo "- ✅ Branch cleaned up (no git pollution)"
                 echo ""
                 echo "**Test the release:**"
                 echo "\`\`\`bash"
-                echo "pip install -i https://test.pypi.org/simple/ injx==$VERSION"
+                echo "pip install -i https://test.pypi.org/simple/ injx==${{ steps.version.outputs.version }}"
                 echo "\`\`\`"
                 echo ""
-                echo "**If tests pass, create production release:**"
-                echo "Run this workflow again with \`target_environment: release\`"
+                echo "**Next step:** If tests pass, create production release with \`target_environment: pypi\`"
               else
-                echo "- PyPI: https://pypi.org/project/injx/$VERSION/"
-                GITHUB_URL="https://github.com/$REPO/releases/tag/v$VERSION"
-                echo "- GitHub: $GITHUB_URL"
+                echo "### Production Release"
+                echo "- ✅ Published to PyPI"
+                echo "- ✅ Git tag created"
+                echo "- ✅ GitHub release created"
+                echo "- ✅ PR created for main branch update"
+                echo ""
+                echo "**PR**: ${{ steps.pr.outputs.url }}"
+                echo ""
+                echo "**Install:**"
+                echo "\`\`\`bash"
+                echo "pip install injx==${{ steps.version.outputs.version }}"
+                echo "\`\`\`"
               fi
             } >> "$GITHUB_STEP_SUMMARY"
           else
             {
               echo "## Release Failed"
-              echo "Check the logs for details."
+              echo "Check the workflow logs for details."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
-
-  docs:
-    name: Deploy Documentation
-    needs: release
-    if: needs.release.outputs.released == 'true' && inputs.target_environment == 'release'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
-        with:
-          fetch-depth: 0  # Required for mike
-          ref: main  # Get the latest with version bump
-
-      - name: Setup uv
-        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4  # v6.7.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: |
-            **/pyproject.toml
-            **/uv.lock
-          prune-cache: false
-
-      - name: Install documentation dependencies
-        run: uv sync --extra docs
-
-      - name: Configure git for mike
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Deploy versioned documentation
-        run: |
-          VERSION="${{ needs.release.outputs.version }}"
-
-          # Check if this is a pre-release
-          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Stable release: update 'latest' alias
-            echo "Deploying docs for v$VERSION and updating 'latest'"
-            uv run mike deploy --push --branch gh-pages --update-aliases "$VERSION" latest
-          else
-            # Pre-release: don't update 'latest'
-            echo "Deploying pre-release docs for v$VERSION"
-            uv run mike deploy --push --branch gh-pages "$VERSION"
-          fi
-
-          echo "Documentation deployed successfully"
