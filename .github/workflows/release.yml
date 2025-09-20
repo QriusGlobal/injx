@@ -97,17 +97,12 @@ jobs:
           echo "Creating branch: $BRANCH"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
-          # Create and switch to release branch
-          git checkout -b "$BRANCH"
-
-          # Update version and changelog on release branch
-          echo "Running semantic-release to update version and changelog..."
+          # Update version and changelog on main branch first (semantic-release only works on main)
+          echo "Running semantic-release on main branch to update version and changelog..."
           uv run semantic-release -v version --no-push --no-vcs-release
 
-          # Commit the changes
-          git add pyproject.toml CHANGELOG.md
-          git commit -m \
-            "chore(release): prepare v${{ steps.version.outputs.version }} for ${{ inputs.target_environment }}"
+          # Create and switch to release branch with the updated files
+          git checkout -b "$BRANCH"
 
           # Push the release branch
           git push -u origin "$BRANCH"
