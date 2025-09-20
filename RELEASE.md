@@ -77,23 +77,33 @@ Every push to `main` automatically publishes to TestPyPI:
 
 ### 3. Creating a Release
 
-#### Option A: Direct Release (when branch protection is disabled)
-Use the standard release workflow:
+#### Unified Release Workflow (Works with Branch Protection)
+
+The release workflow now uses a **release branch strategy** that works seamlessly with branch protection:
 
 1. Go to [Actions → Release workflow](../../actions/workflows/release.yml)
 2. Click "Run workflow"
 3. Select options:
-   - **Target environment**: `testpypi` or `release`
-   - **Dry run**: Test the release without publishing
+   - **Target environment**:
+     - `testpypi` - For testing releases (branch auto-deleted)
+     - `pypi` - For production releases (creates PR to main)
+   - **Dry run**: Test the workflow without publishing
 
-#### Option B: PR-Based Release (when branch protection is enabled)
-Use the PR-based workflow for secure releases:
+#### How It Works
 
-1. Go to [Actions → Create Release PR](../../actions/workflows/release-pr.yml)
-2. Click "Run workflow"
-3. Select target environment (`testpypi` or `release`)
-4. Review and merge the created PR
-5. Release publishes automatically after PR merge
+**For TestPyPI Releases:**
+1. Creates `release/testpypi-v{version}` branch
+2. Updates version and changelog on branch
+3. Publishes to TestPyPI
+4. Deletes branch automatically (no git pollution)
+
+**For Production PyPI Releases:**
+1. Creates `release/pypi-v{version}` branch
+2. Updates version and changelog on branch
+3. Publishes to PyPI
+4. Creates git tag
+5. Opens PR to main for review
+6. Creates GitHub release
 
 #### How Versions Are Determined
 **Version bumps are ALWAYS determined from commit messages** (no manual overrides):
@@ -102,13 +112,16 @@ Use the PR-based workflow for secure releases:
 - `BREAKING CHANGE:` or `!` → major version bump
 - Other commits (docs, test, chore) → no version change
 
-#### Release Process
-1. **Quality Gates**: Format, lint, type check, tests
-2. **Version Calculation**: Automatic from conventional commits
-3. **Environment-Specific Actions**:
-   - **TestPyPI**: Updates version locally, publishes package (no git tags)
-   - **Production**: Creates git tag, publishes to PyPI, creates GitHub release
-4. **Documentation**: Auto-deployed for production releases
+#### Release Branch Strategy
+The workflow uses distinct branch naming to clarify intent:
+- **TestPyPI**: `release/testpypi-v{version}` - Temporary testing branch
+- **Production**: `release/pypi-v{version}` - Creates PR for review
+
+This strategy ensures:
+- Main branch stays protected
+- No git pollution from test releases
+- Clear audit trail for production releases
+- Automatic cleanup for test branches
 
 ## Release Cadence Guidelines
 
@@ -190,11 +203,23 @@ TestPyPI publishes fail when:
 - Version already exists (TestPyPI prohibits overwriting)
 - OIDC trust is not configured (contact repository admin)
 
-### Branch Protection Issues
-If production releases fail with "protected branch" errors:
-- Branch protection is enabled on main
-- Use the PR-based release workflow instead (`release-pr.yml`)
-- This creates a PR with version updates that can be reviewed and merged
+### Branch Protection Configuration
+The release workflow is designed to work with branch protection:
+
+**Main Branch Protection (Recommended):**
+- Require pull request reviews
+- Dismiss stale reviews
+- Include administrators
+- Require status checks
+
+**Release Branches Configuration:**
+- Pattern: `release/*`
+- Allow GitHub Actions to push
+- No PR required for commits
+- Still run CI checks
+- Auto-delete after merge/close
+
+The workflow automatically handles branch protection by using release branches instead of pushing directly to main.
 
 ### Version Determination
 Versions are calculated from commits - **no manual overrides**:
