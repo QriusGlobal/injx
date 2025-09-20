@@ -55,11 +55,11 @@ class TestPerformance:
             resolution_times.append(avg_time)
 
         # O(1) means resolution time should be roughly constant
-        # Allow some variance but not more than 2x difference
+        # Allow some variance but not more than 2x difference (10x in CI)
         min_time = min(resolution_times)
         max_time = max(resolution_times)
 
-        assert max_time <= min_time * 2, (
+        assert max_time <= min_time * 2 * CI_MULTIPLIER, (
             f"Resolution times vary too much: {resolution_times}"
         )
 

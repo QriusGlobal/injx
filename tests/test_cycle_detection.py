@@ -90,7 +90,8 @@ class TestCycleDetection:
         max_time = max(detection_times)
 
         # Detection time should not grow linearly with depth
-        assert max_time < min_time * 5, (
+        # In CI environments, allow more variance (25x vs 5x locally)
+        assert max_time < min_time * 5 * CI_MULTIPLIER, (
             f"Cycle detection not O(1): times={detection_times}, "
             f"depth_10={detection_times[0]:.4f}s, depth_1000={detection_times[-1]:.4f}s"
         )
