@@ -170,9 +170,9 @@ class TestPerformance:
         avg_subsequent_time = sum(subsequent_times) / len(subsequent_times)
 
         # Subsequent accesses should be orders of magnitude faster
-        # CI runners can be slower, apply multiplier for hardware variability
-        assert avg_subsequent_time < 0.02 * CI_MULTIPLIER, (
-            f"Singleton access too slow: {avg_subsequent_time:.6f}s (threshold: {0.02 * CI_MULTIPLIER:.3f}s)"
+        # Singleton access should be very fast after first resolution
+        assert avg_subsequent_time < 0.001, (
+            f"Singleton access too slow: {avg_subsequent_time:.6f}s (threshold: 1ms)"
         )
         assert avg_subsequent_time < first_access_time / 10, (
             f"Singleton access not fast enough: "
@@ -344,8 +344,8 @@ class TestPerformance:
         end_time = time.perf_counter()
 
         dict_time = end_time - start_time
-        assert dict_time < 0.1 * CI_MULTIPLIER, (
-            f"Dictionary operations with tokens too slow: {dict_time:.4f}s (threshold: {0.1 * CI_MULTIPLIER:.3f}s)"
+        assert dict_time < 0.1, (
+            f"Dictionary operations with tokens too slow: {dict_time:.4f}s (threshold: 100ms)"
         )
 
     def test_singleton_lock_performance(self):
@@ -432,9 +432,9 @@ class TestPerformance:
         resolution_time = (end_time - start_time) / 100
 
         # Should be fast even for deep chains (O(1) cycle detection)
-        # CI runners can be slower, apply multiplier for hardware variability
-        assert resolution_time < 0.05 * CI_MULTIPLIER, (
-            f"Deep chain resolution too slow: {resolution_time:.6f}s (threshold: {0.05 * CI_MULTIPLIER:.3f}s)"
+        # Deep chains should still resolve quickly with O(1) lookups
+        assert resolution_time < 0.05, (
+            f"Deep chain resolution too slow: {resolution_time:.6f}s (threshold: 50ms)"
         )
 
         # Test with cycle detection - create a new container with a cycle
@@ -478,9 +478,9 @@ class TestPerformance:
         avg_detection_time = sum(detection_times) / len(detection_times)
 
         # Cycle detection should be very fast (O(1))
-        # CI runners can be slower, apply multiplier for hardware variability
-        assert avg_detection_time < 0.005 * CI_MULTIPLIER, (
-            f"Cycle detection too slow: {avg_detection_time:.6f}s (threshold: {0.005 * CI_MULTIPLIER:.4f}s)"
+        # Cycle detection should be fast even with deep chains
+        assert avg_detection_time < 0.005, (
+            f"Cycle detection too slow: {avg_detection_time:.6f}s (threshold: 5ms)"
         )
 
     def test_memory_efficiency_with_tracemalloc(self):
