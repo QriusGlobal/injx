@@ -1,6 +1,5 @@
 """Performance and O(1) lookup verification tests."""
 
-import os
 import time
 from typing import Any
 
@@ -8,13 +7,6 @@ import pytest
 
 from injx import Container, Scope, Token, inject
 from injx.exceptions import CircularDependencyError
-
-# Detect CI environment and apply timing multiplier for hardware variability
-IS_CI = os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true'
-CI_MULTIPLIER = 5 if IS_CI else 1  # 5x more lenient in CI environments
-
-if IS_CI:
-    print("Running in CI environment - using relaxed timing thresholds (5x)")
 
 
 class TestPerformance:
@@ -55,18 +47,17 @@ class TestPerformance:
             resolution_times.append(avg_time)
 
         # O(1) means resolution time should be roughly constant
-        # Allow some variance but not more than 2x difference (10x in CI)
+        # Check for order-of-magnitude problems, not minor variance
         min_time = min(resolution_times)
         max_time = max(resolution_times)
 
-        assert max_time <= min_time * 2 * CI_MULTIPLIER, (
-            f"Resolution times vary too much: {resolution_times}"
+        assert max_time <= min_time * 10, (
+            f"Resolution times show O(n) behavior: {resolution_times}"
         )
 
-        # Also check absolute performance - should be very fast
+        # Check absolute performance - should be sub-millisecond
         for resolve_time in resolution_times:
-            # CI runners can be slower, apply multiplier for hardware variability
-            assert resolve_time < 0.02 * CI_MULTIPLIER, f"Resolution too slow: {resolve_time:.6f}s (threshold: {0.02 * CI_MULTIPLIER:.3f}s)"
+            assert resolve_time < 0.001, f"Resolution too slow: {resolve_time:.6f}s (threshold: 1ms)"
 
     def test_basic_resolution_performance(self):
         """Simplified resolution performance without protocol indirection."""
@@ -90,8 +81,8 @@ class TestPerformance:
                 container.get(tok)
         dt = time.perf_counter() - start
         per_call = dt / (100 * num)
-        # CI runners can be slower, apply multiplier for hardware variability
-        assert per_call < 0.01 * CI_MULTIPLIER, f"Resolution too slow: {per_call:.6f}s (threshold: {0.01 * CI_MULTIPLIER:.3f}s)"
+        # Should be well under 1ms per call even in worst conditions
+        assert per_call < 0.001, f"Resolution too slow: {per_call:.6f}s per call (threshold: 1ms)"
 
     def test_injection_cache_performance(self):
         """Test that injection caching improves performance."""
