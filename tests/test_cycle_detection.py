@@ -1,7 +1,6 @@
 """Tests for O(1) cycle detection improvements."""
 
 import asyncio
-import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -10,10 +9,6 @@ import pytest
 from injx import Container, Scope, Token
 from injx.container import _resolution_set, _resolution_stack
 from injx.exceptions import CircularDependencyError
-
-# Detect CI environment and apply timing multiplier for hardware variability
-IS_CI = os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true'
-CI_MULTIPLIER = 5 if IS_CI else 1  # 5x more lenient in CI environments
 
 
 class TestCycleDetection:
@@ -85,21 +80,20 @@ class TestCycleDetection:
             detection_times.append(detection_time)
 
         # O(1) means detection time should not increase significantly with depth
-        # Allow some variance but times should be in the same order of magnitude
+        # Check for order-of-magnitude problems indicating O(n) behavior
         min_time = min(detection_times)
         max_time = max(detection_times)
 
         # Detection time should not grow linearly with depth
-        # In CI environments, allow more variance (25x vs 5x locally)
-        assert max_time < min_time * 5 * CI_MULTIPLIER, (
-            f"Cycle detection not O(1): times={detection_times}, "
+        assert max_time < min_time * 10, (
+            f"Cycle detection shows O(n) behavior: times={detection_times}, "
             f"depth_10={detection_times[0]:.4f}s, depth_1000={detection_times[-1]:.4f}s"
         )
 
-        # All detections should be fast (< 100ms even for depth 1000)
+        # All detections should be reasonably fast (< 10ms even for depth 1000)
         for depth, det_time in zip(depths, detection_times):
-            assert det_time < 0.1 * CI_MULTIPLIER, (
-                f"Cycle detection too slow at depth {depth}: {det_time:.4f}s (threshold: {0.1 * CI_MULTIPLIER:.3f}s)"
+            assert det_time < 0.01, (
+                f"Cycle detection too slow at depth {depth}: {det_time:.4f}s (threshold: 10ms)"
             )
 
     def test_resolution_set_mechanism(self):
