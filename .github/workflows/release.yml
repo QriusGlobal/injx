@@ -19,7 +19,7 @@ name: Release
 
 # Prevent simultaneous releases
 concurrency:
-  group: release-${{ github.workflow }}
+  group: release-${{ github.repository }}-${{ inputs.target_environment }}
   cancel-in-progress: false
 
 permissions:
@@ -48,9 +48,15 @@ jobs:
           ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6.0.0
+        with:
+          python-version-file: "pyproject.toml"
+
       - name: Setup uv
         uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4  # v6.7.0
         with:
+          version: "0.8.19"
           enable-cache: true
           cache-dependency-glob: |
             **/pyproject.toml
@@ -58,12 +64,26 @@ jobs:
           prune-cache: false
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --locked --all-extras --dev
 
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Verify upstream state
+        run: |
+          echo "Verifying branch is up-to-date with origin/main..."
+          git fetch origin main
+          LOCAL_SHA=$(git rev-parse HEAD)
+          REMOTE_SHA=$(git rev-parse origin/main)
+          if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
+            echo "::error::Local main branch is not up-to-date with origin/main"
+            echo "Local SHA: $LOCAL_SHA"
+            echo "Remote SHA: $REMOTE_SHA"
+            exit 1
+          fi
+          echo "✅ Branch is up-to-date with origin/main"
 
       - name: Calculate next version
         id: version
@@ -83,9 +103,11 @@ jobs:
             echo "needs_release=false" >> "$GITHUB_OUTPUT"
           else
             echo "::notice::Release needed: v$CURRENT_VERSION → v$NEXT_VERSION"
-            echo "needs_release=true" >> "$GITHUB_OUTPUT"
-            echo "current=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-            echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+            {
+              echo "needs_release=true"
+              echo "current=$CURRENT_VERSION"
+              echo "version=$NEXT_VERSION"
+            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create release branch
@@ -99,10 +121,10 @@ jobs:
 
           # Update version and changelog on main branch first (semantic-release only works on main)
           echo "Running semantic-release on main branch to update version and changelog..."
-          uv run semantic-release -v version --no-push --no-vcs-release
+          uv run semantic-release -v version --no-push --no-vcs-release --no-commit --no-tag
 
-          # Create and switch to release branch with the updated files
-          git checkout -b "$BRANCH"
+          # Create and switch to release branch with the updated files (force create for idempotency)
+          git checkout -B "$BRANCH"
 
           # Push the release branch
           git push -u origin "$BRANCH"
@@ -121,14 +143,29 @@ jobs:
         id: publish
         if: steps.version.outputs.needs_release == 'true' && inputs.dry_run == false
         run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Check if version already exists on the target repository
           if [[ "${{ inputs.target_environment }}" == "testpypi" ]]; then
+            echo "Checking if v$VERSION already exists on TestPyPI..."
+            if uv pip index --index-url https://test.pypi.org/simple/ injx 2>/dev/null | grep -q "$VERSION"; then
+              echo "::notice::Version $VERSION already exists on TestPyPI, skipping publish"
+              echo "released=skipped" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             echo "Publishing to TestPyPI..."
             uv publish --publish-url https://test.pypi.org/legacy/ --trusted-publishing always
-            echo "✅ Published v${{ steps.version.outputs.version }} to TestPyPI"
+            echo "✅ Published v$VERSION to TestPyPI"
           else
+            echo "Checking if v$VERSION already exists on PyPI..."
+            if uv pip index injx 2>/dev/null | grep -q "$VERSION"; then
+              echo "::notice::Version $VERSION already exists on PyPI, skipping publish"
+              echo "released=skipped" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             echo "Publishing to PyPI..."
             uv publish --trusted-publishing always
-            echo "✅ Published v${{ steps.version.outputs.version }} to PyPI"
+            echo "✅ Published v$VERSION to PyPI"
           fi
           echo "released=true" >> "$GITHUB_OUTPUT"
 
@@ -148,15 +185,30 @@ jobs:
 
           else
             # Production PyPI: Create git tag and PR to main
+            TAG="v${{ steps.version.outputs.version }}"
             echo "Creating git tag for production release..."
-            git tag -a "v${{ steps.version.outputs.version }}" \
-              -m "Release v${{ steps.version.outputs.version }}"
-            git push origin "v${{ steps.version.outputs.version }}"
 
-            # Create PR to main for permanent record
-            PR_URL=$(gh pr create \
-              --title "🚀 Release v${{ steps.version.outputs.version }} to PyPI" \
-              --body "## Production Release v${{ steps.version.outputs.version }}
+            # Check if tag already exists
+            if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+              git tag -a "$TAG" -m "Release $TAG"
+              git push origin "$TAG"
+              echo "✅ Created and pushed tag $TAG"
+            else
+              echo "::notice::Tag $TAG already exists, skipping tag creation"
+            fi
+
+            # Create PR to main for permanent record (check if PR already exists)
+            BRANCH_NAME="${{ steps.branch.outputs.branch }}"
+            EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --base main \
+              --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+            if [[ -n "$EXISTING_PR" ]]; then
+              echo "::notice::PR already exists for branch $BRANCH_NAME: #$EXISTING_PR"
+              PR_URL=$(gh pr view "$EXISTING_PR" --json url --jq '.url')
+            else
+              PR_URL=$(gh pr create \
+                --title "🚀 Release v${{ steps.version.outputs.version }} to PyPI" \
+                --body "## Production Release v${{ steps.version.outputs.version }}
 
           This release has been successfully published to PyPI.
 
@@ -175,8 +227,10 @@ jobs:
           \`\`\`
 
           Merging this PR will update the main branch with the release version." \
-              --base main \
-              --head "${{ steps.branch.outputs.branch }}")
+                --base main \
+                --head "$BRANCH_NAME")
+              echo "✅ Created new PR: $PR_URL"
+            fi
 
             echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
             echo "✅ PyPI release complete, PR created: $PR_URL"

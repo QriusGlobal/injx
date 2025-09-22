@@ -130,7 +130,6 @@ addopts = [
     "--strict-config",
 ]
 markers = [
-    "slow: marks tests as slow",
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
 ]

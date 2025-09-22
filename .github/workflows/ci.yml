@@ -17,20 +17,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Single CI job with adaptive behavior based on context
   ci:
+    name: Continuous Integration
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
         with:
-          # For PRs, check out the PR head exactly; for pushes, use the push SHA
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0  # Fetch all history for commit validation
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6.0.0
+        with:
+          python-version-file: "pyproject.toml"
 
       - name: Setup uv
         uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4  # v6.7.0
         with:
+          version: "0.8.19"
           enable-cache: true
           cache-dependency-glob: |
             **/pyproject.toml
@@ -38,9 +45,9 @@ jobs:
           prune-cache: false
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra docs
+        run: uv sync --locked --all-extras --dev
 
-      # Quality gates - fail fast, ordered by speed
+      # Quality gates - always run
       - name: Format check (ruff)
         run: uv run ruff format --check src
 
@@ -50,27 +57,47 @@ jobs:
       - name: Type check (basedpyright)
         run: uv run basedpyright src
 
-      # Run tests with coverage
+      # Determine test configuration based on context
+      - name: Determine test configuration
+        id: test-config
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.base_ref }}" == "main" ]]; then
+            echo "mode=full" >> "$GITHUB_OUTPUT"
+            echo "::notice::Running FULL validation for PR targeting main"
+          else
+            echo "mode=basic" >> "$GITHUB_OUTPUT"
+            echo "::notice::Running basic tests"
+          fi
+
+      # Run tests based on configuration
+      - name: Run tests (basic)
+        if: steps.test-config.outputs.mode == 'basic'
+        env:
+          PYTHONPATH: src
+        run: |
+          uv run pytest -q -n auto
+
       - name: Run tests with coverage
+        if: steps.test-config.outputs.mode == 'full'
         env:
           PYTHONPATH: src
         run: |
           mkdir -p reports
-          uv run pytest -q -ra --maxfail=1 \
+          uv run pytest -q -n auto \
             --junitxml=reports/junit.xml \
-            --cov=src --cov-report=xml \
-            -n auto
+            --cov=src --cov-report=xml
 
-      # Validate commit messages using commitizen (CI backstop)
+      # Additional validation for PRs to main
       - name: Validate recent commit messages
-        if: github.event_name == 'pull_request'
+        if: steps.test-config.outputs.mode == 'full'
         run: |
-          echo "Validating commits in range: origin/main..HEAD"
-          git log --oneline origin/main..HEAD
+          echo "Validating commits in range: origin/main~5..HEAD"
+          git log --oneline origin/main~5..HEAD
           echo ""
-          uv run cz check --rev-range origin/main..HEAD
+          uv run cz check --rev-range origin/main~5..HEAD
 
       - name: Upload coverage to Codecov
+        if: steps.test-config.outputs.mode == 'full'
         uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a  # v4.5.0
         with:
           files: ./coverage.xml
@@ -80,12 +107,79 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test report (JUnit)
+        if: steps.test-config.outputs.mode == 'full' && always()
         uses: actions/upload-artifact@84480863f228bb9747b473957fcc9e309aa96097  # v4.4.2
-        if: always()
         with:
           name: junit-report
           path: reports/junit.xml
 
-      # Verify docs build (without deploying)
       - name: Build docs (verification only)
+        if: steps.test-config.outputs.mode == 'full'
         run: uv run mkdocs build --strict
+
+  # Distribution testing for main branch pushes - validate wheel/sdist build and installation
+  distribution-test:
+    name: Distribution Test (Build, Install, Smoke Test)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6.0.0
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4  # v6.7.0
+        with:
+          version: "0.8.19"
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+          prune-cache: false
+
+      # Build distribution packages
+      - name: Build wheel and sdist
+        run: uv build
+
+      # Create fresh environment for installation testing
+      - name: Create fresh test environment
+        run: |
+          uv venv test-env
+          echo "VIRTUAL_ENV=$(pwd)/test-env" >> "$GITHUB_ENV"
+          echo "$(pwd)/test-env/bin" >> "$GITHUB_PATH"
+
+      # Install wheel and verify import
+      - name: Install wheel and verify
+        run: |
+          uv pip install dist/*.whl
+          python -c "import injx; print(f'Successfully imported injx v{injx.__version__}')"
+
+      # Basic smoke test of core functionality
+      - name: Basic smoke test
+        run: |
+          python -c "
+          import injx
+          from injx import Container, Token, Scope
+
+          # Create a simple service for testing
+          class TestService:
+              def __init__(self, value: str = 'test'):
+                  self.value = value
+
+          # Test basic container functionality
+          container = Container()
+          token = Token[TestService]('test-service')
+
+          container.register(token, TestService, scope=Scope.SINGLETON)
+          service = container.get(token)
+
+          assert service.value == 'test'
+          print('Smoke test passed: Basic DI functionality works')
+          "
