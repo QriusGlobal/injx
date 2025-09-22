@@ -32,9 +32,9 @@ jobs:
     timeout-minutes: 20
     environment: ${{ inputs.target_environment }}
     permissions:
-      id-token: write  # OIDC for PyPI/TestPyPI
-      contents: write  # Git operations and PR creation
-      pull-requests: write  # PR creation
+      id-token: write      # OIDC for PyPI/TestPyPI publishing
+      contents: write      # Git operations, tag creation, releases
+      pull-requests: write  # PR creation back to main
     outputs:
       version: ${{ steps.version.outputs.version }}
       released: ${{ steps.publish.outputs.released }}
