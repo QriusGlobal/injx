@@ -1,0 +1,110 @@
+name: Test Tag Permissions
+
+'on':
+  workflow_dispatch:
+    inputs:
+      test_tag_name:
+        description: 'Name for test tag (will be deleted after test)'
+        required: false
+        default: 'test-permissions'
+        type: string
+
+permissions:
+  contents: write  # Required for tag creation and deletion
+
+jobs:
+  test-tag-creation:
+    name: Test Tag Creation Permissions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Test tag creation permissions
+        id: test-tag
+        run: |
+          TEST_TAG="test-${{ inputs.test_tag_name }}-$(date +%s)"
+          echo "Testing tag creation with: $TEST_TAG"
+          echo "test_tag=$TEST_TAG" >> "$GITHUB_OUTPUT"
+
+          # Test tag creation
+          echo "Creating test tag..."
+          git tag -a "$TEST_TAG" -m "Test tag for permission validation - will be deleted"
+
+          # Test tag push (this is where GH013 would occur if permissions insufficient)
+          echo "Pushing test tag to remote..."
+          git push origin "$TEST_TAG"
+
+          echo "✅ Tag creation and push successful!"
+          echo "Tag $TEST_TAG created and pushed successfully"
+
+      - name: Verify tag exists
+        run: |
+          TEST_TAG="${{ steps.test-tag.outputs.test_tag }}"
+          echo "Verifying tag $TEST_TAG exists in remote repository..."
+
+          # Check tag exists locally
+          if git tag -l | grep -q "$TEST_TAG"; then
+            echo "✅ Tag exists locally"
+          else
+            echo "❌ Tag not found locally"
+            exit 1
+          fi
+
+          # Check tag exists on remote
+          git fetch --tags
+          if git ls-remote --tags origin | grep -q "$TEST_TAG"; then
+            echo "✅ Tag exists on remote"
+          else
+            echo "❌ Tag not found on remote"
+            exit 1
+          fi
+
+      - name: Cleanup test tag
+        if: always() && steps.test-tag.outputs.test_tag
+        run: |
+          TEST_TAG="${{ steps.test-tag.outputs.test_tag }}"
+          echo "Cleaning up test tag: $TEST_TAG"
+
+          # Delete tag locally
+          git tag -d "$TEST_TAG" || echo "Local tag already deleted"
+
+          # Delete tag from remote
+          git push origin --delete "$TEST_TAG" || echo "Remote tag already deleted"
+
+          echo "✅ Test tag cleanup complete"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Tag Permission Test Results"
+            echo ""
+            if [[ "${{ job.status }}" == "success" ]]; then
+              echo "✅ **SUCCESS**: GitHub Actions can create and push tags"
+              echo ""
+              echo "**What was tested:**"
+              echo "- Tag creation locally: ✅"
+              echo "- Tag push to remote: ✅"
+              echo "- Tag verification: ✅"
+              echo "- Tag cleanup: ✅"
+              echo ""
+              echo "**Result**: The workflow permissions fix resolves the GH013 error."
+              echo "Production release workflow should now work correctly."
+            else
+              echo "❌ **FAILED**: Tag creation permissions insufficient"
+              echo ""
+              echo "**Likely cause:** Organization workflow permissions still set to read-only"
+              echo "**Solution needed:** Review workflow permissions configuration"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
