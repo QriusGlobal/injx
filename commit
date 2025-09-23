@@ -1,0 +1,19 @@
+#!/bin/bash
+# Injx Commit Agent - Shell wrapper
+
+# Check if Python is available
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Python 3 is required but not found."
+    exit 1
+fi
+
+# Find the script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Run the commit agent
+if [ -f "$SCRIPT_DIR/scripts/commit-agent.py" ]; then
+    python3 "$SCRIPT_DIR/scripts/commit-agent.py" "$@"
+else
+    echo "❌ Commit agent script not found at $SCRIPT_DIR/scripts/commit-agent.py"
+    exit 1
+fi
