@@ -6,7 +6,7 @@ from typing import Any, Protocol
 import pytest
 
 from injx import Container, Dependencies, Scope, Token, inject
-from injx.exceptions import AsyncCleanupRequiredError
+from injx.exceptions import ResolutionError
 
 
 # Async service protocols
@@ -137,16 +137,9 @@ class TestDependenciesAsync:
             await asyncio.sleep(0.01)
             return MockAsyncCache()
 
-        # Register with type mapping
-        db_token = Token("async_db", AsyncDatabase)
-        cache_token = Token("async_cache", AsyncCache)
-
-        container.register(db_token, create_db)
-        container.register(cache_token, create_cache)
-
-        # Map types for Dependencies access
-        container.register(AsyncDatabase, lambda: container.get(db_token))
-        container.register(AsyncCache, lambda: container.get(cache_token))
+        # Register async services directly with types
+        container.register(AsyncDatabase, create_db)
+        container.register(AsyncCache, create_cache)
 
         @inject
         async def handler(
@@ -265,8 +258,8 @@ class TestDependenciesAsync:
         async def create_cache() -> AsyncCache:
             return TrackableAsyncCache()
 
-        container.register_context(AsyncDatabase, create_db)
-        container.register_context(AsyncCache, create_cache)
+        container.register_context(AsyncDatabase, create_db, is_async=True)
+        container.register_context(AsyncCache, create_cache, is_async=True)
 
         @inject
         async def handler(deps: Dependencies[AsyncDatabase, AsyncCache]) -> bool:
@@ -408,7 +401,8 @@ class TestDependenciesAsync:
             _ = deps[AsyncDatabase]
 
         with container.activate():
-            with pytest.raises(AsyncCleanupRequiredError):
+            # This should raise a ResolutionError for async provider in sync context
+            with pytest.raises(ResolutionError):
                 sync_handler()
 
     @pytest.mark.asyncio
