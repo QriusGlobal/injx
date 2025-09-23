@@ -13,7 +13,7 @@ Run the tests:
 import pytest
 from typing import Protocol, Any, Optional, Generator
 from unittest.mock import Mock, MagicMock, call
-from injx import Container, Token, inject, Scope
+from injx import Container, Token, inject, Scope, Dependencies
 
 
 # 1. Service protocols (same as in basic_example.py)
@@ -70,15 +70,18 @@ CACHE_TOKEN: Token[Cache] = Token("cache", Cache)
 EMAIL_TOKEN: Token[EmailService] = Token("email", EmailService)
 
 
-# 3. Business logic to test
+# 3. Business logic to test with Dependencies pattern
 @inject
 def get_user_profile(
     user_id: int,
-    db: Database,
-    http: HTTPClient,
-    cache: Cache
+    deps: Dependencies[Database, HTTPClient, Cache]
 ) -> dict[str, Any]:
     """Fetch user profile with caching and external enrichment."""
+    # Extract services from dependencies
+    db = deps[Database]
+    http = deps[HTTPClient]
+    cache = deps[Cache]
+
     # Check cache
     cache_key: str = f"profile:{user_id}"
     cached: Optional[dict[str, Any]] = cache.get(cache_key)
@@ -104,11 +107,14 @@ def get_user_profile(
 def register_user(
     name: str,
     email: str,
-    db: Database,
-    http: HTTPClient,
-    email_service: EmailService
+    deps: Dependencies[Database, HTTPClient, EmailService]
 ) -> dict[str, Any]:
     """Register a new user with email validation and notification."""
+    # Extract services from dependencies
+    db = deps[Database]
+    http = deps[HTTPClient]
+    email_service = deps[EmailService]
+
     # Validate email
     validation: dict[str, Any] = http.post(
         "https://api.example.com/validate",
@@ -146,11 +152,14 @@ def register_user(
 @inject
 def delete_user_account(
     user_id: int,
-    db: Database,
-    cache: Cache,
-    email_service: EmailService
+    deps: Dependencies[Database, Cache, EmailService]
 ) -> bool:
     """Delete user account with cleanup."""
+    # Extract services from dependencies
+    db = deps[Database]
+    cache = deps[Cache]
+    email_service = deps[EmailService]
+
     # Get user for email notification
     user: dict[str, Any] = db.get_user(user_id)
 

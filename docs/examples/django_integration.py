@@ -27,7 +27,7 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-from injx import Container, Token, inject, Scope, Depends
+from injx import Container, Token, inject, Scope, Dependencies
 import json
 import logging
 
@@ -251,23 +251,21 @@ T = TypeVar('T')
 
 
 def inject_services(view_func):
-    """Decorator to inject services into Django views."""
+    """Decorator to inject services into Django views using Dependencies pattern."""
     @inject
     def wrapper(
         request: HttpRequest,
         *args,
-        user_service: UserService = Depends(USER_SERVICE),
-        cache_service: CacheService = Depends(CACHE_SERVICE),
-        analytics_service: AnalyticsService = Depends(ANALYTICS_SERVICE),
+        deps: Dependencies[UserService, CacheService, AnalyticsService],
         **kwargs
     ):
         # Add services to request for access in view
-        request.user_service = user_service  # type: ignore
-        request.cache_service = cache_service  # type: ignore
-        request.analytics_service = analytics_service  # type: ignore
+        request.user_service = deps[UserService]  # type: ignore
+        request.cache_service = deps[CacheService]  # type: ignore
+        request.analytics_service = deps[AnalyticsService]  # type: ignore
 
         # Track page view
-        analytics_service.track_page_view(
+        deps[AnalyticsService].track_page_view(
             request.path,
             getattr(request.user, 'id', None)
         )
@@ -344,16 +342,14 @@ class UserAPIView(View):
         self,
         request: HttpRequest,
         *args,
-        user_service: UserService = Depends(USER_SERVICE),
-        cache_service: CacheService = Depends(CACHE_SERVICE),
-        email_service: EmailService = Depends(EMAIL_SERVICE),
+        deps: Dependencies[UserService, CacheService, EmailService],
         **kwargs
     ) -> None:
-        """Setup method with injected dependencies."""
+        """Setup method with injected dependencies using Dependencies pattern."""
         super().setup(request, *args, **kwargs)
-        self.user_service = user_service
-        self.cache_service = cache_service
-        self.email_service = email_service
+        self.user_service = deps[UserService]
+        self.cache_service = deps[CacheService]
+        self.email_service = deps[EmailService]
 
     def get(self, request: HttpRequest, user_id: int) -> JsonResponse:
         """Handle GET request."""
@@ -403,16 +399,14 @@ class UserViewSet(viewsets.ModelViewSet):
     def __init__(
         self,
         *args,
-        cache_service: CacheService = Depends(CACHE_SERVICE),
-        analytics_service: AnalyticsService = Depends(ANALYTICS_SERVICE),
-        email_service: EmailService = Depends(EMAIL_SERVICE),
+        deps: Dependencies[CacheService, AnalyticsService, EmailService],
         **kwargs
     ):
-        """Initialize with injected services."""
+        """Initialize with injected services using Dependencies pattern."""
         super().__init__(*args, **kwargs)
-        self.cache_service = cache_service
-        self.analytics_service = analytics_service
-        self.email_service = email_service
+        self.cache_service = deps[CacheService]
+        self.analytics_service = deps[AnalyticsService]
+        self.email_service = deps[EmailService]
 
     def retrieve(self, request: Request, pk: Optional[int] = None) -> Response:
         """Override retrieve to add caching."""
@@ -459,13 +453,12 @@ class DIMiddleware:
     def __init__(
         self,
         get_response,
-        analytics_service: AnalyticsService = Depends(ANALYTICS_SERVICE),
-        cache_service: CacheService = Depends(CACHE_SERVICE)
+        deps: Dependencies[AnalyticsService, CacheService]
     ):
-        """Initialize middleware with services."""
+        """Initialize middleware with services using Dependencies pattern."""
         self.get_response = get_response
-        self.analytics_service = analytics_service
-        self.cache_service = cache_service
+        self.analytics_service = deps[AnalyticsService]
+        self.cache_service = deps[CacheService]
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         """Process request/response."""

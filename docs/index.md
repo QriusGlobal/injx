@@ -42,7 +42,7 @@ pip install injx
 
 ```python
 from typing import Protocol
-from injx import Container, Token, Scope, inject
+from injx import Container, Token, Scope, inject, Dependencies
 
 # Define interfaces
 class Logger(Protocol):
@@ -62,17 +62,20 @@ class PostgreSQLDatabase:
 
 # Create container and tokens
 container = Container()
-LOGGER = Token[Logger]("logger", scope=Scope.SINGLETON)
-DATABASE = Token[Database]("database", scope=Scope.SINGLETON)
+LOGGER = Token[Logger]("logger", Logger, scope=Scope.SINGLETON)
+DATABASE = Token[Database]("database", Database, scope=Scope.SINGLETON)
 
 # Register providers
 container.register(LOGGER, ConsoleLogger)
 container.register(DATABASE, PostgreSQLDatabase)
 
-# Use with @inject decorator (recommended)
+# Use with @inject decorator and Dependencies pattern (recommended)
 @inject
-def process_users(logger: Logger, db: Database) -> None:
-    """Dependencies injected automatically via type annotations."""
+def process_users(deps: Dependencies[Logger, Database]) -> None:
+    """Dependencies grouped and injected as a single parameter."""
+    logger = deps[Logger]
+    db = deps[Database]
+
     logger.info("Processing users")
     users = db.query("SELECT * FROM users")
     logger.info(f"Found {len(users)} users")

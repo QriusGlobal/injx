@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field
-from injx import Container, Token, inject, Scope, RequestScope
+from injx import Container, Token, inject, Scope, RequestScope, Dependencies
 import asyncio
 
 
@@ -234,11 +234,13 @@ async def get_email_service() -> EmailService:
     return await container.aget(EMAIL_TOKEN)
 
 
-# Type aliases for cleaner annotations
-DatabaseDep = Annotated[Database, Depends(get_database)]
-CacheDep = Annotated[Cache, Depends(get_cache)]
-HTTPClientDep = Annotated[HTTPClient, Depends(get_http_client)]
-EmailServiceDep = Annotated[EmailService, Depends(get_email_service)]
+# Type aliases for cleaner annotations using Dependencies pattern
+async def get_services() -> Dependencies[Database, Cache, HTTPClient, EmailService]:
+    """FastAPI dependency for all services grouped."""
+    container = Container.get_active()
+    return Dependencies(container, (Database, Cache, HTTPClient, EmailService))
+
+ServicesDep = Annotated[Dependencies[Database, Cache, HTTPClient, EmailService], Depends(get_services)]
 
 
 # 7. Application lifespan management
@@ -273,11 +275,14 @@ app = FastAPI(
 # 9. API endpoints with dependency injection
 @app.get("/health", response_model=HealthCheckResponse)
 async def health_check(
-    db: DatabaseDep,
-    cache: CacheDep,
-    http_client: HTTPClientDep
+    deps: ServicesDep
 ) -> HealthCheckResponse:
-    """Health check endpoint with service status."""
+    """Health check endpoint with service status using Dependencies pattern."""
+    # Extract services from dependencies
+    db = deps[Database]
+    cache = deps[Cache]
+    http_client = deps[HTTPClient]
+
     # Check all services concurrently
     db_health, cache_health, api_health = await asyncio.gather(
         db.health_check(),
@@ -296,11 +301,14 @@ async def health_check(
 @app.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: int,
-    db: DatabaseDep,
-    cache: CacheDep,
-    http_client: HTTPClientDep
+    deps: ServicesDep
 ) -> UserResponse:
-    """Get user by ID with caching and enrichment."""
+    """Get user by ID with caching and enrichment using Dependencies pattern."""
+    # Extract services from dependencies
+    db = deps[Database]
+    cache = deps[Cache]
+    http_client = deps[HTTPClient]
+
     # Check cache first
     cache_key = f"user:{user_id}"
     cached_user = await cache.get(cache_key)
@@ -331,11 +339,14 @@ async def get_user(
 async def create_user(
     request: UserCreateRequest,
     background_tasks: BackgroundTasks,
-    db: DatabaseDep,
-    http_client: HTTPClientDep,
-    email_service: EmailServiceDep
+    deps: ServicesDep
 ) -> UserResponse:
-    """Create new user with email validation and notification."""
+    """Create new user with email validation and notification using Dependencies pattern."""
+    # Extract services from dependencies
+    db = deps[Database]
+    http_client = deps[HTTPClient]
+    email_service = deps[EmailService]
+
     # Validate email with external service
     validation = await http_client.post(
         "https://api.example.com/validate/email",
@@ -373,10 +384,13 @@ async def create_user(
 @app.get("/users", response_model=list[UserResponse])
 async def list_users(
     limit: int = 10,
-    db: DatabaseDep,
-    cache: CacheDep
+    deps: ServicesDep
 ) -> list[UserResponse]:
-    """List users with caching."""
+    """List users with caching using Dependencies pattern."""
+    # Extract services from dependencies
+    db = deps[Database]
+    cache = deps[Cache]
+
     # Check cache for user list
     cache_key = f"users:list:{limit}"
     cached_list = await cache.get(cache_key)
@@ -396,9 +410,10 @@ async def list_users(
 @app.delete("/cache/users/{user_id}")
 async def invalidate_user_cache(
     user_id: int,
-    cache: CacheDep
+    deps: ServicesDep
 ) -> JSONResponse:
-    """Invalidate user cache entry."""
+    """Invalidate user cache entry using Dependencies pattern."""
+    cache = deps[Cache]
     deleted = await cache.delete(f"user:{user_id}")
     return JSONResponse(
         content={"message": f"Cache invalidated for user {user_id}", "deleted": deleted}
@@ -409,11 +424,14 @@ async def invalidate_user_cache(
 @app.post("/batch/users")
 async def batch_create_users(
     users: list[UserCreateRequest],
-    db: DatabaseDep,
-    email_service: EmailServiceDep,
+    deps: ServicesDep,
     background_tasks: BackgroundTasks
 ) -> JSONResponse:
-    """Batch create users with request-scoped transaction."""
+    """Batch create users with request-scoped transaction using Dependencies pattern."""
+    # Extract services from dependencies
+    db = deps[Database]
+    email_service = deps[EmailService]
+
     created_users: list[dict[str, Any]] = []
 
     # In production, this would be a database transaction
