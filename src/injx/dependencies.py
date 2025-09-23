@@ -54,20 +54,20 @@ class Dependencies(Generic[*Ts]):  # type: ignore
     def resolve(self) -> None:
         """Synchronously resolve all dependencies. Called by injection layer."""
         if self._resolved is None:
-            resolved = {t: self._container.get(t) for t in self._types}
+            resolved: dict[type, Any] = {t: self._container.get(t) for t in self._types}
             self._resolved = MappingProxyType(resolved)
 
-    def __await__(self) -> Generator[Any, None, Dependencies[*Ts]]:  # type: ignore
+    def __await__(self) -> Generator[Any, None, Dependencies[*Ts]]:  # type: ignore[misc]
         """Make Dependencies awaitable for async resolution."""
-        return self._resolve_async().__await__()
+        return self._resolve_async().__await__()  # type: ignore[return-value]
 
     async def _resolve_async(self) -> Dependencies[*Ts]:  # type: ignore
         """Asynchronously resolve all dependencies in parallel."""
         if self._resolved is None:
             # Resolve all dependencies concurrently for performance
-            tasks = [self._container.aget(t) for t in self._types]
-            results = await asyncio.gather(*tasks)
-            resolved = dict(zip(self._types, results, strict=False))
+            tasks: list[Any] = [self._container.aget(t) for t in self._types]
+            results: list[Any] = await asyncio.gather(*tasks)
+            resolved: dict[type, Any] = dict(zip(self._types, results, strict=False))
             self._resolved = MappingProxyType(resolved)
         return self
 
@@ -83,38 +83,52 @@ class Dependencies(Generic[*Ts]):  # type: ignore
 
         Raises:
             KeyError: If type not in dependencies
+            RuntimeError: If dependencies not resolved
         """
         # For direct usage (not via @inject), resolve sync on first access
         if self._resolved is None:
             self.resolve()
 
-        if key not in self._resolved:
+        # After resolve(), _resolved is guaranteed to be set
+        resolved = self._resolved
+        if resolved is None:  # This should never happen, but satisfies type checker
+            raise RuntimeError("Failed to resolve dependencies")
+
+        if key not in resolved:
             raise KeyError(
                 f"Type {key.__name__} not in dependencies. "
                 f"Available: {', '.join(t.__name__ for t in self._types)}"
             )
-        return self._resolved[key]
+        return resolved[key]
 
     def get(self, key: type[T], default: T | None = None) -> T | None:
         """Safe access with default."""
         # Ensure resolved for direct usage
         if self._resolved is None:
             self.resolve()
-        return self._resolved.get(key, default)  # type: ignore
+
+        resolved = self._resolved
+        if resolved is None:  # Should never happen
+            return default
+        return resolved.get(key, default)
 
     def __contains__(self, key: type) -> bool:
         """Check if dependency exists."""
         # Ensure resolved for direct usage
         if self._resolved is None:
             self.resolve()
-        return key in self._resolved
+
+        resolved = self._resolved
+        return resolved is not None and key in resolved
 
     def __len__(self) -> int:
         """Number of dependencies."""
         # Ensure resolved for direct usage
         if self._resolved is None:
             self.resolve()
-        return len(self._resolved)
+
+        resolved = self._resolved
+        return len(resolved) if resolved is not None else 0
 
     def __repr__(self) -> str:
         """String representation."""
