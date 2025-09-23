@@ -116,6 +116,11 @@ class MockDatabaseConnection:
             if "WHERE id" in query and "id" in params:
                 return [u for u in self.data["users"] if u["id"] == params["id"]]
             return self.data["users"]
+        elif "INSERT" in query and "users" in query:
+            user = params.copy()
+            user["id"] = len(self.data["users"]) + 1
+            self.data["users"].append(user)
+            return [user]
         elif "INSERT" in query and "orders" in query:
             order = params.copy()
             order["id"] = len(self.data["orders"]) + 1
@@ -278,7 +283,7 @@ class TestRealisticDependencies:
         container.register(DatabaseConnection, MockDatabaseConnection)
         container.register(CacheBackend, MockCacheBackend)
         container.register(AuthenticationService, MockAuthenticationService)
-        container.register(MetricsCollector, MockMetricsCollector)
+        container.register(MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON)
 
         @inject
         def get_user_endpoint(
@@ -414,7 +419,7 @@ class TestRealisticDependencies:
 
         container.register(DatabaseConnection, MockDatabaseConnection)
         container.register(EmailProvider, MockEmailProvider)
-        container.register(MetricsCollector, MockMetricsCollector)
+        container.register(MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON)
 
         @inject
         async def process_email_queue(
@@ -651,7 +656,7 @@ class TestRealisticDependencies:
         container.register(DatabaseConnection, MockDatabaseConnection)
         container.register(CacheBackend, MockCacheBackend)
         container.register(EmailProvider, MockEmailProvider)
-        container.register(MetricsCollector, MockMetricsCollector)
+        container.register(MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON)
 
         @inject
         def resilient_operation(

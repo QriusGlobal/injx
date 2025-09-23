@@ -165,8 +165,8 @@ def test_dependencies_bool():
     assert deps
 
 
-def test_dependencies_eager_resolution():
-    """Test that Dependencies resolves all dependencies eagerly."""
+def test_dependencies_lazy_resolution():
+    """Test that Dependencies resolves all dependencies lazily."""
     container = Container()
 
     resolution_order = []
@@ -182,13 +182,15 @@ def test_dependencies_eager_resolution():
     container.register(Database, create_db)
     container.register(Logger, create_logger)
 
-    # Creation should trigger resolution
+    # Creation should NOT trigger resolution (lazy)
     deps = Dependencies(container, (Database, Logger))
+    assert resolution_order == []
 
-    # Both should be resolved already
+    # First access triggers resolution of all dependencies
+    _ = deps[Database]
     assert resolution_order == ["db", "logger"]
 
-    # Accessing should not trigger new resolutions
+    # Subsequent access uses cached values
     resolution_order.clear()
     _ = deps[Database]
     _ = deps[Logger]

@@ -428,9 +428,11 @@ def _resolve_one(req: DependencyRequest, container: ContainerProtocol) -> object
     """Resolve a single dependency synchronously."""
     match req.kind:
         case _DepKind.DEPENDENCIES:
-            # Create Dependencies instance with all types
-            # req.key is tuple[type[Any] | Token[Any], ...] but Dependencies expects tuple[type, ...]
-            return Dependencies(container, cast(tuple[type, ...], req.key))
+            # Create Dependencies and resolve synchronously
+            dep_types = cast(tuple[type, ...], req.key)
+            deps = Dependencies(container, dep_types)
+            deps.resolve()  # Pre-resolve in sync context
+            return deps
         case _DepKind.TOKEN:
             return container.get(cast(Token[Any] | type[Any], req.key))
         case _DepKind.INJECT if req.provider:
@@ -455,10 +457,11 @@ async def _aresolve_one(req: DependencyRequest, container: ContainerProtocol) ->
 
     match req.kind:
         case _DepKind.DEPENDENCIES:
-            # Dependencies uses sync resolution internally
-            # This is safe as individual deps can be async
-            # req.key is tuple[type[Any] | Token[Any], ...] but Dependencies expects tuple[type, ...]
-            return Dependencies(container, cast(tuple[type, ...], req.key))
+            # Create Dependencies and resolve asynchronously
+            dep_types = cast(tuple[type, ...], req.key)
+            deps = Dependencies(container, dep_types)
+            await deps  # Pre-resolve async with parallel gather
+            return deps
         case _DepKind.TOKEN:
             return await _resolve_via_aget(req.key)
         case _DepKind.INJECT if req.provider:

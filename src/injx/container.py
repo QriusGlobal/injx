@@ -1371,6 +1371,9 @@ class Container:
                 pass
 
     async def __aenter__(self) -> Container:
+        # Activate this container for the async context
+        self._old_active = self._active.get()
+        self._active.set(self)
         return self
 
     async def __aexit__(
@@ -1379,6 +1382,10 @@ class Container:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
+        # Restore previous active container
+        self._active.set(getattr(self, "_old_active", None))
+
+        # Perform cleanup
         if self._runtime.singleton_cleanup_async:
             tasks = [fn() for fn in reversed(self._runtime.singleton_cleanup_async)]
             await asyncio.gather(*tasks, return_exceptions=True)
