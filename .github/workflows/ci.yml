@@ -119,12 +119,16 @@ jobs:
 
   # Distribution testing for main branch pushes - validate wheel/sdist build and installation
   distribution-test:
-    name: Distribution Test (Build, Install, Smoke Test)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Distribution Test (Build, Install, Validate)
+    # TODO: Remove PR condition after testing - temporary for validating distribution tests in PR
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.head_ref == 'fix/distribution-test-improvements')
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
         with:
           ref: ${{ github.sha }}
@@ -134,52 +138,71 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
-      - name: Setup uv
+      # Fresh uv setup without cache for clean environment
+      - name: Setup uv (fresh environment)
         uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4  # v6.7.0
         with:
           version: "0.8.19"
-          enable-cache: true
-          cache-dependency-glob: |
-            **/pyproject.toml
-            **/uv.lock
-          prune-cache: false
+          enable-cache: false  # Explicitly no cache for clean testing
 
-      # Build distribution packages
-      - name: Build wheel and sdist
-        run: uv build
-
-      # Create fresh environment for installation testing
-      - name: Create fresh test environment
+      - name: Build distribution packages
         run: |
-          uv venv test-env
-          echo "VIRTUAL_ENV=$(pwd)/test-env" >> "$GITHUB_ENV"
-          echo "$(pwd)/test-env/bin" >> "$GITHUB_PATH"
+          echo "Building wheel and sdist packages..."
+          uv build --verbose
+          echo "Built packages:"
+          ls -la dist/
 
-      # Install wheel and verify import
-      - name: Install wheel and verify
+      - name: Create isolated test environment
         run: |
-          uv pip install dist/*.whl
-          python -c "import injx; print(f'Successfully imported injx v{injx.__version__}')"
+          echo "Creating fresh virtual environment..."
+          uv venv dist-test-env --seed
+          echo "VIRTUAL_ENV=${{ github.workspace }}/dist-test-env" >> "$GITHUB_ENV"
+          echo "${{ github.workspace }}/dist-test-env/bin" >> "$GITHUB_PATH"
 
-      # Basic smoke test of core functionality
-      - name: Basic smoke test
+      - name: Install wheel package
+        run: |
+          echo "Installing built wheel (not from source)..."
+          # Install only the built wheel, not source
+          uv pip install dist/*.whl --verbose
+
+          echo "Installing test dependencies..."
+          uv pip install pytest pytest-asyncio
+
+          echo "Installed packages:"
+          uv pip list
+
+      - name: Verify basic import
+        working-directory: /tmp
         run: |
           python -c "
+          import sys
+          print(f'Python: {sys.version}')
+          print(f'Path: {sys.path}')
+
+          # Basic import test
           import injx
+          print(f'✅ Successfully imported injx v{injx.__version__}')
+
+          # Verify not importing from source
+          import inspect
+          print(f'Injx location: {inspect.getfile(injx)}')
+          assert 'src' not in inspect.getfile(injx), 'ERROR: Importing from source!'
+
+          # Test core imports
           from injx import Container, Token, Scope
-
-          # Create a simple service for testing
-          class TestService:
-              def __init__(self, value: str = 'test'):
-                  self.value = value
-
-          # Test basic container functionality
-          container = Container()
-          token = Token[TestService]('test-service')
-
-          container.register(token, TestService, scope=Scope.SINGLETON)
-          service = container.get(token)
-
-          assert service.value == 'test'
-          print('Smoke test passed: Basic DI functionality works')
+          print('✅ Core imports successful')
           "
+
+      - name: Run distribution tests with pytest
+        working-directory: /tmp
+        run: |
+          echo "Running distribution tests from neutral directory..."
+          # Run from /tmp to ensure no source contamination
+          python -m pytest \
+            ${{ github.workspace }}/tests/test_distribution.py \
+            -v \
+            -m distribution \
+            --tb=short \
+            --color=yes \
+            -o log_cli=true \
+            -o log_cli_level=INFO
