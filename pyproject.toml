@@ -132,6 +132,7 @@ addopts = [
 markers = [
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
+    "distribution: validates the installed package distribution",
 ]
 asyncio_mode = "auto"
 
