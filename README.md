@@ -38,7 +38,7 @@ Copy this complete example to `main.py` and run it:
 """Complete working example of dependency injection with Injx."""
 
 from typing import Protocol, Any, Optional
-from injx import Container, Token, inject, Scope
+from injx import Container, Token, inject, Scope, Dependencies
 
 
 # 1. Define service interfaces using Protocols with type annotations
@@ -135,19 +135,23 @@ def setup_container() -> Container:
     return container
 
 
-# 4. Use @inject decorator for automatic dependency injection
+# 4. Use @inject decorator with Dependencies pattern for clean DI
 @inject
 def get_user_info(
     user_id: int,
-    db: Database,
-    http: HTTPClient,
-    cache: Cache
+    deps: Dependencies[Database, HTTPClient, Cache]
 ) -> dict[str, Any]:
     """
     Fetch user info with caching and external validation.
 
-    Dependencies are automatically injected based on type annotations.
+    Dependencies are grouped and injected as a single parameter.
+    This follows modern Python patterns used by FastAPI and Pydantic.
     """
+    # Extract services from dependencies container
+    db = deps[Database]
+    http = deps[HTTPClient]
+    cache = deps[Cache]
+
     # Check cache first
     cache_key = f"user:{user_id}"
     cached_data = cache.get(cache_key)
@@ -168,15 +172,18 @@ def get_user_info(
     return user
 
 
-# 5. Alternative: Create user with validation
+# 5. Alternative: Create user with validation using Dependencies
 @inject
 def create_user(
     name: str,
     email: str,
-    db: Database,
-    http: HTTPClient
+    deps: Dependencies[Database, HTTPClient]
 ) -> dict[str, Any]:
-    """Create a new user with external validation."""
+    """Create a new user with external validation using grouped dependencies."""
+    # Extract services
+    db = deps[Database]
+    http = deps[HTTPClient]
+
     # Validate email
     validation = http.post(
         "https://api.example.com/validate/email",
@@ -242,14 +249,22 @@ container = Container()
 container.register(DB_TOKEN, PostgresDatabase, scope=Scope.SINGLETON)
 ```
 
-### @inject Decorator
-Automatically resolves and injects dependencies based on type annotations:
+### @inject Decorator with Dependencies Pattern
+Automatically resolves and injects grouped dependencies:
 ```python
 @inject
-def my_service(db: Database, cache: Cache) -> None:
-    # db and cache are automatically injected
+def my_service(deps: Dependencies[Database, Cache]) -> None:
+    # Access dependencies with type safety
+    db = deps[Database]
+    cache = deps[Cache]
     ...
 ```
+
+This pattern:
+- Groups related dependencies into a single parameter
+- Follows modern Python conventions (FastAPI, Pydantic)
+- Keeps function signatures clean and maintainable
+- Provides full type safety
 
 ### Scopes
 Control service lifetime and instantiation:

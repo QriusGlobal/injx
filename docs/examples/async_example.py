@@ -13,7 +13,7 @@ Run this file directly:
 import asyncio
 from typing import Protocol, Any, Optional, AsyncContextManager
 from contextlib import asynccontextmanager
-from injx import Container, Token, inject, Scope
+from injx import Container, Token, inject, Scope, Dependencies
 
 
 # 1. Define async service protocols with type annotations
@@ -243,19 +243,22 @@ ASYNC_CACHE: Token[AsyncCache] = Token("async_cache", AsyncCache)
 MESSAGE_QUEUE: Token[MessageQueue] = Token("message_queue", MessageQueue)
 
 
-# 5. Business logic with async dependency injection
+# 5. Business logic with async dependency injection using Dependencies pattern
 @inject
 async def fetch_user_async(
     user_id: int,
-    db: AsyncDatabase,
-    cache: AsyncCache,
-    http: AsyncHTTPClient
+    deps: Dependencies[AsyncDatabase, AsyncCache, AsyncHTTPClient]
 ) -> dict[str, Any]:
     """
     Fetch user with async operations.
 
-    Type annotations ensure proper async handling.
+    Type annotations ensure proper async handling with grouped dependencies.
     """
+    # Extract services from dependencies
+    db = deps[AsyncDatabase]
+    cache = deps[AsyncCache]
+    http = deps[AsyncHTTPClient]
+
     # Try cache first
     cache_key: str = f"async_user:{user_id}"
     cached: Optional[dict[str, Any]] = await cache.get(cache_key)
@@ -291,15 +294,18 @@ async def fetch_user_async(
 async def process_user_event(
     event_type: str,
     user_id: int,
-    db: AsyncDatabase,
-    queue: MessageQueue,
-    http: AsyncHTTPClient
+    deps: Dependencies[AsyncDatabase, MessageQueue, AsyncHTTPClient]
 ) -> None:
     """
     Process user events with message queue.
 
-    Demonstrates async context managers and error handling.
+    Demonstrates async context managers and error handling with Dependencies pattern.
     """
+    # Extract services from dependencies
+    db = deps[AsyncDatabase]
+    queue = deps[MessageQueue]
+    http = deps[AsyncHTTPClient]
+
     print(f"\n📤 Processing {event_type} event for user {user_id}")
 
     # Fetch user

@@ -11,7 +11,7 @@ Run this file directly to see it in action:
 """
 
 from typing import Protocol, Any, Optional
-from injx import Container, Token, inject, Scope
+from injx import Container, Token, inject, Scope, Dependencies
 
 
 # 1. Define service interfaces using Protocols with full type annotations
@@ -155,22 +155,25 @@ def setup_container() -> Container:
     return container
 
 
-# 5. Business logic functions with @inject decorator
+# 5. Business logic functions with @inject decorator and Dependencies pattern
 @inject
 def get_user_with_enrichment(
     user_id: int,
-    db: Database,
-    http: HTTPClient,
-    cache: Cache
+    deps: Dependencies[Database, HTTPClient, Cache]
 ) -> dict[str, Any]:
     """
     Fetch user data enriched with external API data.
 
     This function demonstrates:
-    - Automatic dependency injection via @inject
-    - Type-safe service usage
+    - Automatic dependency injection via @inject with Dependencies pattern
+    - Type-safe service access through deps[Type]
     - Cache-aside pattern
     """
+    # Extract services from dependencies
+    db = deps[Database]
+    http = deps[HTTPClient]
+    cache = deps[Cache]
+
     # Check cache first
     cache_key: str = f"user:{user_id}:enriched"
     cached_data: Optional[dict[str, Any]] = cache.get(cache_key)
@@ -199,18 +202,21 @@ def get_user_with_enrichment(
 def create_user_account(
     name: str,
     email: str,
-    db: Database,
-    http: HTTPClient,
-    email_service: EmailService
+    deps: Dependencies[Database, HTTPClient, EmailService]
 ) -> dict[str, Any]:
     """
     Create a new user account with validation and notification.
 
     Demonstrates:
-    - Multiple service dependencies
+    - Grouped service dependencies using Dependencies pattern
     - Type-safe error handling
     - Service orchestration
     """
+    # Extract services from dependencies
+    db = deps[Database]
+    http = deps[HTTPClient]
+    email_service = deps[EmailService]
+
     print(f"\n📝 Creating account for {name}")
 
     # Validate email with external service
