@@ -266,6 +266,32 @@ This pattern:
 - Keeps function signatures clean and maintainable
 - Provides full type safety
 
+### Async Support with Dependencies
+Dependencies are fully awaitable for async contexts:
+```python
+@inject
+async def async_handler(
+    deps: Dependencies[AsyncDatabase, AsyncCache, AsyncHTTPClient]
+) -> dict[str, Any]:
+    # Dependencies are automatically resolved in parallel for performance
+    db = deps[AsyncDatabase]
+    cache = deps[AsyncCache]
+    http = deps[AsyncHTTPClient]
+
+    # Use async services
+    results = await asyncio.gather(
+        db.query("SELECT * FROM users"),
+        cache.get("key"),
+        http.get("https://api.example.com/data")
+    )
+    return process_results(results)
+```
+
+The Dependencies container intelligently handles resolution:
+- In sync contexts: Uses `resolve()` for synchronous resolution
+- In async contexts: Automatically awaitable with parallel resolution
+- Optimal performance: All dependencies resolved concurrently
+
 ### Scopes
 Control service lifetime and instantiation:
 - `SINGLETON`: One instance for container lifetime
