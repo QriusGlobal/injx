@@ -133,6 +133,11 @@ markers = [
     "unit: marks tests as unit tests",
     "integration: marks tests as integration tests",
     "distribution: validates the installed package distribution",
+    "core: Core functionality and basic operations",
+    "type_safety: Type validation and safety checks",
+    "complex: Complex scenarios and edge cases",
+    "performance: Performance-related tests",
+    "thread_safety: Concurrency and thread safety tests",
 ]
 asyncio_mode = "auto"
 
