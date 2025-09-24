@@ -24,17 +24,26 @@ T = TypeVar("T")
 
 class Dependencies(Generic[*Ts]):  # type: ignore
     """
-    Type-safe container for multiple dependencies.
+    Type-safe container for multiple dependencies with async support.
 
-    Example:
+    Example (Sync):
         @inject
         def process(deps: Dependencies[Database, Logger]):
             db = deps[Database]  # Type-safe access
             logger = deps[Logger]
 
-    Dependencies are lazily resolved by the injection layer based on
-    the execution context (sync or async). Direct usage falls back
-    to synchronous resolution for backward compatibility.
+    Example (Async):
+        @inject
+        async def process(deps: Dependencies[AsyncDB, AsyncCache]):
+            # Dependencies are automatically awaitable
+            db = deps[AsyncDB]
+            cache = deps[AsyncCache]
+            # All dependencies resolved in parallel for performance
+
+    The Dependencies container intelligently handles resolution:
+    - Sync context: Uses resolve() for synchronous resolution
+    - Async context: Fully awaitable with parallel resolution
+    - Direct usage: Falls back to synchronous resolution
     """
 
     __slots__ = ("_container", "_types", "_resolved", "__weakref__")
@@ -52,17 +61,32 @@ class Dependencies(Generic[*Ts]):  # type: ignore
         self._resolved: Mapping[type, Any] | None = None
 
     def resolve(self) -> None:
-        """Synchronously resolve all dependencies. Called by injection layer."""
+        """
+        Synchronously resolve all dependencies.
+
+        Called by the injection layer in synchronous contexts. For async contexts,
+        the Dependencies object is awaitable and will resolve dependencies in parallel.
+        """
         if self._resolved is None:
             resolved: dict[type, Any] = {t: self._container.get(t) for t in self._types}
             self._resolved = MappingProxyType(resolved)
 
     def __await__(self) -> Generator[Any, None, Dependencies[*Ts]]:  # type: ignore[misc]
-        """Make Dependencies awaitable for async resolution."""
+        """
+        Make Dependencies awaitable for async resolution.
+
+        This enables the Dependencies container to be used with await syntax,
+        automatically resolving all dependencies in parallel when in an async context.
+        """
         return self._resolve_async().__await__()  # type: ignore[return-value]
 
     async def _resolve_async(self) -> Dependencies[*Ts]:  # type: ignore
-        """Asynchronously resolve all dependencies in parallel."""
+        """
+        Asynchronously resolve all dependencies in parallel.
+
+        Uses asyncio.gather for concurrent resolution, providing optimal
+        performance when dealing with multiple async dependencies.
+        """
         if self._resolved is None:
             # Resolve all dependencies concurrently for performance
             tasks: list[Any] = [self._container.aget(t) for t in self._types]
