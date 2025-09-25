@@ -396,7 +396,7 @@ chore(container): add new feature  # Should be 'feat'
 #### Agent Integration Instructions
 
 **For AI Agents using this codebase:**
-1. **Use project sub-agent**: Run `./.claude/sub-agents/commit/commit.py` for interactive commits
+1. **Use project sub-agent**: Run `./.claude/sub-agents/commit/commit.sh` for interactive commits
 2. **Alternative**: Run `uv run cz commit` for interactive commit authoring
 3. **Handle failures**: Review validation messages for specific guidance
 4. **Emergency bypass**: Use `git commit --no-verify` only with documented reason
@@ -405,8 +405,8 @@ chore(container): add new feature  # Should be 'feat'
 #### Project Sub-Agent for Commits
 
 This project includes a Claude Code sub-agent for handling semantic commits:
-- **Location**: `.claude/sub-agents/commit/commit.py`
-- **Usage**: `./.claude/sub-agents/commit/commit.py` (standalone script, no dependencies)
+- **Location**: `.claude/sub-agents/commit/commit.sh`
+- **Usage**: `./.claude/sub-agents/commit/commit.sh` (native shell script)
 - **Features**:
   - Analyzes staged changes and proposes conventional commits
   - Determines correct commit type based on file changes
