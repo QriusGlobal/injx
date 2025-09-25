@@ -315,7 +315,12 @@ class InjxCommitAgent:
         print("  [e] Edit message")
         print("  [c] Cancel")
 
-        choice = input("\nYour choice [y/e/c]: ").lower().strip()
+        import os
+        if os.environ.get('INJX_COMMIT_AUTO') == 'y':
+            choice = 'y'
+            print("\nYour choice [y/e/c]: y (auto-accept mode)")
+        else:
+            choice = input("\nYour choice [y/e/c]: ").lower().strip()
 
         if choice == 'y':
             # Commit with the message
@@ -352,10 +357,16 @@ def main():
     agent = InjxCommitAgent()
 
     if len(sys.argv) > 1:
-        # Direct commit message provided
-        message = " ".join(sys.argv[1:])
-        agent._run_git("commit", "-m", message)
-        print(f"✅ Committed: {message}")
+        if sys.argv[1] == "-y":
+            # Auto-accept mode
+            import os
+            os.environ['INJX_COMMIT_AUTO'] = 'y'
+            agent.interactive_commit()
+        else:
+            # Direct commit message provided
+            message = " ".join(sys.argv[1:])
+            agent._run_git("commit", "-m", message)
+            print(f"✅ Committed: {message}")
     else:
         # Interactive mode
         agent.interactive_commit()

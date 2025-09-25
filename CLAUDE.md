@@ -413,6 +413,24 @@ This project includes a Claude Code sub-agent for handling semantic commits:
   - Suggests appropriate scope from module names
   - Shows version impact (patch/minor/major/none)
   - Interactive mode with edit capability
+  - Auto-accept mode with `-y` flag
+
+#### Slash Command Integration
+
+**Usage**: `/commit` - Analyzes staged changes and proposes a semantic commit
+
+The `/commit` slash command provides an interactive interface to the commit sub-agent:
+- **Default behavior**: Analyzes all staged files and proposes an appropriate commit
+- **Auto-accept**: `/commit -y` to automatically accept the proposed commit
+- **Smart detection**: Automatically determines commit type based on file changes
+- **Version awareness**: Shows whether commit will trigger a release (patch/minor/major)
+
+The command intelligently categorizes changes:
+- src/ changes → feat or fix (triggers releases)
+- tests/ changes → test commits
+- docs/ changes → docs commits
+- .github/ changes → ci commits
+- Config files → chore commits
 
 #### Escape Hatch (Audited)
 - **Local bypass**: `git commit --no-verify` for exceptional cases
