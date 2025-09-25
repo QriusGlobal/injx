@@ -16,8 +16,8 @@ Check current git status and invoke the commit sub-agent:
 # First, check if there are staged changes
 !git status --short
 
-# Run the commit sub-agent
-!uv run python .claude/sub-agents/commit/commit.py $ARGUMENTS
+# Run the commit sub-agent directly (it only uses Python standard library)
+!./.claude/sub-agents/commit/commit.py $ARGUMENTS
 ```
 
 The sub-agent will:
