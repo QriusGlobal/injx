@@ -241,17 +241,19 @@ class TestDependenciesAdvanced:
         """Test memory usage with large Dependencies."""
         container = Container()
 
-        # Register many services
+        # Register many services - store the types
+        service_types = []
         for i in range(100):
             service_class = type(f"Service{i}", (), {"data": [0] * 1000})
+            service_types.append(service_class)
             container.register(service_class, service_class)
 
         # Force garbage collection
         gc.collect()
         initial_memory = sys.getsizeof(container)
 
-        # Access services to test memory usage
-        _ = [container.get(type(f"Service{i}", (), {})) for i in range(100)]
+        # Access services to test memory usage - use the same type instances
+        _ = [container.get(service_types[i]) for i in range(100)]
 
         # Check memory is reasonable (not storing duplicate data)
         gc.collect()

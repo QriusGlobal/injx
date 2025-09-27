@@ -258,8 +258,8 @@ class TestDependenciesAsync:
         async def create_cache() -> AsyncCache:
             return TrackableAsyncCache()
 
-        container.register_context(AsyncDatabase, create_db, is_async=True)
-        container.register_context(AsyncCache, create_cache, is_async=True)
+        container.register(AsyncDatabase, create_db)
+        container.register(AsyncCache, create_cache)
 
         @inject
         async def handler(deps: Dependencies[AsyncDatabase, AsyncCache]) -> bool:

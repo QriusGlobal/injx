@@ -1,0 +1,165 @@
+name: Issue Triage Automation
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Welcome first-time contributors
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Check if this is a first-time contributor
+            const creator = context.payload.sender.login
+            const opts = github.rest.issues.listForRepo.endpoint.merge({
+              ...context.issue,
+              creator,
+              state: 'all'
+            })
+            const issues = await github.paginate(opts)
+
+            // Filter out the current issue and check if any others exist
+            const otherIssues = issues.filter(issue => issue.number !== context.issue.number)
+
+            if (otherIssues.length === 0) {
+              // This is their first issue!
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `👋 **Welcome to injx!** Thank you for your first contribution!
+
+                A maintainer will review your issue and provide feedback soon. In the meantime:
+
+                - 📖 Check out our [documentation](https://github.com/QriusGlobal/injx#readme)
+                - 🔍 Browse [existing issues](https://github.com/QriusGlobal/injx/issues) for similar problems
+                - 💬 Join discussions in other issues if you have insights to share
+
+                We appreciate you taking the time to improve injx! ✨`
+              })
+            }
+
+      - name: Add helpful guidance based on issue type
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issueBody = context.payload.issue.body || '';
+            const issueTitle = context.payload.issue.title || '';
+            const labels = context.payload.issue.labels.map(label => label.name);
+
+            let guidanceComment = '';
+
+            // Guidance for bug reports
+            if (labels.includes('bug')) {
+              // Check if minimal reproducible example was provided
+              if (!issueBody.includes('```python') && !issueBody.includes('```py')) {
+                guidanceComment += `
+            ## 🐛 Bug Report Guidance
+
+            Thank you for reporting a bug! To help us fix it quickly:
+
+            **Missing: Code Example** - Please provide a minimal reproducible example showing the issue.
+
+            \`\`\`python
+            from injx import Container, Token
+
+            # Your code that reproduces the issue
+            \`\`\`
+
+            This helps us understand and fix the problem much faster! 🚀
+            `;
+              }
+            }
+
+            // Guidance for feature requests
+            if (labels.includes('enhancement')) {
+              guidanceComment += `
+            ## ✨ Feature Request Guidance
+
+            Thank you for the feature suggestion! A few tips:
+
+            - **Use cases** help us understand the value of your request
+            - **API examples** show how you'd like the feature to work
+            - **Alternatives** you've tried help us understand the gap
+
+            We'll review this and provide feedback on feasibility and priority. 📋
+            `;
+            }
+
+            // Guidance for questions
+            if (labels.includes('question')) {
+              guidanceComment += `
+            ## ❓ Question Guidance
+
+            Great question! Before we answer:
+
+            - Have you checked the [documentation](https://github.com/QriusGlobal/injx#readme)?
+            - Any [examples](https://github.com/QriusGlobal/injx/tree/main/examples) that might help?
+            - Similar [questions](https://github.com/QriusGlobal/injx/issues?q=is:issue+label:question) already answered?
+
+            If this is a general "how do I..." question, we'll do our best to help! If it reveals a documentation gap, we might also improve the docs. 📚
+            `;
+            }
+
+            // Post guidance comment if we have any
+            if (guidanceComment.trim()) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: guidanceComment.trim()
+              });
+            }
+
+      - name: Notify maintainer of high-priority issues
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issueBody = context.payload.issue.body || '';
+            const issueTitle = context.payload.issue.title || '';
+            const labels = context.payload.issue.labels.map(label => label.name);
+
+            // Keywords that indicate high priority
+            const highPriorityKeywords = [
+              'crash', 'memory leak', 'security', 'data loss', 'critical',
+              'python 3.14', 'free-threading', 'performance regression'
+            ];
+
+            const criticalSigns = [
+              'segfault', 'segmentation fault', 'core dump',
+              'deadlock', 'infinite loop', 'hangs forever'
+            ];
+
+            const textToCheck = (issueTitle + ' ' + issueBody).toLowerCase();
+
+            const hasHighPriority = highPriorityKeywords.some(keyword =>
+              textToCheck.includes(keyword.toLowerCase())
+            );
+
+            const hasCriticalSigns = criticalSigns.some(keyword =>
+              textToCheck.includes(keyword.toLowerCase())
+            );
+
+            if (hasHighPriority || hasCriticalSigns) {
+              let priorityLevel = hasHighPriority ? 'HIGH' : 'CRITICAL';
+
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `🚨 **${priorityLevel} PRIORITY DETECTED** 🚨
+
+                This issue appears to be ${priorityLevel.toLowerCase()} priority based on keywords detected.
+
+                @QriusGlobal/maintainers - please review ASAP.
+
+                **Detected indicators:** ${hasHighPriority ? 'High-impact keywords' : 'Critical system issues'}`
+              });
+            }

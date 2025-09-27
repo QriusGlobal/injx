@@ -1,0 +1,217 @@
+name: Sprint Planning Automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      sprint_name:
+        description: 'Sprint name (e.g., "Sprint 2025-Q1-1")'
+        required: true
+        default: 'Sprint YYYY-QX-N'
+      target_issues:
+        description: 'Target number of issues for this sprint'
+        required: false
+        default: '5'
+      days_duration:
+        description: 'Sprint duration in days'
+        required: false
+        default: '14'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  create-sprint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Sprint Milestone
+        id: milestone
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const sprintName = '${{ github.event.inputs.sprint_name }}';
+            const durationDays = parseInt('${{ github.event.inputs.days_duration }}');
+
+            // Calculate due date (duration days from now)
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + durationDays);
+
+            try {
+              // Create milestone
+              const milestone = await github.rest.issues.createMilestone({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: sprintName,
+                description: `Sprint planning milestone created on ${new Date().toISOString().split('T')[0]}`,
+                due_on: dueDate.toISOString()
+              });
+
+              console.log('Created milestone:', milestone.data.title);
+              return milestone.data.number;
+            } catch (error) {
+              console.error('Error creating milestone:', error);
+              return null;
+            }
+
+      - name: Analyze Triage Queue
+        id: analysis
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Get all issues with needs-triage label
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'needs-triage',
+              state: 'open',
+              sort: 'created',
+              direction: 'asc',
+              per_page: 100
+            });
+
+            const targetCount = parseInt('${{ github.event.inputs.target_issues }}');
+
+            // Categorize issues
+            const analysis = {
+              bugs: issues.data.filter(issue => issue.labels.some(label => label.name === 'bug')),
+              enhancements: issues.data.filter(issue => issue.labels.some(label => label.name === 'enhancement')),
+              questions: issues.data.filter(issue => issue.labels.some(label => label.name === 'question')),
+              python314: issues.data.filter(issue => issue.labels.some(label => label.name === 'python-3.14')),
+              roadmap: issues.data.filter(issue => issue.labels.some(label => label.name === 'roadmap')),
+              total: issues.data.length
+            };
+
+            // Priority scoring (bugs and python-3.14 get higher priority)
+            const scoredIssues = issues.data.map(issue => {
+              let score = 0;
+              const labels = issue.labels.map(l => l.name);
+
+              if (labels.includes('bug')) score += 10;
+              if (labels.includes('python-3.14')) score += 8;
+              if (labels.includes('python-3.15')) score += 7;
+              if (labels.includes('roadmap')) score += 6;
+              if (labels.includes('enhancement')) score += 3;
+              if (labels.includes('question')) score += 1;
+
+              // Age bonus (older issues get slight priority boost)
+              const ageInDays = (new Date() - new Date(issue.created_at)) / (1000 * 60 * 60 * 24);
+              score += Math.min(ageInDays / 7, 5); // Max 5 points for age
+
+              return { issue, score };
+            }).sort((a, b) => b.score - a.score);
+
+            console.log('Triage Queue Analysis:', analysis);
+            console.log(`Top ${targetCount} priority issues identified`);
+
+            return {
+              analysis,
+              topIssues: scoredIssues.slice(0, targetCount),
+              allScoredIssues: scoredIssues
+            };
+
+      - name: Create Sprint Planning Issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const sprintName = '${{ github.event.inputs.sprint_name }}';
+            const targetCount = parseInt('${{ github.event.inputs.target_issues }}');
+            const durationDays = parseInt('${{ github.event.inputs.days_duration }}');
+            const analysis = ${{ steps.analysis.outputs.result }};
+            const milestoneNumber = ${{ steps.milestone.outputs.result }};
+
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + durationDays);
+
+            // Build issue body
+            let issueBody = `# ${sprintName} Planning
+
+            **Duration:** ${durationDays} days (until ${dueDate.toISOString().split('T')[0]})
+            **Target Issues:** ${targetCount}
+            **Created:** ${new Date().toISOString().split('T')[0]}
+
+            ## Triage Queue Analysis
+
+            | Category | Count |
+            |----------|--------|
+            | 🐛 Bugs | ${analysis.analysis.bugs.length} |
+            | ✨ Enhancements | ${analysis.analysis.enhancements.length} |
+            | ❓ Questions | ${analysis.analysis.questions.length} |
+            | 🐍 Python 3.14 | ${analysis.analysis.python314.length} |
+            | 🗺️ Roadmap | ${analysis.analysis.roadmap.length} |
+            | **Total Untriaged** | **${analysis.analysis.total}** |
+
+            ## Recommended Sprint Issues
+
+            Based on priority scoring (bugs and Python 3.14 items prioritized):
+
+            `;
+
+            // Add top issues
+            analysis.topIssues.forEach((item, index) => {
+              const issue = item.issue;
+              const labels = issue.labels.map(l => l.name).join(', ');
+              issueBody += `${index + 1}. [#${issue.number} ${issue.title}](${issue.html_url}) (Score: ${item.score.toFixed(1)})
+                 - Labels: ${labels}
+                 - Created: ${issue.created_at.split('T')[0]}
+
+            `;
+            });
+
+            issueBody += `
+            ## Sprint Tasks
+
+            ### Maintainer Actions Required:
+            - [ ] Review and label all recommended issues above
+            - [ ] Remove \`needs-triage\` label from processed issues
+            - [ ] Assign issues to sprint milestone${milestoneNumber ? ` (#${milestoneNumber})` : ''}
+            - [ ] Identify any blocking dependencies
+            - [ ] Estimate effort for each issue
+
+            ### Sprint Goals:
+            - [ ] Process all \`needs-triage\` issues older than 7 days
+            - [ ] Focus on Python 3.14 readiness items
+            - [ ] Address critical bugs first
+            - [ ] Maintain good community communication
+
+            ## Sprint Metrics Target:
+            - Issues triaged: ${analysis.analysis.total}
+            - Issues closed: ${Math.floor(targetCount * 0.7)}
+            - Community response time: < 48 hours
+            - Documentation updates: As needed
+
+            ---
+
+            **Auto-generated by Sprint Planning Automation** 🤖
+            Run ID: ${{ github.run_id }}
+            `;
+
+            // Create the planning issue
+            const planningIssue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `📋 ${sprintName} - Planning & Progress Tracker`,
+              body: issueBody,
+              labels: ['roadmap'],
+              milestone: milestoneNumber
+            });
+
+            console.log('Created sprint planning issue:', planningIssue.data.html_url);
+
+            // Pin the planning issue
+            try {
+              await github.rest.issues.pin({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: planningIssue.data.number
+              });
+              console.log('Pinned sprint planning issue');
+            } catch (error) {
+              console.log('Could not pin issue (requires admin permissions):', error.message);
+            }
+
+      - name: Summary
+        run: |
+          echo "✅ Sprint planning completed!"
+          echo "📊 Created sprint milestone and analysis"
+          echo "📋 Sprint planning issue created with triage recommendations"
+          echo "🎯 Next: Review the planning issue and assign issues to the milestone"

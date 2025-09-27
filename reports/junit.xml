@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="267" time="1.914" timestamp="2025-09-25T15:40:09.749937+10:00" hostname="Mishals-Mac-mini.local"><testcase classname="tests.test_async.TestAsyncResolution" name="test_async_provider_in_sync_context_raises_error" time="0.004" /><testcase classname="tests.test_container.TestContainer" name="test_has_method" time="0.002" /><testcase classname="tests.test_container.TestContainer" name="test_register_value" time="0.004" /><testcase classname="tests.integration.test_dependencies_realistic.TestRealisticDependencies" name="test_transaction_pattern" time="0.003" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_container_initialization" time="0.003" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_singleton_storage" time="0.003" /><testcase classname="tests.test_async_httpx_asyncpg" name="test_fake_asyncpg_pool_singleton_and_cleanup" time="0.012" /><testcase classname="tests.integration.test_realistic_usage" name="test_playwright_style_fake_browser_with_cleanup" time="0.009" /><testcase classname="tests.test_async.TestAsyncCleanup" name="test_async_resource_tracking" time="0.007" /><testcase classname="tests.integration.test_dependencies_realistic.TestRealisticDependencies" name="test_request_session_scoping" time="0.001" /><testcase classname="tests.integration.test_dependencies_realistic.TestRealisticDependencies" name="test_error_recovery_pattern" time="0.001" /><testcase classname="tests.test_container.TestTypeResolution" name="test_resolve_by_concrete_type" time="0.001" /><testcase classname="tests.test_container.TestSingletonLocks" name="test_get_singleton_lock_on_demand" time="0.000" /><testcase classname="tests.test_async.TestAsyncResolution" name="test_async_singleton_creation" time="0.004" /><testcase classname="tests.test_async.TestAsyncInjection" name="test_inject_async_function" time="0.009" /><testcase classname="tests.test_container.TestSingletonLocks" name="test_singleton_lock_cleanup_after_successful_creation" time="0.004" /><testcase classname="tests.test_container.TestSingletonLocks" name="test_singleton_lock_with_concurrent_access" time="0.013" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_async_request_scope" time="0.006" /><testcase classname="tests.test_container.TestContainer" name="test_register_with_string" time="0.003" /><testcase classname="tests.test_container.TestContainer" name="test_register_validates_provider" time="0.000" /><testcase classname="tests.test_container.TestContainer" name="test_register_chaining" time="0.001" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_request_scope_context" time="0.001" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_nested_request_scopes" time="0.000" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_transient_storage" time="0.000" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_cleanup_on_scope_exit" time="0.001" /><testcase classname="tests.test_container.TestContainer" name="test_get_simple" time="0.001" /><testcase classname="tests.test_container.TestContainer" name="test_get_singleton" time="0.001" /><testcase classname="tests.test_async.TestAsyncCleanup" name="test_dispose_multiple_async_resources" time="0.001" /><testcase classname="tests.integration.test_dependencies_realistic.TestRealisticDependencies" name="test_fastapi_style_endpoint" time="0.007" /><testcase classname="tests.integration.test_dependencies_realistic.TestRealisticDependencies" name="test_django_style_view" time="0.001" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_async_cleanup" time="0.002" /><testcase classname="tests.integration.test_realistic_usage" name="test_sync_cleanup_circuit_breaker_raises_for_async_resources" time="0.002" /><testcase classname="tests.test_async.TestAsyncInjection" name="test_async_circular_dependency_detection" time="0.002" /><testcase classname="tests.integration.test_dependencies_realistic.TestRealisticDependencies" name="test_background_task_processing" time="0.003" /><testcase classname="tests.test_async.TestAsyncResolution" name="test_async_singleton_race_condition" time="0.019" /><testcase classname="tests.test_async.TestAsyncCleanup" name="test_dispose_with_cleanup_errors" time="0.001" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_clear_request_context" time="0.000" /><testcase classname="tests.test_async.TestAsyncResolution" name="test_async_provider_resolution" time="0.002" /><testcase classname="tests.test_container.TestContainer" name="test_container_initialization" time="0.000" /><testcase classname="tests.test_container.TestContainer" name="test_register_provider" time="0.000" /><testcase classname="tests.test_async_httpx_asyncpg" name="test_async_singleton_httpx_concurrency" time="0.028" /><testcase classname="tests.integration.test_realistic_usage" name="test_user_style_project_di_with_httpx_only" time="0.013" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_cleanup_with_context_manager" time="0.001" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_session_scope_context" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_dependencies_resolves_registered_services_on_access" time="0.001" /><testcase classname="tests.test_container.TestSingletonLocks" name="test_singleton_lock_cleanup_with_failing_initialization" time="0.001" /><testcase classname="tests.test_container.TestContainer" name="test_register_scoped_methods" time="0.000" /><testcase classname="tests.test_cycle_detection.TestCycleDetection" name="test_async_cycle_detection" time="0.008" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_dependencies_provides_multiple_services_correctly" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_inject_decorator_provides_dependencies_to_function" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_dependencies_raises_keyerror_for_unregistered_type" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_empty_dependencies_returns_zero_length_and_false_bool" time="0.000" /><testcase classname="tests.test_container.TestContainer" name="test_given_instances" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_lazy_resolution_defers_until_first_access" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_raises_resolution_error_for_unregistered_dependency" time="0.001" /><testcase classname="tests.test_async.TestAsyncCleanup" name="test_dispose_clears_state" time="0.002" /><testcase classname="tests.integration.test_dependencies_realistic.TestRealisticDependencies" name="test_multi_tenant_scenario" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_keyerror_when_requesting_non_dependency_type" time="0.001" /><testcase classname="tests.test_container.TestSingletonLocks" name="test_cleanup_singleton_lock" time="0.000" /><testcase classname="tests.test_contextual.TestContextFunctions" name="test_get_set_context" time="0.000" /><testcase classname="tests.test_cycle_detection.TestCycleDetection" name="test_o1_cycle_detection_performance" time="0.079" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_clear_session_context" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_inject_works_without_dependencies_parameter" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_token_registered_services_resolve_through_dependencies" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_repr_shows_type_names_in_dependencies_format" time="0.000" /><testcase classname="tests.test_container.TestContainer" name="test_register_with_type" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_resolution_error_includes_missing_service_name" time="0.001" /><testcase classname="tests.test_async.TestAsyncResolution" name="test_sync_provider_in_async_context" time="0.002" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_contains_operator_checks_dependency_presence" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_mock_implementations_satisfy_protocol_contracts" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_attribute_error_for_incompatible_service_implementation" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_nested_service_dependencies_resolve_recursively" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_given_instances_returned_without_factory_call" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_bool_returns_false_for_empty_true_for_populated" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_async_request_scope_isolates_request_services" time="0.064" /><testcase classname="tests.test_cycle_detection.TestCycleDetection" name="test_self_dependency_detection" time="0.000" /><testcase classname="tests.test_cycle_detection.TestCycleDetection" name="test_cycle_detection_with_different_scopes" time="0.000" /><testcase classname="tests.test_cycle_detection.TestCycleDetection" name="test_cycle_error_provides_useful_information" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_get_returns_none_for_missing_service_with_default" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_async_dependencies_resolve_with_await_syntax" time="0.038" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_runtime_error_when_accessing_unregistered_service" time="0.001" /><testcase classname="tests.test_container.TestSingletonLocks" name="test_multiple_singleton_locks_independence" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_async_errors_propagate_through_dependencies" time="0.027" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_given_overrides_registered_providers" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_memory_efficient_with_hundred_services" time="0.027" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_derived_class_satisfies_base_class_dependency" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_single_dependency_in_bracket_syntax" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_scales_to_fifteen_plus_dependencies" time="0.001" /><testcase classname="tests.test_async.TestAsyncResolution" name="test_mixed_async_sync_dependencies" time="0.003" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_django_pattern_with_transaction_rollback" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_background_task_bulk_email_processing" time="0.004" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_clear_all_contexts" time="0.000" /><testcase classname="tests.test_contextual.TestContextualContainer" name="test_singleton_live_view_after_clear" time="0.000" /><testcase classname="tests.test_contextual.TestRequestScope" name="test_request_scope_sync" time="0.000" /><testcase classname="tests.test_contextual.TestRequestScope" name="test_request_scope_async" time="0.002" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_scope_hierarchy_request_session_singleton" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_fallback_chain_cache_database_default" time="0.001" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_empty" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_thread_safe_singleton_with_transient_race_conditions" time="0.004" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_many_services" time="0.001" /><testcase classname="tests.test_cycle_detection.TestCycleDetection" name="test_resolution_guard_cleanup_on_exception" time="0.001" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_memory_usage" time="0.017"><failure message="injx.exceptions.ResolutionError: Cannot resolve token 'Service0':&#10;  Resolution chain: root&#10;  Cause: No provider registered for token 'Service0'. Fix: register a provider for this token before resolving.">self = &lt;tests.test_dependencies_advanced.TestDependenciesAdvanced object at 0x11b0989e0&gt;
+
+    def test_dependencies_memory_usage(self):
+        """Test memory usage with large Dependencies."""
+        container = Container()
+    
+        # Register many services
+        for i in range(100):
+            service_class = type(f"Service{i}", (), {"data": [0] * 1000})
+            container.register(service_class, service_class)
+    
+        # Force garbage collection
+        gc.collect()
+        initial_memory = sys.getsizeof(container)
+    
+        # Access services to test memory usage
+&gt;       _ = [container.get(type(f"Service{i}", (), {})) for i in range(100)]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_dependencies_advanced.py:254: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/injx/container.py:711: in get
+    result = self._resolve_sync(token)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+src/injx/container.py:790: in _resolve_sync
+    return self._resolve_sync_provider(token, effective_scope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/injx/container.py:911: in _resolve_sync_provider
+    provider = self._get_provider(token)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Container(providers=100, singletons=0, cache_hit_rate=0.00%)
+token = Token('Service0', Service0)
+
+    def _get_provider(self, token: Token[U]) -&gt; ProviderLike[U]:
+        token = self._canonicalize(token)
+        record = self._core.providers.get(token)
+        if record is None:
+            logger.error(f"No provider registered for token '{token.name}'")
+&gt;           raise ResolutionError(
+                token,
+                [],
+                (
+                    f"No provider registered for token '{token.name}'. "
+                    f"Fix: register a provider for this token before resolving."
+                ),
+            )
+E           injx.exceptions.ResolutionError: Cannot resolve token 'Service0':
+E             Resolution chain: root
+E             Cause: No provider registered for token 'Service0'. Fix: register a provider for this token before resolving.
+
+src/injx/container.py:628: ResolutionError</failure></testcase><testcase classname="tests.test_dependencies.TestDependencies" name="test_container_rejects_generic_type_aliases_requires_tokens" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_get_method_returns_none_for_optional_missing_service" time="0.001" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_with_tokens" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_union_types_work_with_runtime_type_checking" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_literal_types_for_configuration_services" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_protocol_based_services_with_callable_methods" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_collects_multiple_type_errors_during_execution" time="0.000" /><testcase classname="tests.test_contextual.TestSessionScope" name="test_session_scope" time="0.000" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_concurrent_access" time="0.005"><failure message="assert 8 == 10&#10; +  where 8 = len({4703189520, 4703467664, 4703641424, 4703771184, 4704092240, 4704100944, ...})&#10; +    where {4703189520, 4703467664, 4703641424, 4703771184, 4704092240, 4704100944, ...} = set([4703189520, 4703467664, 4703467664, 4704158992, 4704159904, 4703771184, ...])">self = &lt;tests.test_dependencies_advanced.TestDependenciesAdvanced object at 0x1184e66d0&gt;
+
+    def test_dependencies_concurrent_access(self):
+        """Test thread-safe concurrent access to Dependencies."""
+        import threading
+    
+        container = Container()
+        container.register(Database, MockDatabase, scope=Scope.SINGLETON)
+        container.register(Cache, MockCache, scope=Scope.TRANSIENT)
+    
+        results = []
+        errors = []
+    
+        @inject
+        def handler(deps: Dependencies[Database, Cache]) -&gt; dict[str, Any]:
+            db = deps[Database]
+            cache = deps[Cache]
+            return {"db_id": id(db), "cache_id": id(cache)}
+    
+        def worker():
+            try:
+                with container.activate():
+                    result = handler()
+                    results.append(result)
+            except Exception as e:
+                errors.append(e)
+    
+        # Create multiple threads
+        threads = [threading.Thread(target=worker) for _ in range(10)]
+    
+        # Start all threads
+        for t in threads:
+            t.start()
+    
+        # Wait for completion
+        for t in threads:
+            t.join()
+    
+        # No errors should occur
+        assert len(errors) == 0
+        assert len(results) == 10
+    
+        # All should have same singleton Database
+        db_ids = [r["db_id"] for r in results]
+        assert len(set(db_ids)) == 1
+    
+        # All should have different transient Cache
+        cache_ids = [r["cache_id"] for r in results]
+&gt;       assert len(set(cache_ids)) == 10
+E       assert 8 == 10
+E        +  where 8 = len({4703189520, 4703467664, 4703641424, 4703771184, 4704092240, 4704100944, ...})
+E        +    where {4703189520, 4703467664, 4703641424, 4703771184, 4704092240, 4704100944, ...} = set([4703189520, 4703467664, 4703467664, 4704158992, 4704159904, 4703771184, ...])
+
+tests/test_dependencies_advanced.py:480: AssertionError</failure></testcase><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_override_behavior" time="0.001"><failure message="AssertionError: assert 'SELECT 1' == 'OVERRIDE: SELECT 1'&#10;  &#10;  - OVERRIDE: SELECT 1&#10;  + SELECT 1">self = &lt;tests.test_dependencies_advanced.TestDependenciesAdvanced object at 0x1070d2c30&gt;
+
+    def test_dependencies_override_behavior(self):
+        """Test override behavior with Dependencies."""
+        container = Container()
+        container.register(Database, MockDatabase)
+        container.register(Cache, MockCache)
+    
+        @inject
+        def handler(deps: Dependencies[Database, Cache]) -&gt; str:
+            return deps[Database].query("SELECT 1")[0]["sql"]
+    
+        # Normal execution
+        with container.activate():
+            result1 = handler()
+            assert result1 == "SELECT 1"
+    
+        # With override
+        class OverrideDB:
+            def query(self, sql: str) -&gt; list[dict[str, Any]]:
+                return [{"id": 999, "sql": f"OVERRIDE: {sql}"}]
+    
+        container.override(Database, OverrideDB())
+    
+        with container.activate():
+            result2 = handler()
+&gt;           assert result2 == "OVERRIDE: SELECT 1"
+E           AssertionError: assert 'SELECT 1' == 'OVERRIDE: SELECT 1'
+E             
+E             - OVERRIDE: SELECT 1
+E             + SELECT 1
+
+tests/test_dependencies_advanced.py:236: AssertionError</failure></testcase><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_single" time="0.001" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_mixed_sync_async" time="0.021" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_multi_tenant_isolation_with_shared_cache" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_token_indirection_preserves_type_safety" time="0.001" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_scoped_resolution" time="0.001"><failure message="TypeError: '_GeneratorContextManager' object does not support the asynchronous context manager protocol">self = &lt;tests.test_dependencies_async.TestDependenciesAsync object at 0x107df4750&gt;
+
+    @pytest.mark.asyncio
+    async def test_async_dependencies_scoped_resolution(self):
+        """Test async Dependencies with different scopes."""
+        container = Container()
+    
+        call_count = {"singleton": 0, "transient": 0, "request": 0}
+    
+        async def create_singleton() -&gt; AsyncDatabase:
+            call_count["singleton"] += 1
+            await asyncio.sleep(0.01)
+            return MockAsyncDatabase()
+    
+        async def create_transient() -&gt; AsyncCache:
+            call_count["transient"] += 1
+            await asyncio.sleep(0.01)
+            return MockAsyncCache()
+    
+        async def create_request() -&gt; AsyncHTTPClient:
+            call_count["request"] += 1
+            await asyncio.sleep(0.01)
+            return MockAsyncHTTPClient()
+    
+        container.register(AsyncDatabase, create_singleton, scope=Scope.SINGLETON)
+        container.register(AsyncCache, create_transient, scope=Scope.TRANSIENT)
+        container.register(AsyncHTTPClient, create_request, scope=Scope.REQUEST)
+    
+        @inject
+        async def handler(
+            deps: Dependencies[AsyncDatabase, AsyncCache, AsyncHTTPClient],
+        ) -&gt; None:
+            _ = deps[AsyncDatabase]
+            _ = deps[AsyncCache]
+            _ = deps[AsyncHTTPClient]
+    
+        async with container:
+            # First request scope
+&gt;           async with container.request_scope():
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: '_GeneratorContextManager' object does not support the asynchronous context manager protocol
+
+tests/test_dependencies_async.py:444: TypeError</failure></testcase><testcase classname="tests.test_dependencies.TestDependencies" name="test_type_confusion_detectable_at_runtime" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_token_scope_inheritance_in_dependencies" time="0.001" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_error_handling" time="0.001" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_nested_resolution" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_missing_service_runtime_error" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_wrong_type_access" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_payment_transaction_with_rollback_on_failure" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_incompatible_service" time="0.001" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_with_given_instances" time="0.001" /><testcase classname="tests.test_async_httpx_asyncpg" name="test_context_overrides_isolation_between_tasks" time="0.002" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_optional_types" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_protocol_satisfaction" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_type_errors_collection" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_union_types" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_type_variance" time="0.002" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_literal_types" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_with_token_types" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_mypy_style_checks" time="0.001" /><testcase classname="tests.test_distribution.TestDistribution" name="test_package_version" time="0.000" /><testcase classname="tests.test_distribution.TestDistribution" name="test_token_creation_and_registration" time="0.000" /><testcase classname="tests.test_distribution.TestDistribution" name="test_inject_decorator" time="0.001" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_callable_protocols" time="0.002" /><testcase classname="tests.test_distribution.TestDistribution" name="test_error_types_accessible" time="0.000" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_with_async_context_manager" time="0.046" /><testcase classname="tests.test_dependencies_type_safety.TestDependenciesTypeSafety" name="test_dependencies_generic_types" time="0.002"><failure message="TypeError: Token specification must be a Token or type; strings are not supported">self = &lt;tests.test_dependencies_type_safety.TestDependenciesTypeSafety object at 0x10ba9dae0&gt;
+
+    def test_dependencies_generic_types(self):
+        """Test Dependencies with generic types."""
+        from typing import Generic, TypeVar
+    
+        T = TypeVar("T")
+    
+        class GenericService(Generic[T]):
+            def __init__(self, value: T):
+                self.value = value
+    
+            def get(self) -&gt; T:
+                return self.value
+    
+        # Use Token for generic types
+        StringServiceToken = Token("str_service", GenericService[str])
+        IntServiceToken = Token("int_service", GenericService[int])
+    
+        container = Container()
+        container.register(StringServiceToken, lambda: GenericService("hello"))
+        container.register(IntServiceToken, lambda: GenericService(42))
+    
+        # Map to types for Dependencies access
+&gt;       container.register(
+            GenericService[str], lambda: container.get(StringServiceToken)
+        )
+
+tests/test_dependencies_type_safety.py:214: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Container(providers=2, singletons=0, cache_hit_rate=0.00%)
+token = tests.test_dependencies_type_safety.TestDependenciesTypeSafety.test_dependencies_generic_types.&lt;locals&gt;.GenericService[str]
+provider = &lt;function TestDependenciesTypeSafety.test_dependencies_generic_types.&lt;locals&gt;.&lt;lambda&gt; at 0x10bd3c900&gt;
+scope = None
+
+    def register(
+        self,
+        token: Token[U] | type[U],
+        provider: ProviderLike[U],
+        scope: Scope | None = None,
+        *,
+        tags: tuple[str, ...] = (),
+    ) -&gt; "Container":
+        """Register a provider for a token.
+    
+        Args:
+            token: A ``Token[T]`` or a concrete ``type[T]``. If a type is
+                provided, a token is created automatically.
+            provider: Callable that returns the dependency instance.
+            scope: Optional lifecycle override (defaults to token.scope or TRANSIENT).
+            tags: Optional tags for discovery/metadata.
+    
+        Returns:
+            Self, to allow method chaining.
+    
+        Example:
+            container.register(Token[DB]("db"), create_db, scope=Scope.SINGLETON)
+        """
+        if not isinstance(token, (Token, type)):
+&gt;           raise TypeError(
+                "Token specification must be a Token or type; strings are not supported"
+            )
+E           TypeError: Token specification must be a Token or type; strings are not supported
+
+src/injx/container.py:333: TypeError</failure></testcase><testcase classname="tests.test_dependencies.TestDependencies" name="test_async_context_manager_services_enter_exit_correctly" time="0.047" /><testcase classname="tests.test_distribution.TestDistribution" name="test_all_public_imports" time="0.001" /><testcase classname="tests.test_distribution.TestDistribution" name="test_token_factory" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_dependencies_performance_matches_individual_injection" time="0.001" /><testcase classname="tests.test_injection.TestInjectMarker" name="test_inject_creation" time="0.000" /><testcase classname="tests.test_distribution.TestDistribution" name="test_transient_scope" time="0.001" /><testcase classname="tests.test_injection.TestGiven" name="test_given_delegates_to_inject" time="0.000" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_with_streaming" time="0.056" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_basic" time="0.035" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_scope_lifecycle_singleton_transient_request" time="0.001" /><testcase classname="tests.test_distribution.TestDistribution" name="test_async_provider" time="0.003" /><testcase classname="tests.test_distribution.TestDistribution" name="test_contextual_containers" time="0.001" /><testcase classname="tests.test_injection.TestAnalyzeDependencies" name="test_analyze_no_dependencies" time="0.000" /><testcase classname="tests.test_injection.TestAnalyzeDependencies" name="test_analyze_inject_default" time="0.000" /><testcase classname="tests.test_injection.TestAnalyzeDependencies" name="test_analyze_inject_annotation" time="0.000" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_cleanup" time="0.003"><failure message="AttributeError: 'coroutine' object has no attribute '__aenter__'. Did you mean: '__delattr__'?">self = &lt;tests.test_dependencies_async.TestDependenciesAsync object at 0x10757da70&gt;
+
+    @pytest.mark.asyncio
+    async def test_async_dependencies_cleanup(self):
+        """Test proper cleanup of async resources with Dependencies."""
+        container = Container()
+    
+        # Track cleanup
+        cleanup_order = []
+    
+        class TrackableAsyncDB(MockAsyncDatabase):
+            async def close(self) -&gt; None:
+                await super().close()
+                cleanup_order.append("db")
+    
+        class TrackableAsyncCache(MockAsyncCache):
+            async def close(self) -&gt; None:
+                await super().close()
+                cleanup_order.append("cache")
+    
+        async def create_db() -&gt; AsyncDatabase:
+            return TrackableAsyncDB()
+    
+        async def create_cache() -&gt; AsyncCache:
+            return TrackableAsyncCache()
+    
+        container.register_context(AsyncDatabase, create_db, is_async=True)
+        container.register_context(AsyncCache, create_cache, is_async=True)
+    
+        @inject
+        async def handler(deps: Dependencies[AsyncDatabase, AsyncCache]) -&gt; bool:
+            db = deps[AsyncDatabase]
+            cache = deps[AsyncCache]
+            await db.query("SELECT 1")
+            await cache.set("key", "value")
+            return True
+    
+        async with container:
+&gt;           result = await handler()
+                     ^^^^^^^^^^^^^^^
+
+tests/test_dependencies_async.py:273: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/injx/injection.py:657: in async_wrapper
+    resolved = await aresolve_dependencies(deps, active_container, overrides)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/injx/injection.py:510: in aresolve_dependencies
+    results = await asyncio.gather(*tasks.values())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/injx/injection.py:463: in _aresolve_one
+    await deps  # Pre-resolve async with parallel gather
+    ^^^^^^^^^^
+src/injx/dependencies.py:93: in _resolve_async
+    results: list[Any] = await asyncio.gather(*tasks)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/injx/container.py:1031: in aget
+    return await self._resolve_async(token)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/injx/container.py:1048: in _resolve_async
+    return await self._resolve_async_context(token, record, effective_scope)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/injx/container.py:1074: in _resolve_async_context
+    return await self._resolve_transient_context_async(token, record)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = Container(providers=2, singletons=0, cache_hit_rate=0.00%)
+token = Token('AsyncDatabase', AsyncDatabase)
+record = ProviderSpec(provider=&lt;function TestDependenciesAsync.test_async_dependencies_cleanup.&lt;locals&gt;.create_db at 0x1076f9f80&gt;, cleanup=&lt;CleanupStrategy.ASYNC_CONTEXT: 4&gt;, scope=&lt;Scope.TRANSIENT: 4&gt;, is_async=True, dependencies=())
+
+    async def _resolve_transient_context_async(
+        self, token: Token[U], record: ProviderSpec[object]
+    ) -&gt; U:
+        """Resolve a transient async context-managed dependency.
+    
+        Args:
+            token: The token to resolve
+            reg: The registration with async context manager
+    
+        Returns:
+            The resolved instance
+        """
+        cm = cast(AsyncContextManager[U], record.provider())
+&gt;       value = await cm.__aenter__()
+                      ^^^^^^^^^^^^^
+E       AttributeError: 'coroutine' object has no attribute '__aenter__'. Did you mean: '__delattr__'?
+
+src/injx/container.py:1150: AttributeError</failure></testcase><testcase classname="tests.test_injection.TestDepends" name="test_depends_creates_inject" time="0.000" /><testcase classname="tests.test_injection.TestAnalyzeDependencies" name="test_analyze_caching" time="0.001" /><testcase classname="tests.test_injection.TestAnalyzeDependencies" name="test_analyze_inject_with_provider" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_parallel_async_resolution_with_gather" time="0.023" /><testcase classname="tests.test_injection.TestAnalyzeDependencies" name="test_analyze_token_annotation" time="0.000" /><testcase classname="tests.test_injection.TestResolveDependencies" name="test_resolve_inject_with_provider" time="0.000" /><testcase classname="tests.test_injection.TestResolveDependencies" name="test_resolve_inject_with_type" time="0.001" /><testcase classname="tests.test_injection.TestResolveDependencies" name="test_resolve_token" time="0.001" /><testcase classname="tests.test_injection.TestAnalyzeDependencies" name="test_analyze_skip_args_kwargs" time="0.000" /><testcase classname="tests.test_injection.TestResolveDependencies" name="test_resolve_type_directly" time="0.000" /><testcase classname="tests.test_injection.TestResolveDependencies" name="test_resolve_with_overrides" time="0.000" /><testcase classname="tests.test_injection.TestResolveDependencies" name="test_resolve_async_with_sync_fallback" time="0.004" /><testcase classname="tests.test_injection.TestResolveDependencies" name="test_resolve_async" time="0.002" /><testcase classname="tests.test_injection.TestResolveDependencies" name="test_resolve_async_provider" time="0.002" /><testcase classname="tests.test_injection.TestInjectDecorator" name="test_inject_no_dependencies" time="0.000" /><testcase classname="tests.test_injection.TestInjectDecorator" name="test_inject_sync_function" time="0.001" /><testcase classname="tests.test_injection.TestInjectDecorator" name="test_inject_default_container" time="0.001" /><testcase classname="tests.test_injection.TestInjectDecorator" name="test_inject_without_cache" time="0.000" /><testcase classname="tests.test_injection.TestInjectDecorator" name="test_inject_async_function" time="0.001" /><testcase classname="tests.test_injection.TestInjectDecorator" name="test_inject_with_override" time="0.001" /><testcase classname="tests.test_injection.TestInjectDecorator" name="test_inject_preserves_function_metadata" time="0.001" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_inject_decorator_integration" time="0.001" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_given_instances_integration" time="0.000" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_using_context_integration" time="0.000" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_full_dependency_graph" time="0.001" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_async_integration" time="0.013" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_request_scope_integration" time="0.001" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_async_inject_integration" time="0.013" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_batch_operations_integration" time="0.001" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_circular_dependency_detection" time="0.001" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_transient_no_caching" time="0.013" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_singleton_lock_cleanup" time="0.001" /><testcase classname="tests.test_injection.TestInjectMarker" name="test_inject_with_type" time="0.000" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_token_slots_memory_efficiency" time="0.269" /><testcase classname="tests.test_injection.TestInjectMarker" name="test_inject_repr" time="0.000" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_cleanup_stack_memory_bounded" time="0.002" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_async_lock_cleanup" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_sync_and_async_services_in_same_dependencies" time="0.022" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_container_clear_cleanup" time="0.015" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_performance_metrics" time="0.002" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_async_generator_services_stream_data" time="0.065" /><testcase classname="tests.test_integration.TestCompleteIntegration" name="test_error_handling" time="0.001" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_resolution_set_memory_efficiency" time="0.051" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_singleton_lock_cleanup_with_exception" time="0.001" /><testcase classname="tests.test_metaclass.TestMetaclassRegistration" name="test_basic_auto_registration" time="0.001" /><testcase classname="tests.test_cycle_detection.TestCycleDetection" name="test_resolution_set_mechanism" time="0.001" /><testcase classname="tests.test_metaclass.TestMetaclassRegistration" name="test_auto_registration_with_protocol" time="0.001" /><testcase classname="tests.test_cycle_detection.TestCycleDetection" name="test_multiple_cycles_detection" time="0.001" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_concurrent_operations" time="0.027" /><testcase classname="tests.test_metaclass.TestMetaclassRegistration" name="test_no_auto_registration_without_flag" time="0.001" /><testcase classname="tests.test_metaclass.TestMetaclassRegistration" name="test_different_scopes" time="0.001" /><testcase classname="tests.test_cycle_detection.TestCycleDetection" name="test_concurrent_cycle_detection" time="0.004" /><testcase classname="tests.test_metaclass.TestMetaclassRegistration" name="test_registry_isolation" time="0.001" /><testcase classname="tests.test_metaclass.TestMetaclassRegistration" name="test_inheritance_with_metaclass" time="0.001" /><testcase classname="tests.test_performance.TestPerformance" name="test_o1_type_resolution_scaling" time="0.040" /><testcase classname="tests.test_performance.TestPerformance" name="test_basic_resolution_performance" time="0.532" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_performance" time="0.032" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_hundred_concurrent_async_resolutions_under_one_second" time="0.035" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_performance" time="0.351" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_container_clear_async_cleanup" time="0.004" /><testcase classname="tests.test_metaclass.TestMetaclassRegistration" name="test_complex_dependency_chain" time="0.003" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_async_cleanup_executes_on_context_exit" time="0.022" /><testcase classname="tests.test_performance.TestPerformance" name="test_memory_efficiency" time="0.004" /><testcase classname="tests.test_performance.TestPerformance" name="test_large_container_registration_performance" time="0.030" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_cancellation" time="0.106" /><testcase classname="tests.test_performance.TestPerformance" name="test_token_hashing_performance" time="0.034" /><testcase classname="tests.test_metaclass.TestMetaclassRegistration" name="test_custom_token_names" time="0.001" /><testcase classname="tests.test_threading.TestThreadSafety" name="test_concurrent_singleton_creation" time="0.022" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_with_sync_resolution_error" time="0.003" /><testcase classname="tests.test_performance.TestPerformance" name="test_stress_performance" time="0.600" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_async_factory_fails_in_sync_context" time="0.006" /><testcase classname="tests.test_performance.TestPerformance" name="test_injection_cache_performance" time="0.015" /><testcase classname="tests.test_performance.TestPerformance" name="test_singleton_lock_performance" time="0.308" /><testcase classname="tests.test_metaclass.TestMetaclassRegistration" name="test_auto_registration_with_dependencies" time="0.001" /><testcase classname="tests.test_threading.TestThreadSafety" name="test_concurrent_override_and_resolution" time="0.012" /><testcase classname="tests.test_threading.TestThreadSafety" name="test_resource_tracking_thread_safety" time="0.004" /><testcase classname="tests.test_dependencies_async.TestDependenciesAsync" name="test_async_dependencies_error_handling" time="0.026" /><testcase classname="tests.test_threading.TestThreadSafety" name="test_concurrent_registration_and_resolution" time="0.013" /><testcase classname="tests.test_tokens.TestToken" name="test_token_hashing" time="0.000" /><testcase classname="tests.test_tokens.TestToken" name="test_token_with_scope" time="0.000" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_cancelled_async_task_propagates_cancellation" time="0.104" /><testcase classname="tests.test_tokens.TestToken" name="test_token_creation" time="0.001" /><testcase classname="tests.test_tokens.TestToken" name="test_token_with_tags_method" time="0.000" /><testcase classname="tests.test_performance.TestPerformance" name="test_memory_efficiency_with_tracemalloc" time="0.192" /><testcase classname="tests.test_tokens.TestToken" name="test_token_qualified_name" time="0.001" /><testcase classname="tests.test_tokens.TestToken" name="test_token_with_tags" time="0.000" /><testcase classname="tests.test_tokens.TestTokenFactory" name="test_factory_creation" time="0.000" /><testcase classname="tests.test_threading.TestThreadSafety" name="test_injection_cache_thread_safety" time="0.011" /><testcase classname="tests.test_tokens.TestTokenFactory" name="test_factory_singleton_method" time="0.001" /><testcase classname="tests.test_tokens.TestTokenFactory" name="test_factory_caching" time="0.001" /><testcase classname="tests.test_tokens.TestTokenFactory" name="test_factory_transient_method" time="0.000" /><testcase classname="tests.test_threading.TestThreadSafety" name="test_stress_test_concurrent_operations" time="0.073" /><testcase classname="tests.test_tokens.TestTokenFactory" name="test_factory_session_method" time="0.001" /><testcase classname="tests.test_tokens.TestToken" name="test_token_with_qualifier" time="0.001" /><testcase classname="tests.test_tokens.TestTokenFactory" name="test_factory_cache_clearing" time="0.000" /><testcase classname="tests.test_tokens.TestTokenFactory" name="test_factory_cache_size" time="0.000" /><testcase classname="tests.test_tokens.TestScope" name="test_scope_values" time="0.001" /><testcase classname="tests.test_tokens.TestScope" name="test_scope_comparison" time="0.001" /><testcase classname="tests.test_tokens.TestTokenFactory" name="test_factory_request_method" time="0.001" /><testcase classname="tests.test_tokens.TestToken" name="test_token_equality" time="0.001" /><testcase classname="tests.test_performance.TestPerformance" name="test_resolution_stack_vs_set_performance" time="0.331" /><testcase classname="tests.test_tokens.TestTokenFactory" name="test_factory_qualified_method" time="0.001" /><testcase classname="tests.test_dependencies.TestDependencies" name="test_fastapi_pattern_with_metrics_and_caching" time="0.001" /><testcase classname="tests.test_tokens.TestToken" name="test_token_with_qualifier_method" time="0.000" /><testcase classname="tests.test_memory_profiling.TestMemoryProfiling" name="test_no_memory_leak_on_container_destruction" time="0.452" /><testcase classname="tests.test_dependencies_advanced.TestDependenciesAdvanced" name="test_dependencies_with_scopes" time="0.001" /><testcase classname="tests.test_tokens.TestToken" name="test_token_immutability" time="0.000" /><testcase classname="tests.test_performance.TestPerformance" name="test_singleton_access_performance" time="0.016" /><testcase classname="tests.test_threading.TestThreadSafety" name="test_thread_local_circular_dependency_detection" time="0.002" /></testsuite></testsuites>

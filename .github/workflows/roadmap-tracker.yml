@@ -1,0 +1,228 @@
+name: Roadmap Progress Tracker
+
+on:
+  issues:
+    types: [closed, reopened]
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      roadmap_issue:
+        description: 'Roadmap issue number to update'
+        required: false
+
+permissions:
+  issues: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  update-roadmap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Roadmap on Issue Close
+        if: github.event_name == 'issues' && github.event.action == 'closed'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const closedIssue = context.payload.issue;
+
+            // Check if this issue was referenced in any roadmap issues
+            const roadmapIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'roadmap',
+              state: 'open'
+            });
+
+            for (const roadmap of roadmapIssues.data) {
+              const roadmapBody = roadmap.body || '';
+
+              // Check if the closed issue is referenced
+              if (roadmapBody.includes(`#${closedIssue.number}`)) {
+                // Update the roadmap issue
+                const updatedBody = roadmapBody.replace(
+                  new RegExp(`- \\[ \\] #${closedIssue.number}`, 'g'),
+                  `- [x] #${closedIssue.number}`
+                );
+
+                if (updatedBody !== roadmapBody) {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: roadmap.number,
+                    body: updatedBody
+                  });
+
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: roadmap.number,
+                    body: `✅ Issue #${closedIssue.number} has been closed and marked as completed in this roadmap.
+
+                    **Closed Issue:** ${closedIssue.title}
+                    **Closed by:** @${closedIssue.closed_by?.login || 'unknown'}
+                    **Resolution:** ${closedIssue.state_reason || 'completed'}`
+                  });
+
+                  console.log(`Updated roadmap issue #${roadmap.number} for closed issue #${closedIssue.number}`);
+                }
+              }
+            }
+
+      - name: Update Roadmap on PR Merge
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            // Extract all issue references from PR body and commit messages
+            const issueRegex = /#(\d+)/g;
+            const bodyText = pr.body || '';
+            const titleText = pr.title || '';
+            const allText = bodyText + ' ' + titleText;
+
+            const issueNumbers = [];
+            let match;
+            while ((match = issueRegex.exec(allText)) !== null) {
+              issueNumbers.push(match[1]);
+            }
+
+            if (issueNumbers.length > 0) {
+              // Find roadmap issues and update them
+              const roadmapIssues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'roadmap',
+                state: 'open'
+              });
+
+              for (const roadmap of roadmapIssues.data) {
+                const roadmapBody = roadmap.body || '';
+                let updated = false;
+                let updatedBody = roadmapBody;
+
+                for (const issueNum of issueNumbers) {
+                  if (roadmapBody.includes(`#${issueNum}`)) {
+                    // Mark as completed
+                    updatedBody = updatedBody.replace(
+                      new RegExp(`- \\[ \\] (.*)#${issueNum}`, 'g'),
+                      `- [x] $1#${issueNum}`
+                    );
+                    updated = true;
+                  }
+                }
+
+                if (updated) {
+                  await github.rest.issues.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: roadmap.number,
+                    body: updatedBody
+                  });
+
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: roadmap.number,
+                    body: `🎉 PR #${pr.number} has been merged!
+
+                    **PR Title:** ${pr.title}
+                    **Merged by:** @${pr.merged_by?.login || 'unknown'}
+                    **Related Issues:** ${issueNumbers.map(n => `#${n}`).join(', ')}
+
+                    These issues have been marked as completed in this roadmap.`
+                  });
+
+                  console.log(`Updated roadmap issue #${roadmap.number} for merged PR #${pr.number}`);
+                }
+              }
+            }
+
+      - name: Generate Roadmap Progress Report
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const roadmapNumber = '${{ github.event.inputs.roadmap_issue }}';
+
+            // Get all roadmap issues or specific one
+            let roadmapIssues;
+            if (roadmapNumber) {
+              const issue = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(roadmapNumber)
+              });
+              roadmapIssues = [issue.data];
+            } else {
+              const response = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'roadmap',
+                state: 'open'
+              });
+              roadmapIssues = response.data;
+            }
+
+            for (const roadmap of roadmapIssues) {
+              const roadmapBody = roadmap.body || '';
+
+              // Count checkboxes for progress
+              const totalCheckboxes = (roadmapBody.match(/- \[[ x]\]/g) || []).length;
+              const completedCheckboxes = (roadmapBody.match(/- \[x\]/g) || []).length;
+              const progressPercent = totalCheckboxes > 0 ? Math.round((completedCheckboxes / totalCheckboxes) * 100) : 0;
+
+              // Extract Python version if in title
+              const pythonVersionMatch = roadmap.title.match(/Python (\d+\.\d+)/);
+              const pythonVersion = pythonVersionMatch ? pythonVersionMatch[1] : null;
+
+              // Generate progress bar
+              const progressBar = '█'.repeat(Math.floor(progressPercent / 10)) + '░'.repeat(10 - Math.floor(progressPercent / 10));
+
+              // Build progress report
+              const report = `## 📊 Roadmap Progress Report
+
+              **Roadmap:** ${roadmap.title}
+              ${pythonVersion ? `**Python Version:** ${pythonVersion}` : ''}
+              **Status:** ${roadmap.state}
+              **Created:** ${new Date(roadmap.created_at).toLocaleDateString()}
+              **Last Updated:** ${new Date(roadmap.updated_at).toLocaleDateString()}
+
+              ### Progress Overview
+              ${progressBar} **${progressPercent}%** (${completedCheckboxes}/${totalCheckboxes} tasks)
+
+              ### Task Breakdown
+              - ✅ Completed: ${completedCheckboxes}
+              - ⏳ Remaining: ${totalCheckboxes - completedCheckboxes}
+              - 📊 Total: ${totalCheckboxes}
+
+              ### Recent Activity
+              - Last comment: ${roadmap.comments} comments
+              - Last update: ${new Date(roadmap.updated_at).toRelativeTime()} ago
+
+              ${progressPercent === 100 ? '### 🎉 This roadmap is complete! Consider closing this issue.' : ''}
+              ${progressPercent > 80 && progressPercent < 100 ? '### 🏁 Almost there! Final push to completion.' : ''}
+              ${progressPercent < 20 ? '### 🚀 Just getting started! Keep up the momentum.' : ''}
+
+              ---
+              *Progress report generated on ${new Date().toISOString().split('T')[0]}*
+              *Report ID: ${context.runId}*`;
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: roadmap.number,
+                body: report
+              });
+
+              console.log(`Generated progress report for roadmap issue #${roadmap.number}: ${progressPercent}% complete`);
+
+              // Add summary to workflow
+              core.summary.addHeading(`Roadmap #${roadmap.number}: ${roadmap.title}`, 3);
+              core.summary.addRaw(`Progress: ${progressBar} ${progressPercent}%`);
+              core.summary.addRaw(`\nCompleted: ${completedCheckboxes}/${totalCheckboxes} tasks\n\n`);
+            }
+
+            await core.summary.write();

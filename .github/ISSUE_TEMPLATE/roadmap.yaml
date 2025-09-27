@@ -1,0 +1,95 @@
+name: Roadmap Tracker
+description: Track progress on major milestones and Python version support
+labels: ["roadmap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Roadmap Issue
+
+        This template is for tracking major milestones, Python version support, or significant feature rollouts.
+
+        **For regular features, use [Feature Request](https://github.com/QriusGlobal/injx/issues/new?template=feature_request.yaml) instead.**
+
+  - type: input
+    attributes:
+      label: Milestone Name
+      description: Name of the milestone or Python version
+      placeholder: e.g., "Python 3.14 Support", "Enhanced Container API v0.3.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    attributes:
+      label: Priority
+      description: Priority level for this roadmap item
+      options:
+        - Critical (Python version support)
+        - High (Major feature)
+        - Medium (Enhancement)
+        - Low (Nice to have)
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Objective
+      description: |
+        What is the main goal of this roadmap item?
+        Include the value it provides to users.
+      placeholder: |
+        Enable injx to work with Python 3.14's new features including:
+        - Free-threading support (PEP 703)
+        - Enhanced error messages
+        - Performance improvements
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Success Criteria
+      description: |
+        How will we know this milestone is complete?
+        List specific, measurable criteria.
+      placeholder: |
+        - [ ] All tests pass on Python 3.14
+        - [ ] Free-threading tests implemented and passing
+        - [ ] Performance benchmarks show no regressions
+        - [ ] Documentation updated for new features
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Related Issues
+      description: |
+        Link to specific issues that are part of this roadmap.
+        Use GitHub issue references (#123) or URLs.
+      placeholder: |
+        Part of this milestone:
+        - #123 - Free-threading support
+        - #124 - Sub-interpreter compatibility
+        - #125 - Performance benchmarking
+
+  - type: input
+    attributes:
+      label: Target Version
+      description: Target release version for this milestone
+      placeholder: e.g., v0.3.0, v1.0.0
+
+  - type: input
+    attributes:
+      label: Target Date
+      description: Estimated completion date (if known)
+      placeholder: e.g., Q2 2025, March 2025
+
+  - type: checkboxes
+    attributes:
+      label: Implementation Phases
+      description: Check the phases that apply to this roadmap item
+      options:
+        - label: Research and design phase needed
+        - label: Breaking changes involved
+        - label: Community input required
+        - label: Documentation update required
+        - label: Performance testing required

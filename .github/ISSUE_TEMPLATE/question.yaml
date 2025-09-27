@@ -1,0 +1,47 @@
+name: Question
+description: Ask a question about injx
+labels: ["question", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question about using injx?
+
+        Before asking, please check:
+        - [Documentation](https://github.com/QriusGlobal/injx#readme)
+        - [Examples](https://github.com/QriusGlobal/injx/tree/main/examples)
+        - [Existing questions](https://github.com/QriusGlobal/injx/issues?q=is:issue+label:question)
+
+  - type: textarea
+    attributes:
+      label: Question
+      description: What would you like to know?
+      placeholder: How do I...? Why does...? What's the best way to...?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Context
+      description: |
+        Provide any relevant context or code examples.
+        This helps us give you a better answer.
+      render: python
+      placeholder: |
+        # What I'm trying to do:
+        from injx import Container
+        ...
+
+  - type: input
+    attributes:
+      label: Version
+      description: What version of injx are you using?
+      placeholder: e.g., 0.2.0
+
+  - type: checkboxes
+    attributes:
+      label: Documentation
+      description: Would this be helpful to add to documentation?
+      options:
+        - label: This should be added to the documentation
+        - label: This should be an example in the repository
