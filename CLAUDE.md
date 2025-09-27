@@ -396,11 +396,41 @@ chore(container): add new feature  # Should be 'feat'
 #### Agent Integration Instructions
 
 **For AI Agents using this codebase:**
-1. **Install hooks**: `uv run pre-commit install --hook-type commit-msg`
-2. **Use cz commit**: Run `uv run cz commit` for interactive commit authoring
-3. **Handle failures**: Review commitlint error messages for specific guidance
+1. **Use project sub-agent**: Run `./.claude/sub-agents/commit/commit.sh` for interactive commits
+2. **Alternative**: Run `uv run cz commit` for interactive commit authoring
+3. **Handle failures**: Review validation messages for specific guidance
 4. **Emergency bypass**: Use `git commit --no-verify` only with documented reason
 5. **Dependencies**: Node.js dependencies managed automatically by pre-commit
+
+#### Project Sub-Agent for Commits
+
+This project includes a Claude Code sub-agent for handling semantic commits:
+- **Location**: `.claude/sub-agents/commit/commit.sh`
+- **Usage**: `./.claude/sub-agents/commit/commit.sh` (native shell script)
+- **Features**:
+  - Analyzes staged changes and proposes conventional commits
+  - Determines correct commit type based on file changes
+  - Suggests appropriate scope from module names
+  - Shows version impact (patch/minor/major/none)
+  - Interactive mode with edit capability
+  - Auto-accept mode with `-y` flag
+
+#### Slash Command Integration
+
+**Usage**: `/commit` - Analyzes staged changes and proposes a semantic commit
+
+The `/commit` slash command provides an interactive interface to the commit sub-agent:
+- **Default behavior**: Analyzes all staged files and proposes an appropriate commit
+- **Auto-accept**: `/commit -y` to automatically accept the proposed commit
+- **Smart detection**: Automatically determines commit type based on file changes
+- **Version awareness**: Shows whether commit will trigger a release (patch/minor/major)
+
+The command intelligently categorizes changes:
+- src/ changes → feat or fix (triggers releases)
+- tests/ changes → test commits
+- docs/ changes → docs commits
+- .github/ changes → ci commits
+- Config files → chore commits
 
 #### Escape Hatch (Audited)
 - **Local bypass**: `git commit --no-verify` for exceptional cases
