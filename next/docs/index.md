@@ -8,7 +8,7 @@
 
 A **type-safe** dependency injection container for Python 3.13+ that provides:
 
-  * 🚀 **Thread-safe and async-safe** resolution (ContextVar-based; no cross-talk) 
+  * 🚀 **Thread-safe and async-safe** resolution (ContextVar-based; no cross-talk)
   * ⚡ **O(1) performance** for type lookups with pre-computed hash tokens
   * 🔍 **Circular dependency detection** with detailed error chains
   * 🧹 **Automatic resource cleanup** (LIFO order with proper async support)
@@ -16,6 +16,23 @@ A **type-safe** dependency injection container for Python 3.13+ that provides:
   * 🏭 **Metaclass auto-registration** for declarative DI patterns
   * 📦 **Zero external dependencies** \- pure Python implementation
   * 🎯 **PEP 561 compliant** with `py.typed` for mypy/basedpyright support
+
+## Examples¶
+
+Comprehensive, type-annotated examples are available in the [`examples/`](examples/) directory:
+
+### Core Patterns¶
+
+  * [**Basic DI Setup**](examples/basic_example.py) \- Complete working example with Database, HTTP Client, Cache, and Email services
+  * [**Async Services**](examples/async_example.py) \- Async/await patterns with proper cleanup and concurrent operations
+  * [**Testing with DI**](examples/testing_example.py) \- Pytest fixtures with `Mock(autospec=True)` and container overrides
+
+### Framework Integration¶
+
+  * [**FastAPI Integration**](examples/fastapi_integration.py) \- Request-scoped dependencies, background tasks, and Pydantic models
+  * [**Django Integration**](examples/django_integration.py) \- Views, middleware, Django ORM, and Django REST Framework
+
+All examples are self-contained and can be run directly with `python filename.py`.
 
 ## Quick Install¶
     
@@ -31,7 +48,7 @@ A **type-safe** dependency injection container for Python 3.13+ that provides:
     
     
     from typing import Protocol
-    from injx import Container, Token, Scope, inject
+    from injx import Container, Token, Scope, inject, Dependencies
     
     # Define interfaces
     class Logger(Protocol):
@@ -51,17 +68,20 @@ A **type-safe** dependency injection container for Python 3.13+ that provides:
     
     # Create container and tokens
     container = Container()
-    LOGGER = Token[Logger]("logger", scope=Scope.SINGLETON)
-    DATABASE = Token[Database]("database", scope=Scope.SINGLETON)
+    LOGGER = Token[Logger]("logger", Logger, scope=Scope.SINGLETON)
+    DATABASE = Token[Database]("database", Database, scope=Scope.SINGLETON)
     
     # Register providers
     container.register(LOGGER, ConsoleLogger)
     container.register(DATABASE, PostgreSQLDatabase)
     
-    # Use with @inject decorator (recommended)
+    # Use with @inject decorator and Dependencies pattern (recommended)
     @inject
-    def process_users(logger: Logger, db: Database) -> None:
-        """Dependencies injected automatically via type annotations."""
+    def process_users(deps: Dependencies[Logger, Database]) -> None:
+        """Dependencies grouped and injected as a single parameter."""
+        logger = deps[Logger]
+        db = deps[Database]
+    
         logger.info("Processing users")
         users = db.query("SELECT * FROM users")
         logger.info(f"Found {len(users)} users")

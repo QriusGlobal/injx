@@ -33,6 +33,30 @@ PEP 561 compliant
 with
 py.typed
 for mypy/basedpyright support
+Examples
+¶
+Comprehensive, type-annotated examples are available in the
+examples/
+directory:
+Core Patterns
+¶
+Basic DI Setup
+- Complete working example with Database, HTTP Client, Cache, and Email services
+Async Services
+- Async/await patterns with proper cleanup and concurrent operations
+Testing with DI
+- Pytest fixtures with
+Mock(autospec=True)
+and container overrides
+Framework Integration
+¶
+FastAPI Integration
+- Request-scoped dependencies, background tasks, and Pydantic models
+Django Integration
+- Views, middleware, Django ORM, and Django REST Framework
+All examples are self-contained and can be run directly with
+python filename.py
+.
 Quick Install
 ¶
 # Install with UV (recommended)
@@ -59,6 +83,8 @@ Token
 Scope
 ,
 inject
+,
+Dependencies
 # Define interfaces
 class
 Logger
@@ -167,6 +193,8 @@ Logger
 ](
 "logger"
 ,
+Logger
+,
 scope
 =
 Scope
@@ -180,6 +208,8 @@ Token
 Database
 ](
 "database"
+,
+Database
 ,
 scope
 =
@@ -204,23 +234,35 @@ DATABASE
 ,
 PostgreSQLDatabase
 )
-# Use with @inject decorator (recommended)
+# Use with @inject decorator and Dependencies pattern (recommended)
 @inject
 def
 process_users
 (
-logger
+deps
 :
+Dependencies
+[
 Logger
 ,
-db
-:
 Database
-)
+])
 ->
 None
 :
-"""Dependencies injected automatically via type annotations."""
+"""Dependencies grouped and injected as a single parameter."""
+logger
+=
+deps
+[
+Logger
+]
+db
+=
+deps
+[
+Database
+]
 logger
 .
 info
