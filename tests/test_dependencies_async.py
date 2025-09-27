@@ -5,7 +5,7 @@ from typing import Any, Protocol
 
 import pytest
 
-from injx import Container, Dependencies, Scope, Token, inject
+from injx import Container, Dependencies, Scope, inject
 from injx.exceptions import ResolutionError
 
 
@@ -270,8 +270,8 @@ class TestDependenciesAsync:
             finally:
                 await cache.close()
 
-        container.register(AsyncDatabase, create_db)
-        container.register(AsyncCache, create_cache)
+        container.register_context(AsyncDatabase, create_db, is_async=True)
+        container.register_context(AsyncCache, create_cache, is_async=True)
 
         @inject
         async def handler(deps: Dependencies[AsyncDatabase, AsyncCache]) -> bool:

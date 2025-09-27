@@ -35,8 +35,8 @@ All templates auto-apply appropriate labels + `needs-triage`
 ### ✅ Documentation
 - **PROJECT_MANAGEMENT.md** - Complete system documentation
 - **SETUP_CHECKLIST.md** - This file
-- **create-roadmap-issue.sh** - Script to create master roadmap
 - **manage-milestones.sh** - Script to manage milestones and auto-assign issues
+- **GitHub Projects** - Use roadmap view for visual project tracking
 
 ### ✅ GitHub Milestones (4 created)
 - **Python 3.13 Stable** - Maintenance releases (bug fixes only)
@@ -100,21 +100,20 @@ Group by: Labels (bug/enhancement)
 Columns: Ready | In Progress | Testing | Released
 ```
 
-### 3. 📍 Create Master Roadmap Issue
+### 3. 📍 Create Project Roadmap
 
-**Purpose:** Central tracking for all development
+**Purpose:** Visual tracking for all development
 
 **Steps:**
-```bash
-# Run the provided script
-./.github/scripts/create-roadmap-issue.sh
+1. Go to repository → Projects tab → New project
+2. Select "Roadmap" template for visual timeline
+3. Configure date fields (Start Date, Target Date)
+4. Add roadmap items from `.github/ISSUES/` directory
+5. Group by Phase or Priority for better organization
 
-# Or create manually using the roadmap template
+**Alternative:** Create a roadmap issue manually
+```bash
 gh issue create --template roadmap.yaml
-```
-
-**Then pin the issue:**
-```bash
 gh issue pin [issue-number]
 ```
 

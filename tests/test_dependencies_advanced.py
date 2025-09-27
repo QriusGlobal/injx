@@ -486,4 +486,6 @@ class TestDependenciesAdvanced:
         cache_ids = [r["cache_id"] for r in results]
         unique_caches = len(set(cache_ids))
         # Should have at least 2 different cache instances to show transient behavior
-        assert unique_caches >= 2, f"Expected at least 2 unique cache instances, got {unique_caches}"
+        assert unique_caches >= 2, (
+            f"Expected at least 2 unique cache instances, got {unique_caches}"
+        )
