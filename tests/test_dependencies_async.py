@@ -252,11 +252,23 @@ class TestDependenciesAsync:
                 await super().close()
                 cleanup_order.append("cache")
 
-        async def create_db() -> AsyncDatabase:
-            return TrackableAsyncDB()
+        from contextlib import asynccontextmanager
 
-        async def create_cache() -> AsyncCache:
-            return TrackableAsyncCache()
+        @asynccontextmanager
+        async def create_db():
+            db = TrackableAsyncDB()
+            try:
+                yield db
+            finally:
+                await db.close()
+
+        @asynccontextmanager
+        async def create_cache():
+            cache = TrackableAsyncCache()
+            try:
+                yield cache
+            finally:
+                await cache.close()
 
         container.register_context(AsyncDatabase, create_db, is_async=True)
         container.register_context(AsyncCache, create_cache, is_async=True)
@@ -441,12 +453,12 @@ class TestDependenciesAsync:
 
         async with container:
             # First request scope
-            async with container.request_scope():
+            async with container.async_request_scope():
                 await handler()
                 await handler()
 
             # Second request scope
-            async with container.request_scope():
+            async with container.async_request_scope():
                 await handler()
 
         # Verify scope behavior

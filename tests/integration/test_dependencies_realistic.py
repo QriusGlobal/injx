@@ -351,9 +351,9 @@ class TestRealisticDependencies:
         """Test Django-style view with Dependencies."""
         container = Container()
 
-        container.register(DatabaseConnection, MockDatabaseConnection)
-        container.register(EmailProvider, MockEmailProvider)
-        container.register(AuthenticationService, MockAuthenticationService)
+        container.register(DatabaseConnection, MockDatabaseConnection, scope=Scope.SINGLETON)
+        container.register(EmailProvider, MockEmailProvider, scope=Scope.SINGLETON)
+        container.register(AuthenticationService, MockAuthenticationService, scope=Scope.SINGLETON)
 
         @inject
         def create_user_view(
@@ -527,9 +527,9 @@ class TestRealisticDependencies:
         """Test transaction pattern with Dependencies."""
         container = Container()
 
-        container.register(DatabaseConnection, MockDatabaseConnection)
-        container.register(PaymentGateway, MockPaymentGateway)
-        container.register(EmailProvider, MockEmailProvider)
+        container.register(DatabaseConnection, MockDatabaseConnection, scope=Scope.SINGLETON)
+        container.register(PaymentGateway, MockPaymentGateway, scope=Scope.SINGLETON)
+        container.register(EmailProvider, MockEmailProvider, scope=Scope.SINGLETON)
 
         @inject
         def process_order(
@@ -653,9 +653,9 @@ class TestRealisticDependencies:
         """Test error recovery with Dependencies."""
         container = Container()
 
-        container.register(DatabaseConnection, MockDatabaseConnection)
-        container.register(CacheBackend, MockCacheBackend)
-        container.register(EmailProvider, MockEmailProvider)
+        container.register(DatabaseConnection, MockDatabaseConnection, scope=Scope.SINGLETON)
+        container.register(CacheBackend, MockCacheBackend, scope=Scope.SINGLETON)
+        container.register(EmailProvider, MockEmailProvider, scope=Scope.SINGLETON)
         container.register(MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON)
 
         @inject
