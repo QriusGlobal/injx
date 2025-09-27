@@ -1,0 +1,53 @@
+# Configuration for github/issue-labeler action
+# This file defines patterns to automatically apply labels to issues
+
+bug:
+  - '/(bug|error|crash|fail|broken|issue|exception|traceback|segfault|memory leak|regression)/i'
+  - "/doesn't work|not working/i"
+  - '/ResolutionError|TypeError|ValueError|AttributeError/i'
+
+enhancement:
+  - '/(feature|request|enhancement|add support|suggestion|improvement|proposal)/i'
+  - '/would be (nice|great|useful|helpful)/i'
+  - '/it would be/i'
+
+question:
+  - '/(how to|how do|how can|what is|why does|can i|is it possible)/i'
+  - '/(question|help|confused|unclear|documentation)/i'
+  - '/\?$/m'  # Ends with question mark
+
+documentation:
+  - '/(docs|documentation|readme|example|tutorial|typo|clarify|explain)/i'
+  - '/update.*(docs|documentation|readme)/i'
+
+performance:
+  - '/(slow|performance|speed|faster|optimize|memory|cpu|benchmark|profil)/i'
+  - '/takes too long|too slow/i'
+
+python-3.14:
+  - '/python 3\.14|py3\.14|python314/i'
+  - '/free.?threading|no.?gil|gil.?removal/i'
+  - '/PEP.?703|PEP.?734/i'
+
+python-3.15:
+  - '/python 3\.15|py3\.15|python315/i'
+
+duplicate:
+  - '/duplicate|dupe|duplicated/i'
+  - '/already reported|already exists|already open/i'
+
+good first issue:
+  - '/good first issue|beginner friendly|easy fix|simple change/i'
+  - '/trivial|straightforward/i'
+
+help wanted:
+  - '/help wanted|contribution welcome|pr welcome/i'
+  - '/looking for contributor/i'
+
+wontfix:
+  - '/wont fix|wont fix|will not fix/i'
+  - '/out of scope|by design|intentional behavior/i'
+
+invalid:
+  - '/not a bug|works as expected|user error/i'
+  - '/cannot reproduce|cant reproduce/i'
