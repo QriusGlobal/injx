@@ -5,6 +5,7 @@ They ensure the package works correctly after pip install.
 
 Run with: pytest -m distribution
 """
+
 import pytest
 
 
@@ -17,40 +18,27 @@ class TestDistribution:
         import injx
 
         # Version should be available
-        assert hasattr(injx, '__version__')
+        assert hasattr(injx, "__version__")
         assert injx.__version__
 
         # Check version format (should be semantic)
-        parts = injx.__version__.split('.')
+        parts = injx.__version__.split(".")
         assert len(parts) >= 2  # At least major.minor
 
     def test_all_public_imports(self):
         """Verify all public API components are importable."""
         # Core container components
-        from injx import Container, Token, TokenFactory, Scope
-
         # Injection decorators and markers
-        from injx import inject, Inject, Given, Depends
-
         # Contextual components
-        from injx import ContextualContainer, RequestScope, SessionScope
-
         # Protocols
-        from injx import ContainerProtocol
-
         # Exception types
-        from injx import (
-            InjxError,
-            ResolutionError,
-            CircularDependencyError,
-            AsyncCleanupRequiredError
-        )
-
         # Compatibility imports
-        from injx import Injectable
-
         # Dependencies utility
-        from injx import Dependencies
+        from injx import (
+            Container,
+            Token,
+            inject,
+        )
 
         # Verify they're not None (actual imports)
         assert Container is not None
@@ -59,19 +47,19 @@ class TestDistribution:
 
     def test_token_creation_and_registration(self):
         """Test basic DI functionality with correct Token API."""
-        from injx import Container, Token, Scope
+        from injx import Container, Scope, Token
 
         # Test service class
         class TestService:
-            def __init__(self, value: str = 'test'):
+            def __init__(self, value: str = "test"):
                 self.value = value
 
         # Create container
         container = Container()
 
         # Create token with CORRECT syntax
-        token = Token('test-service', TestService)
-        assert token.name == 'test-service'
+        token = Token("test-service", TestService)
+        assert token.name == "test-service"
         assert token.type_ == TestService
         assert token.scope == Scope.TRANSIENT  # default
 
@@ -81,7 +69,7 @@ class TestDistribution:
         # Get instance
         service = container.get(token)
         assert isinstance(service, TestService)
-        assert service.value == 'test'
+        assert service.value == "test"
 
         # Verify singleton behavior
         service2 = container.get(token)
@@ -89,21 +77,19 @@ class TestDistribution:
 
     def test_inject_decorator(self):
         """Test @inject decorator works from installed package."""
-        from injx import Container, Token, inject, Inject
         from typing import Annotated
+
+        from injx import Container, Inject, Token, inject
 
         container = Container()
 
         # Register a string service
-        greeting_token = Token('greeting', str)
+        greeting_token = Token("greeting", str)
         container.register(greeting_token, lambda: "Hello from installed package!")
 
         # Use inject decorator
         @inject(container=container)
-        def greet_user(
-            name: str,
-            greeting: Annotated[str, Inject()]
-        ) -> str:
+        def greet_user(name: str, greeting: Annotated[str, Inject()]) -> str:
             return f"{greeting} User: {name}"
 
         # Test the injected function
@@ -112,7 +98,7 @@ class TestDistribution:
 
     def test_token_factory(self):
         """Test TokenFactory convenience methods."""
-        from injx import TokenFactory, Scope
+        from injx import Scope, TokenFactory
 
         class DatabaseService:
             pass
@@ -135,13 +121,12 @@ class TestDistribution:
 
     def test_contextual_containers(self):
         """Test contextual container imports and basic usage."""
-        from injx import Container, Token, Scope
-        from injx import RequestScope, SessionScope
+        from injx import Container, RequestScope, Scope, Token
 
         container = Container()
 
         # Register a request-scoped token
-        request_data_token = Token('request_data', dict, scope=Scope.REQUEST)
+        request_data_token = Token("request_data", dict, scope=Scope.REQUEST)
         container.register(request_data_token, dict)
 
         # Verify RequestScope context manager works
@@ -152,16 +137,17 @@ class TestDistribution:
 
     def test_transient_scope(self):
         """Test transient scope creates new instances."""
-        from injx import Container, Token, Scope
+        from injx import Container, Scope, Token
 
         class Counter:
             count = 0
+
             def __init__(self):
                 Counter.count += 1
                 self.id = Counter.count
 
         container = Container()
-        counter_token = Token('counter', Counter, scope=Scope.TRANSIENT)
+        counter_token = Token("counter", Counter, scope=Scope.TRANSIENT)
         container.register(counter_token, Counter)
 
         # Each get should create a new instance
@@ -175,8 +161,9 @@ class TestDistribution:
     @pytest.mark.asyncio
     async def test_async_provider(self):
         """Test async provider resolution."""
-        from injx import Container, Token, Scope
         import asyncio
+
+        from injx import Container, Scope, Token
 
         # Async service class
         class AsyncService:
@@ -189,7 +176,7 @@ class TestDistribution:
             return AsyncService()
 
         container = Container()
-        token = Token('async_service', AsyncService, scope=Scope.SINGLETON)
+        token = Token("async_service", AsyncService, scope=Scope.SINGLETON)
         container.register(token, create_async_service)
 
         # Test async resolution
@@ -203,17 +190,18 @@ class TestDistribution:
 
     def test_error_types_accessible(self):
         """Verify error types can be imported and used."""
-        from injx import Container, Token, ResolutionError
         import pytest
+
+        from injx import Container, ResolutionError, Token
 
         container = Container()
 
         # Create unregistered token
-        missing_token = Token('missing', str)
+        missing_token = Token("missing", str)
 
         # Should raise ResolutionError
         with pytest.raises(ResolutionError) as exc_info:
             container.get(missing_token)
 
         # Verify error message contains useful info
-        assert 'missing' in str(exc_info.value)
+        assert "missing" in str(exc_info.value)

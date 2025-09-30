@@ -57,7 +57,9 @@ class TestPerformance:
 
         # Check absolute performance - should be sub-millisecond
         for resolve_time in resolution_times:
-            assert resolve_time < 0.001, f"Resolution too slow: {resolve_time:.6f}s (threshold: 1ms)"
+            assert resolve_time < 0.001, (
+                f"Resolution too slow: {resolve_time:.6f}s (threshold: 1ms)"
+            )
 
     def test_basic_resolution_performance(self):
         """Simplified resolution performance without protocol indirection."""
@@ -82,7 +84,9 @@ class TestPerformance:
         dt = time.perf_counter() - start
         per_call = dt / (100 * num)
         # Should be well under 1ms per call even in worst conditions
-        assert per_call < 0.001, f"Resolution too slow: {per_call:.6f}s per call (threshold: 1ms)"
+        assert per_call < 0.001, (
+            f"Resolution too slow: {per_call:.6f}s per call (threshold: 1ms)"
+        )
 
     def test_injection_cache_performance(self):
         """Test that injection caching improves performance."""
@@ -134,9 +138,7 @@ class TestPerformance:
 
         # Verify no individual call is unusually slow
         max_time = max(call_times)
-        assert max_time < 0.005, (
-            f"Some calls too slow: max={max_time:.6f}s"
-        )
+        assert max_time < 0.005, f"Some calls too slow: max={max_time:.6f}s"
 
     def test_singleton_access_performance(self):
         """Test that singleton access is fast after first creation."""

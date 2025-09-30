@@ -35,7 +35,11 @@ package-lock.json
 .pytest_cache/
 htmlcov/
 coverage.json
+coverage.xml
 coverage_annotated/
+reports/
+*.junit.xml
+junit.xml
 
 # Virtual environments
 venv/
@@ -60,3 +64,8 @@ site/
 # CodeContext dev tool (internal use only)
 .codecontext/
 LSP.md
+
+# Hive Mind / Agent systems
+.claude-flow/
+.hive-mind/
+.swarm/

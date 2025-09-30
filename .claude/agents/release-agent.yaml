@@ -15,19 +15,19 @@ release_channels:
     prerelease: true
     prerelease_token: "alpha"
     pypi_channel: "pre-release"
-    
+
   beta:
     pattern: "^beta/.*"
     prerelease: true
     prerelease_token: "beta"
     pypi_channel: "pre-release"
-    
+
   rc:
     pattern: "^rc/.*"
     prerelease: true
     prerelease_token: "rc"
     pypi_channel: "pre-release"
-    
+
   stable:
     pattern: "^main$"
     prerelease: false
@@ -39,7 +39,7 @@ version_rules:
     breaking_change: "minor"
     feature: "patch"
     fix: "patch"
-    
+
   # After 1.0.0, follow strict semver
   post_1_0_0:
     breaking_change: "major"
@@ -58,23 +58,23 @@ release_workflow:
     - Parse conventional commits
     - Determine version bump type
     - Check current version against PEP 440
-    
+
   2_update_version:
     - Update pyproject.toml
     - Update src/injx/__init__.py
     - Generate CHANGELOG entries
-    
+
   3_quality_checks:
     - Run test suite
     - Type checking with basedpyright
     - Security scanning
     - Documentation build
-    
+
   4_build_artifacts:
     - Build sdist
     - Build wheel
     - Generate checksums
-    
+
   5_publish:
     - Create GitHub release
     - Upload to PyPI (or TestPyPI for pre-releases)

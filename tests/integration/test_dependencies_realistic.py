@@ -283,7 +283,9 @@ class TestRealisticDependencies:
         container.register(DatabaseConnection, MockDatabaseConnection)
         container.register(CacheBackend, MockCacheBackend)
         container.register(AuthenticationService, MockAuthenticationService)
-        container.register(MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON)
+        container.register(
+            MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON
+        )
 
         @inject
         def get_user_endpoint(
@@ -351,9 +353,13 @@ class TestRealisticDependencies:
         """Test Django-style view with Dependencies."""
         container = Container()
 
-        container.register(DatabaseConnection, MockDatabaseConnection, scope=Scope.SINGLETON)
+        container.register(
+            DatabaseConnection, MockDatabaseConnection, scope=Scope.SINGLETON
+        )
         container.register(EmailProvider, MockEmailProvider, scope=Scope.SINGLETON)
-        container.register(AuthenticationService, MockAuthenticationService, scope=Scope.SINGLETON)
+        container.register(
+            AuthenticationService, MockAuthenticationService, scope=Scope.SINGLETON
+        )
 
         @inject
         def create_user_view(
@@ -419,7 +425,9 @@ class TestRealisticDependencies:
 
         container.register(DatabaseConnection, MockDatabaseConnection)
         container.register(EmailProvider, MockEmailProvider)
-        container.register(MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON)
+        container.register(
+            MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON
+        )
 
         @inject
         async def process_email_queue(
@@ -527,7 +535,9 @@ class TestRealisticDependencies:
         """Test transaction pattern with Dependencies."""
         container = Container()
 
-        container.register(DatabaseConnection, MockDatabaseConnection, scope=Scope.SINGLETON)
+        container.register(
+            DatabaseConnection, MockDatabaseConnection, scope=Scope.SINGLETON
+        )
         container.register(PaymentGateway, MockPaymentGateway, scope=Scope.SINGLETON)
         container.register(EmailProvider, MockEmailProvider, scope=Scope.SINGLETON)
 
@@ -653,10 +663,14 @@ class TestRealisticDependencies:
         """Test error recovery with Dependencies."""
         container = Container()
 
-        container.register(DatabaseConnection, MockDatabaseConnection, scope=Scope.SINGLETON)
+        container.register(
+            DatabaseConnection, MockDatabaseConnection, scope=Scope.SINGLETON
+        )
         container.register(CacheBackend, MockCacheBackend, scope=Scope.SINGLETON)
         container.register(EmailProvider, MockEmailProvider, scope=Scope.SINGLETON)
-        container.register(MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON)
+        container.register(
+            MetricsCollector, MockMetricsCollector, scope=Scope.SINGLETON
+        )
 
         @inject
         def resilient_operation(
