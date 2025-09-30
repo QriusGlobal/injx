@@ -53,6 +53,13 @@ env/
 *.swo
 *~
 
+# Backup and temporary files
+*.bk
+*.backup
+*.orig
+*.tmp
+*.temp
+
 # OS
 .DS_Store
 Thumbs.db
@@ -65,7 +72,12 @@ site/
 .codecontext/
 LSP.md
 
-# Hive Mind / Agent systems
+# Hive Mind / Agent systems / Claude Flow
 .claude-flow/
 .hive-mind/
+.hive-mind-*/
 .swarm/
+.swarm-*/
+*session*.json
+*session*.log
+.agent-*/
