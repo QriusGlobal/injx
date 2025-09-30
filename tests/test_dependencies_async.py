@@ -5,7 +5,7 @@ from typing import Any, Protocol
 
 import pytest
 
-from injx import Container, Dependencies, Scope, Token, inject
+from injx import Container, Dependencies, Scope, inject
 from injx.exceptions import ResolutionError
 
 

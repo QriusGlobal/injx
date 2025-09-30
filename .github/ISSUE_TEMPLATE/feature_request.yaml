@@ -1,0 +1,69 @@
+name: Feature request
+description: Suggest a new feature or improvement
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for contributing to injx!
+
+        Before requesting, please check if a similar feature has been
+        [requested](https://github.com/QriusGlobal/injx/issues?q=is:issue+label:enhancement).
+
+  - type: textarea
+    attributes:
+      label: Description
+      description: Describe the feature you'd like
+      placeholder: A clear and concise description of what you want to happen
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Use Case
+      description: |
+        How would you use this feature? Why is it needed?
+        Include code examples if possible.
+      placeholder: |
+        I'm trying to achieve X, but currently I have to do Y.
+        With this feature, I could do Z instead.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Proposed Solution
+      description: |
+        If you have ideas on how to implement this feature, share them here.
+        Include API design suggestions or implementation hints.
+      render: python
+      placeholder: |
+        # Example API
+        container.new_feature(...)
+
+  - type: textarea
+    attributes:
+      label: Alternatives
+      description: |
+        Describe workarounds or alternative solutions you've considered.
+        Why aren't they sufficient?
+
+  - type: dropdown
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Nice to have
+        - Important
+        - Critical for my use case
+    validations:
+      required: true
+
+  - type: checkboxes
+    attributes:
+      label: Contribution
+      description: Are you willing to contribute to this feature?
+      options:
+        - label: I'm willing to submit a PR for this feature
+        - label: I can help with testing
+        - label: I can help with documentation

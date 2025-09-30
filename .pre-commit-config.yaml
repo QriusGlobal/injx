@@ -38,7 +38,7 @@ repos:
         files: ^.github/workflows/
         pass_filenames: true
 
-      # Custom commit hooks removed - using commitizen only
+    # Custom commit hooks removed - using commitizen only
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1

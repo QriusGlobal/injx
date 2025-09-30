@@ -1,0 +1,50 @@
+name: Issue Management
+
+'on':
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  # Auto-label issues based on content
+  auto-label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: github/issue-labeler@v3.4
+        with:
+          configuration-path: .github/labeler.yml
+          enable-versioned-regex: 0
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Check for similar issues using AI
+  similarity-check:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: Check for similar issues
+        uses: actions-cool/issues-similarity-analysis@v1
+        with:
+          filter-threshold: 0.7
+          title-weight: 0.8
+          body-weight: 0.2
+          comment: |
+            ### 🔍 Similar Issues Detected
+
+            This issue appears similar to existing issues. Please check if your issue is already covered:
+
+            ${similar-issues}
+
+            If this is indeed different, please explain how it differs. Otherwise, we may close this as a duplicate.
+
+  # Add to project board
+  add-to-project:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: Add to project
+        uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: https://github.com/orgs/QriusGlobal/projects/1
+          github-token: ${{ secrets.GITHUB_TOKEN }}

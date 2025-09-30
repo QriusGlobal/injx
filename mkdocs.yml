@@ -61,7 +61,10 @@ extra:
 plugins:
   - search
   - llmstxt:
-      markdown_description: "Injx is a lightweight, type-safe dependency injection container for Python 3.13+, designed for modern applications with O(1) lookup performance and zero external dependencies."
+      markdown_description: >-
+        Injx is a lightweight, type-safe dependency injection container for
+        Python 3.13+, designed for modern applications with O(1) lookup
+        performance and zero external dependencies.
       full_output: llms-full.txt
       sections:
         Core Documentation:
