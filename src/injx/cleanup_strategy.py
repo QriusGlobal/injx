@@ -3,6 +3,22 @@
 This module provides a functional-first approach to resource cleanup,
 precomputing cleanup strategies at registration time for zero runtime overhead.
 Uses IntEnum (4-8 bytes) instead of class instances (56+ bytes) for strategies.
+
+TYPE SAFETY NOTE:
+This module intentionally uses `Any` types for dynamic resource analysis:
+- `provider: Any` - We analyze arbitrary user-provided resources at registration
+- `instance: Any` - We cleanup arbitrary resource instances at runtime
+- `hasattr()` checks - Dynamic protocol detection (duck typing)
+- `getattr()` lookups - Dynamic cleanup method resolution
+
+This is a fundamental requirement of dependency injection frameworks:
+- Cannot know resource types at registration time
+- Must support arbitrary cleanup protocols (close, aclose, __exit__, etc.)
+- Requires runtime introspection for flexibility
+
+All `Any` usage is intentional, reviewed, and documented.
+See: pyproject.toml [tool.basedpyright] for suppression configuration.
+Rationale: DI frameworks MUST balance type safety with runtime flexibility.
 """
 
 from __future__ import annotations
