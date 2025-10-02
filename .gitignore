@@ -23,6 +23,13 @@ wheels/
 .installed.cfg
 *.egg
 
+# Type checking
+.mypy_cache/
+.basedpyright/
+.pytype/
+.dmypy.json
+dmypy.json
+
 # Node.js (for commit validation system)
 node_modules/
 package-lock.json
@@ -72,7 +79,7 @@ site/
 .codecontext/
 LSP.md
 
-# Hive Mind / Agent systems / Claude Flow
+# Hive Mind / Agent systems / Claude Flow (runtime files only)
 .claude-flow/
 .hive-mind/
 .hive-mind-*/
@@ -81,3 +88,41 @@ LSP.md
 *session*.json
 *session*.log
 .agent-*/
+
+# Claude Flow generated files (exclude ALL generated, keep only project-specific)
+.claude/agents/
+.claude/commands/
+.claude/helpers/
+.claude/settings.local.json
+.claude/settings.json
+.claude/commands.json
+.mcp.json
+claude-flow.config.json
+memory/
+coordination/
+memory/claude-flow-data.json
+memory/sessions/*
+!memory/sessions/README.md
+memory/agents/*
+!memory/agents/README.md
+coordination/memory_bank/*
+coordination/subtasks/*
+coordination/orchestration/*
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+claude-flow
+hive-mind-prompt-*.txt
+
+# Keep ONLY these project-specific agents and tools:
+!.claude/agents/conventional-commit.md
+!.claude/agents/release-agent.py
+!.claude/agents/release-agent.yaml
+!.claude/sub-agents/triage-bot/
+!.claude/commands/commit.md
+
+# Auto-generated type stubs (basedpyright --createstub output)
+typings/

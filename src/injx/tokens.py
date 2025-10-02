@@ -211,3 +211,6 @@ class TokenFactory:
     def cache_size(self) -> int:
         """Number of cached token shapes currently held."""
         return len(self._cache)
+
+
+# test comment

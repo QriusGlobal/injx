@@ -440,7 +440,7 @@ def _resolve_one(req: DependencyRequest, container: ContainerProtocol) -> object
         case _DepKind.DEPENDENCIES:
             # Create Dependencies and resolve synchronously
             dep_types = cast(tuple[type, ...], req.key)
-            deps = Dependencies(container, dep_types)
+            deps: Dependencies[Any] = Dependencies(container, dep_types)
             deps.resolve()  # Pre-resolve in sync context
             return deps
         case _DepKind.TOKEN:
@@ -469,7 +469,7 @@ async def _aresolve_one(req: DependencyRequest, container: ContainerProtocol) ->
         case _DepKind.DEPENDENCIES:
             # Create Dependencies and resolve asynchronously
             dep_types = cast(tuple[type, ...], req.key)
-            deps = Dependencies(container, dep_types)
+            deps: Dependencies[Any] = Dependencies(container, dep_types)
             await deps  # Pre-resolve async with parallel gather
             return deps
         case _DepKind.TOKEN:

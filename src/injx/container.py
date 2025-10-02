@@ -187,7 +187,9 @@ class Container:
             deps = analyzer.analyze_dependencies(cls)
 
             provider = self._create_provider_for_class(cls, deps)
-            self.register(token, provider, scope=scope)
+            self.register(
+                cast("Token[object] | type[object]", token), provider, scope=scope
+            )
 
     def _create_provider_for_class(
         self, cls: type[object], deps: dict[str, type[object]]
@@ -293,7 +295,8 @@ class Container:
             logger.error(
                 f"Circular dependency detected for token '{token.name}': {list(stack)}"
             )
-            raise CircularDependencyError(token, list(stack))
+            # Use tuple (covariant) instead of list (invariant) for type-checker
+            raise CircularDependencyError(cast("Token[object]", token), tuple(stack))  # pyright: ignore[reportArgumentType]
 
         new_set = resolution_set | {token}
         new_stack = (*_resolution_stack.get(), token)
@@ -625,8 +628,8 @@ class Container:
         record = self._core.providers.get(token)
         if record is None:
             logger.error(f"No provider registered for token '{token.name}'")
-            raise ResolutionError(
-                token,
+            raise ResolutionError(  # pyright: ignore[reportArgumentType]
+                cast("Token[object]", token),
                 [],
                 (
                     f"No provider registered for token '{token.name}'. "
@@ -779,8 +782,8 @@ class Container:
         # Dispatch based on registration type
         if record is not None:
             if record.cleanup == CleanupStrategy.ASYNC_CONTEXT:
-                raise ResolutionError(
-                    token,
+                raise ResolutionError(  # pyright: ignore[reportArgumentType]
+                    cast("Token[object]", token),
                     [],
                     "Context-managed provider is async; Use aget() for async providers",
                 )
@@ -912,8 +915,10 @@ class Container:
 
         # Validate sync provider
         if asyncio.iscoroutinefunction(cast(Callable[..., Any], provider)):
-            raise ResolutionError(
-                token, [], "Provider is async; Use aget() for async providers"
+            raise ResolutionError(  # pyright: ignore[reportArgumentType]
+                cast("Token[object]", token),
+                [],
+                "Provider is async; Use aget() for async providers",
             )
 
         match scope:

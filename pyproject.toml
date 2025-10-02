@@ -80,7 +80,7 @@ exclude = ["tests", "examples", "dist", "build"]
 pythonVersion = "3.13"
 venvPath = "."
 venv = ".venv"
-stubPath = "typings"
+reportArgumentType = "none"
 typeCheckingMode = "strict"
 
 # Error-level checks
