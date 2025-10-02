@@ -26,10 +26,9 @@ Following the successful patterns of UV and Ruff, we use a minimal label taxonom
 6. **[Memory Optimization](06_memory_optimization.md)** - Reduce overhead per dependency
 7. **[Thread-Safety Audit](07_thread_safety_audit.md)** - Verify concurrent safety
 
-### 🟢 Good First Issues (3 issues)
+### 🟢 Good First Issues (2 issues)
 8. **[Add More Examples](08_add_more_examples.md)** - Real-world usage patterns
 9. **[Improve Test Coverage](09_improve_test_coverage.md)** - Missing edge cases
-10. **[Type Stub Improvements](10_type_stub_improvements.md)** - Better IDE support
 
 ## Current Implementation Status
 
