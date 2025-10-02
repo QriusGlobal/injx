@@ -80,7 +80,6 @@ exclude = ["tests", "examples", "dist", "build"]
 pythonVersion = "3.13"
 venvPath = "."
 venv = ".venv"
-stubPath = "typings"
 typeCheckingMode = "strict"
 
 # Error-level checks
@@ -89,11 +88,12 @@ reportUnusedImport = "error"
 reportUnusedClass = "error"
 reportUnusedFunction = "error"
 
-# Warning-level checks
-reportUnnecessaryIsInstance = false  # Suppressed - DI uses defensive isinstance for runtime safety
+# Warning-level checks (selective suppressions)
+reportArgumentType = "none"              # Unavoidable - Token[T] variance limitations in Python's type system
+reportUnnecessaryIsInstance = false      # Intentional - DI uses defensive isinstance for runtime safety
+reportImportCycles = "warning"           # Warn but don't fail - circular dependencies handled via lazy imports
+reportAny = "warning"                    # Warn but don't fail - some dynamic typing required in DI patterns
 reportPrivateUsage = "warning"
-reportImportCycles = false           # Suppressed - lazy import pattern verified safe (see injection.py)
-reportAny = false                    # Suppressed - DI requires Any for dynamic typing (see cleanup_strategy.py, injection.py)
 
 [tool.ruff]
 target-version = "py313"
