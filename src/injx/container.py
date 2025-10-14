@@ -1,4 +1,18 @@
-"""Enhanced DI Container with all optimizations and features."""
+"""Enhanced DI Container with all optimizations and features.
+
+This module implements the core dependency injection container for Injx,
+providing type-safe dependency resolution with O(1) performance characteristics.
+The container supports both synchronous and asynchronous dependency resolution,
+multiple lifecycle scopes, and comprehensive testing capabilities.
+
+Key Features:
+- O(1) token-based dependency lookup
+- Thread-safe singleton initialization
+- Async-safe context management via ContextVar
+- First-class testing support with isolated scopes
+- Comprehensive debugging and introspection capabilities
+- Zero external dependencies
+"""
 
 from __future__ import annotations
 
@@ -7,7 +21,10 @@ import logging
 import threading
 import time
 from collections import deque
-from collections.abc import Callable, Iterator
+from collections.abc import (
+    Callable,
+    Iterator,
+)
 from contextlib import contextmanager
 from contextvars import ContextVar
 from functools import lru_cache
@@ -33,6 +50,7 @@ from .exceptions import (
     CircularDependencyError,
     ResolutionError,
 )
+from .protocols.container import ContainerProtocol, TestScopeProtocol
 from .logging import log_performance_metric, log_resolution_path, logger
 from .metaclasses import Injectable
 from .protocols.resources import SupportsAsyncClose, SupportsClose
@@ -132,6 +150,8 @@ class Container:
     - Contextual scoping using ``contextvars`` (request/session)
     - Scala-inspired "given" instances for testability
     - Method chaining for concise setup and batch operations
+    - First-class testing support with isolated scopes
+    - Comprehensive debugging and introspection capabilities
 
     Class-level active container management using ContextVar ensures
     proper isolation between async tasks and threads.
@@ -144,6 +164,12 @@ class Container:
         @inject
         def handler(logger: Inject[Logger]):
             logger.info("hello")
+
+    Testing Example:
+        with container.test_scope() as test:
+            test.override(LOGGER, MockLogger())
+            service = test.get(MyService)
+            # Test with isolated dependencies
     """
 
     # Class-level ContextVar for active container management
@@ -1519,3 +1545,85 @@ class Container:
     def clear_all_contexts(self) -> None:
         """Clear all contexts. Delegates to ContextualContainer."""
         self._contextual.clear_all_contexts()
+
+    def test_scope(self) -> TestScopeProtocol:
+        """Create an isolated test scope with automatic cleanup.
+
+        Provides a clean testing environment with scoped overrides
+        and automatic resource cleanup. The test scope is completely isolated
+        from the main container state, ensuring that test dependencies
+        don't leak into production code.
+
+        Returns:
+            A TestScope context manager for isolated testing
+
+        Example:
+            with container.test_scope() as test:
+                test.override(DATABASE, MockDatabase())
+                service = test.get(USER_SERVICE)
+                # Test with isolated dependencies
+                # Original database is unaffected after scope exit
+        """
+        from .testing import TestScope
+
+        return TestScope(self)
+
+    def list_tokens(self) -> list[Token[Any]]:
+        """List all registered tokens.
+
+        Returns:
+            List of all registered tokens
+        """
+        return list(self._core.providers.keys())
+
+    def is_singleton(self, token: Token[Any] | type[Any]) -> bool:
+        """Check if a token is registered as a singleton.
+
+        Args:
+            token: The token or type to check
+
+        Returns:
+            True if the token is registered as a singleton
+        """
+        normalized_token = (
+            self._coerce_to_token(token) if isinstance(token, type) else token
+        )
+        normalized_token = self._canonicalize(normalized_token)
+
+        # Check if token has singleton scope or is cached as singleton
+        return (
+            self._get_scope(normalized_token) == Scope.SINGLETON
+            or self.get_singleton_cached(normalized_token) is not None
+        )
+
+    def dependency_graph(self) -> dict[str, list[str]]:
+        """Get a simple dependency graph representation.
+
+        Returns:
+            Dictionary mapping token names to their dependency names
+        """
+        graph: dict[str, list[str]] = {}
+
+        for token in self._core.providers.keys():
+            # TODO: Extract actual dependencies from provider functions
+            # For now, return empty lists for each token
+            graph[token.name] = []
+
+        return graph
+
+    def debug_info(self) -> dict[str, Any]:
+        """Get comprehensive debugging information.
+
+        Returns:
+            Dictionary with container debug information
+        """
+        return {
+            "providers_count": len(self._core.providers),
+            "singletons_count": len(self._runtime.singletons),
+            "cache_hit_rate": self.cache_hit_rate,
+            "tokens": [token.name for token in self.list_tokens()],
+            "scopes": {
+                token.name: token.scope.name for token in self._core.providers.keys()
+            },
+            "performance_stats": self.get_stats(),
+        }

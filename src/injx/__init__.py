@@ -36,18 +36,21 @@ __repo__ = "https://github.com/QriusGlobal/injx"
 __docs__ = "https://qriusglobal.github.io/injx/"
 from injx.container import Container
 from injx.contextual import ContextualContainer, RequestScope, SessionScope
+from injx.debug import ContainerDebugger, debug_container
 from injx.dependencies import Dependencies
 
 # Compatibility imports - these will be deprecated
 from injx.exceptions import (
     AsyncCleanupRequiredError,
     CircularDependencyError,
+    DependencyChainError,
     InjxError,
     ResolutionError,
 )
 from injx.injection import Depends, Given, Inject, inject
 from injx.metaclasses import Injectable
 from injx.protocols.container import ContainerProtocol
+from injx.testing import TestContainer, TestScope, mock_dependency, test_container
 from injx.tokens import Scope, Token, TokenFactory
 
 __all__ = [
@@ -62,8 +65,17 @@ __all__ = [
     "Inject",
     "Given",
     "Depends",
+    # Testing
+    "TestContainer",
+    "TestScope",
+    "test_container",
+    "mock_dependency",
+    # Debugging
+    "ContainerDebugger",
+    "debug_container",
     # Protocols
     "ContainerProtocol",
+    "TestScopeProtocol",
     # Scoping
     "ContextualContainer",
     "RequestScope",
@@ -75,6 +87,8 @@ __all__ = [
     "ResolutionError",
     "CircularDependencyError",
     "AsyncCleanupRequiredError",
+    "DependencyChainError",
+    "DependencyChainError",
     # Deprecated (will be removed in v2.0.0)
     "get_default_container",
     "set_default_container",

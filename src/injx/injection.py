@@ -2,6 +2,10 @@
 
 These tools are inspired by FastAPI but remain framework-agnostic and
 work with synchronous and asynchronous callables.
+
+The injection system provides type-safe dependency resolution with
+comprehensive support for generic types, tokens, and various dependency
+patterns including optional dependencies and complex dependency graphs.
 """
 
 from __future__ import annotations
@@ -105,14 +109,33 @@ class Inject(Generic[T]):
     """
     Marker for injected dependencies (similar to FastAPI's ``Depends``).
 
-    Usage:
-        def handler(db: Inject[Database]):
-            # db is auto-injected
-            ...
+    The Inject marker enables type-safe dependency injection for function
+    parameters. It can be used either as a type annotation or as a default
+    value with an optional provider function.
 
-        # Or with default provider
+    Usage Examples:
+        # Type annotation approach
+        def handler(db: Inject[Database]):
+            # db is auto-injected from container
+            return db.query_users()
+
+        # Default value approach with provider
         def handler(db: Inject[Database] = Inject(create_db)):
-            ...
+            # db is created using create_db if not found in container
+            return db.query_users()
+
+        # Optional dependency
+        def handler(
+            cache: Inject[Cache] | None = Inject(create_cache)
+        ):
+            if cache:
+                return cache.get(key)
+            return None
+
+    Type Safety:
+        The Inject marker preserves generic type information throughout
+        the injection chain, ensuring that IDEs can provide accurate type
+        inference and autocomplete.
     """
 
     def __init__(self, provider: Callable[..., T] | None = None) -> None:
@@ -120,7 +143,16 @@ class Inject(Generic[T]):
         Initialize an injection marker optionally carrying a provider.
 
         Args:
-            provider: Optional provider function
+            provider: Optional provider function that creates the dependency.
+                     If provided, this function will be called to create the
+                     instance when the dependency is resolved.
+
+        Example:
+            # Using a factory function
+            Inject(lambda: Database(): Database("localhost"))
+
+            # Using a class constructor
+            Inject(Database)
         """
         self.provider = provider
         self._type: type[T] | None = None
@@ -579,10 +611,28 @@ def _rebuild_kwargs(
     return final_kwargs
 
 
+@overload
+def inject(
+    func: Callable[P, R],
+    *,
+    container: "ContainerProtocol | None" = None,
+    cache: bool = True,
+) -> Callable[P, R]: ...
+
+
+@overload
+def inject(
+    func: None = None,
+    *,
+    container: "ContainerProtocol | None" = None,
+    cache: bool = True,
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
+
+
 def inject(
     func: Callable[P, R] | None = None,
     *,
-    container: Any | None = None,
+    container: "ContainerProtocol | None" = None,
     cache: bool = True,
 ) -> Callable[P, R] | Callable[[Callable[P, R]], Callable[P, R]]:
     """
