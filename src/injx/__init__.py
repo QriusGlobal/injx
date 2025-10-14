@@ -49,7 +49,6 @@ from injx.exceptions import (
 )
 from injx.injection import Depends, Given, Inject, inject
 from injx.metaclasses import Injectable
-from injx.protocols.container import ContainerProtocol
 from injx.testing import TestContainer, TestScope, mock_dependency, test_container
 from injx.tokens import Scope, Token, TokenFactory
 
@@ -74,7 +73,6 @@ __all__ = [
     "ContainerDebugger",
     "debug_container",
     # Protocols
-    "ContainerProtocol",
     "TestScopeProtocol",
     # Scoping
     "ContextualContainer",

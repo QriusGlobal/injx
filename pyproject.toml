@@ -198,6 +198,13 @@ allowed_prefixes = ["feat", "fix", "docs", "style", "refactor", "perf", "test", 
 commit_retry = true
 encoding = "utf-8"
 
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+]
+
 
 [tool.hatch.build.targets.sdist]
 include = [
