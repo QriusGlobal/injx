@@ -21,10 +21,10 @@ class TestTestContainer:
     def test_override_with_instance(self):
         """Test overriding with direct instance."""
         base = Container()
-        base.register("service", lambda: "original")
+        base.register(str, lambda: "original")
 
         test_cont = TestContainer(base)
-        test_cont.override("service", "mocked")
+        test_cont.override(str, "mocked")
 
         result = test_cont.get("service")
         assert result == "mocked"
@@ -32,17 +32,17 @@ class TestTestContainer:
     def test_override_with_factory(self):
         """Test overriding with factory function."""
         base = Container()
-        base.register("service", lambda: "original")
+        base.register(str, lambda: "original")
 
         test_cont = TestContainer(base)
-        test_cont.override("service", lambda: "mocked_factory")
+        test_cont.override(str, lambda: "mocked_factory")
 
         result = test_cont.get("service")
         assert result == "mocked_factory"
 
     def test_mock_with_token(self):
         """Test mocking with Token."""
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token[str]("service", str)
 
         test_cont = TestContainer()
         test_cont.mock(SERVICE_TOKEN)
@@ -65,10 +65,10 @@ class TestTestContainer:
     def test_clear_overrides(self):
         """Test clearing overrides."""
         base = Container()
-        base.register("service", lambda: "original")
+        base.register(str, lambda: "original")
 
         test_cont = TestContainer(base)
-        test_cont.override("service", "mocked")
+        test_cont.override(str, "mocked")
         assert test_cont.get("service") == "mocked"
 
         test_cont.clear_overrides()
@@ -78,9 +78,9 @@ class TestTestContainer:
         """Test listing overridden tokens."""
         test_cont = TestContainer()
 
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token[str]("service", str)
         test_cont.override(SERVICE_TOKEN, "mock")
-        test_cont.mock("another_service")
+        test_cont.mock(str)
 
         overrides = test_cont.list_overrides()
         assert len(overrides) == 2
@@ -145,10 +145,10 @@ class TestGlobalFunctions:
     def test_test_container_context_manager(self):
         """Test test_container context manager."""
         base = Container()
-        base.register("service", lambda: "original")
+        base.register(str, lambda: "original")
 
         with test_container(base) as test_cont:
-            test_cont.override("service", "mocked")
+            test_cont.override(str, "mocked")
             assert test_cont.get("service") == "mocked"
 
     def test_mock_dependency_function(self):
