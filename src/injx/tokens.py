@@ -32,15 +32,38 @@ class Scope(Enum):
 class Token(Generic[T]):
     """Immutable, hashable identifier for a typed dependency.
 
+    Tokens serve as compile-time keys for dependency registration and resolution.
+    They are immutable, hashable, and carry type information that enables
+    static analysis and IDE autocomplete. Tokens can be scoped to control
+    the lifecycle of their instances.
+
+    The token design follows these principles:
+    - **Type Safety**: Each token is strongly typed with generic parameter T
+    - **Immutability**: Tokens cannot be modified after creation
+    - **Performance**: Pre-computed hash enables O(1) lookup operations
+    - **Clarity**: Human-readable names make dependencies explicit
+
     Args:
-        name: Human-readable name for the binding.
-        type_: The expected Python type of the dependency.
-        scope: Lifecycle scope. Defaults to TRANSIENT.
-        qualifier: Optional qualifier to differentiate multiple bindings of the same type.
-        tags: Optional tags for discovery/metadata.
+        name: Human-readable name for the dependency binding.
+        type_: The expected Python type of the dependency instance.
+        scope: Lifecycle scope controlling when instances are created.
+              Defaults to TRANSIENT (new instance each resolution).
+        qualifier: Optional string to distinguish multiple bindings of the same type.
+        tags: Optional tuple of tags for metadata and discovery.
 
     Example:
-        LOGGER = Token[Logger]("logger", scope=Scope.SINGLETON)
+        # Singleton database connection
+        DB = Token[Database]("database", scope=Scope.SINGLETON)
+
+        # Request-scoped user session
+        USER_SESSION = Token[UserSession]("user_session", scope=Scope.REQUEST)
+
+        # Transient service instance
+        CALCULATOR = Token[Calculator]("calculator")
+
+        # Qualified binding for multiple implementations
+        PRIMARY_DB = Token[Database]("database", qualifier="primary")
+        CACHE_DB = Token[Database]("database", qualifier="cache")
     """
 
     name: str
@@ -111,7 +134,19 @@ class Token(Generic[T]):
         )
 
     def with_qualifier(self, qualifier: str) -> Token[T]:
-        """Return a copy of this token with a qualifier."""
+        """Return a copy of this token with a qualifier.
+
+        Args:
+            qualifier: Qualifier string to distinguish multiple bindings
+
+        Returns:
+            New token instance with the specified qualifier
+
+        Example:
+            db_token = Token[Database]("db")
+            primary_db = db_token.with_qualifier("primary")
+            cache_db = db_token.with_qualifier("cache")
+        """
         return Token(
             name=self.name,
             type_=self.type_,
@@ -122,7 +157,19 @@ class Token(Generic[T]):
         )
 
     def with_tags(self, *tags: str) -> Token[T]:
-        """Return a copy of this token with tags merged in (set semantics)."""
+        """Return a copy of this token with tags merged in (set semantics).
+
+        Args:
+            *tags: Tags to add to the token
+
+        Returns:
+            New token instance with merged tags
+
+        Example:
+            token = Token[Service]("service", tags=("v1", "deprecated"))
+            enhanced_token = token.with_tags("v2", "enhanced")
+            # enhanced_token.tags == ("v1", "deprecated", "v2", "enhanced")
+        """
         return Token(
             name=self.name,
             type_=self.type_,
@@ -146,12 +193,26 @@ class Token(Generic[T]):
     def validate(self, instance: object) -> bool:
         """Validate instance type against the token's expected type.
 
-        Returns False only when ``isinstance(instance, type_)`` is definitively False.
-        If runtime type information is insufficient, returns True.
+        This method provides runtime type validation for resolved dependencies.
+        It handles edge cases gracefully and only returns False when the type
+        mismatch is definitively known.
+
+        Args:
+            instance: The instance to validate against the token's type
+
+        Returns:
+            True if the instance matches the expected type, False otherwise.
+            Returns True for ambiguous cases where runtime type checking
+            is inconclusive.
+
+        Note:
+            This validation is primarily for debugging and testing purposes.
+            The type system handles most type checking at compile time.
         """
         try:
             return isinstance(instance, self.type_)
         except Exception:
+            # Handle cases where type checking might fail (e.g., malformed types)
             return True
 
 

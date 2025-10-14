@@ -1,6 +1,5 @@
 """Tests for the testing utilities module."""
 
-
 from injx import Container, Token, mock_dependency, test_container
 from injx.testing import MockFactory, TestContainer, TestScope
 

@@ -1,6 +1,5 @@
 """Tests for the debugging utilities module."""
 
-
 from injx import Container, Scope, Token
 from injx.debug import ContainerDebugger, DependencyVisualizer, debug_container
 

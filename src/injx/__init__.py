@@ -74,6 +74,13 @@ __all__ = [
     "debug_container",
     # Protocols
     "ContainerProtocol",
+    "Resolvable",
+    "AsyncResolvable",
+    "SupportsOverride",
+    "TestScopeProtocol",
+    "SupportsClose",
+    "SupportsAsyncClose",
+    "SupportsLifecycle",
     # Scoping
     "ContextualContainer",
     "RequestScope",
@@ -85,6 +92,7 @@ __all__ = [
     "ResolutionError",
     "CircularDependencyError",
     "AsyncCleanupRequiredError",
+    "DependencyChainError",
     # Deprecated (will be removed in v2.0.0)
     "get_default_container",
     "set_default_container",
