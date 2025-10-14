@@ -1519,3 +1519,82 @@ class Container:
     def clear_all_contexts(self) -> None:
         """Clear all contexts. Delegates to ContextualContainer."""
         self._contextual.clear_all_contexts()
+
+    def test_scope(self) -> "TestScope":
+        """Create an isolated test scope with automatic cleanup.
+
+        Provides a clean testing environment with scoped overrides
+        and automatic resource cleanup.
+
+        Returns:
+            A TestScope context manager for isolated testing
+
+        Example:
+            with container.test_scope() as test:
+                test.override(DATABASE, MockDatabase())
+                service = test.get(USER_SERVICE)
+                # Test with isolated dependencies
+        """
+        from .testing import TestScope
+
+        return TestScope(self)
+
+    def list_tokens(self) -> list[Token[Any]]:
+        """List all registered tokens.
+
+        Returns:
+            List of all registered tokens
+        """
+        return list(self._core.providers.keys())
+
+    def is_singleton(self, token: Token[Any] | type[Any]) -> bool:
+        """Check if a token is registered as a singleton.
+
+        Args:
+            token: The token or type to check
+
+        Returns:
+            True if the token is registered as a singleton
+        """
+        normalized_token = (
+            self._coerce_to_token(token) if isinstance(token, type) else token
+        )
+        normalized_token = self._canonicalize(normalized_token)
+
+        # Check if token has singleton scope or is cached as singleton
+        return (
+            self._get_scope(normalized_token) == Scope.SINGLETON
+            or self.get_singleton_cached(normalized_token) is not None
+        )
+
+    def dependency_graph(self) -> dict[str, list[str]]:
+        """Get a simple dependency graph representation.
+
+        Returns:
+            Dictionary mapping token names to their dependency names
+        """
+        graph: dict[str, list[str]] = {}
+
+        for token in self._core.providers.keys():
+            # TODO: Extract actual dependencies from provider functions
+            # For now, return empty lists for each token
+            graph[token.name] = []
+
+        return graph
+
+    def debug_info(self) -> dict[str, Any]:
+        """Get comprehensive debugging information.
+
+        Returns:
+            Dictionary with container debug information
+        """
+        return {
+            "providers_count": len(self._core.providers),
+            "singletons_count": len(self._runtime.singletons),
+            "cache_hit_rate": self.cache_hit_rate,
+            "tokens": [token.name for token in self.list_tokens()],
+            "scopes": {
+                token.name: token.scope.name for token in self._core.providers.keys()
+            },
+            "performance_stats": self.get_stats(),
+        }

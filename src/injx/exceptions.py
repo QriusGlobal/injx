@@ -15,11 +15,20 @@ __all__ = [
     "ResolutionError",
     "AsyncCleanupRequiredError",
     "CleanupContractError",
+    "DependencyChainError",
 ]
 
 
 class InjxError(Exception):
     """Base exception for all injx errors."""
+
+
+class DependencyChainError(InjxError):
+    """Raised when dependency chain analysis fails."""
+
+    def __init__(self, message: str, chain: list["Token[Any]"] | None = None) -> None:
+        self.chain = chain or []
+        super().__init__(message)
 
 
 class ResolutionError(InjxError):
@@ -39,12 +48,29 @@ class ResolutionError(InjxError):
         self.chain = chain
         self.cause = cause
 
-        chain_str = " -> ".join(t.name for t in chain) if chain else "root"
+        # Enhanced error message with full dependency resolution chain
+        chain_str = self._format_resolution_chain(chain)
         super().__init__(
             f"Cannot resolve token '{token.name}':\n"
-            f"  Resolution chain: {chain_str}\n"
-            f"  Cause: {cause}"
+            f"  Resolution chain:\n{chain_str}"
+            f"  Missing dependency: {cause}"
         )
+
+    def _format_resolution_chain(self, chain: list["Token[Any]"]) -> str:
+        """Format the resolution chain with type information and indentation."""
+        if not chain:
+            return "    [root]\n"
+
+        formatted_lines = []
+        for i, token in enumerate(chain):
+            indent = "    " * (i + 1)
+            type_info = (
+                f" ({token.type_.__name__})" if hasattr(token.type_, "__name__") else ""
+            )
+            scope_info = f" [{token.scope.name}]" if hasattr(token, "scope") else ""
+            formatted_lines.append(f"{indent}└─ {token.name}{type_info}{scope_info}\n")
+
+        return "".join(formatted_lines)
 
 
 class CircularDependencyError(ResolutionError):
@@ -57,10 +83,23 @@ class CircularDependencyError(ResolutionError):
             token: The token that created the cycle
             chain: The resolution chain showing the cycle
         """
+        # Include the problematic token in the chain to show the full cycle
+        full_cycle = chain + [token]
+        cycle_names = " -> ".join(t.name for t in full_cycle)
+
         super().__init__(
             token,
             chain,
-            f"Circular dependency detected: {' -> '.join(t.name for t in chain)} -> {token.name}",
+            f"Circular dependency detected: {cycle_names}",
+        )
+
+        # Override the message to highlight the cycle
+        chain_str = self._format_resolution_chain(full_cycle)
+        self.args = (
+            f"Circular dependency detected for token '{token.name}':\n"
+            f"  Dependency cycle:\n{chain_str}"
+            f"  Fix: Break the cycle by removing one of the dependencies\n"
+            f"  or redesign the dependency structure.",
         )
 
 
