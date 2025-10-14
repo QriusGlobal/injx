@@ -71,13 +71,3 @@ site/
 # CodeContext dev tool (internal use only)
 .codecontext/
 LSP.md
-
-# Hive Mind / Agent systems / Claude Flow
-.claude-flow/
-.hive-mind/
-.hive-mind-*/
-.swarm/
-.swarm-*/
-*session*.json
-*session*.log
-.agent-*/
