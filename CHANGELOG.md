@@ -6,8 +6,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **REMOVED: `Injectable` metaclass** (replaced by `@autowire` decorator)
+  - The metaclass-based auto-registration pattern has been completely removed in v0.2.0
+  - **Migration required**: Replace `class Foo(metaclass=Injectable)` with `@autowire` decorator
+  - **Reason**: Metaclass conflicts with SQLAlchemy, Django ORM, Pydantic, and other frameworks
+  - **Migration guide**: See [Migration Guide](docs/migration-v0.2.md)
+
 ### Features
 
+- **`@autowire` decorator** for automatic dependency registration
+  - Identity decorator that returns class unchanged (testing-compatible)
+  - Type-based dependency resolution from constructor hints
+  - Pre-compiled resolution paths for O(1) performance
+  - Application startup pattern with `container.activate()` context
+- **`wire()` function** for advanced dependency wiring
+  - Fluent builder API for manual dependency control
+  - Support for dependency overrides (useful for testing)
+  - Scope configuration via method chaining
 - `Dependencies` pattern for grouping multiple dependencies (#PRD-003)
 - `Container.get_active()` and `Container.set_active()` class methods (#PRD-001)
 - `ContainerProtocol` for type-safe contracts (#PRD-002)
@@ -37,6 +54,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Optimized singleton resolution to avoid lock creation for cached values (99% of cases)
 - Implemented double-check locking pattern with fast path for better performance
 - Reduced lock contention in high-throughput scenarios
+
+### Changed
+
+- **Public API**: Removed `Injectable` from `injx.__all__` exports
+- **Examples**: All examples updated to use `@autowire` pattern
+- **Documentation**: Complete migration from metaclass to decorator pattern
 
 ### Refactoring
 
@@ -68,10 +91,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `defaults.py` module (functionality moved to Container)
 - `InjectionAnalyzer` class (use `analyze_dependencies()` function directly)
-
-### Breaking Changes
-
-- Removed `container.inject()` anti-pattern method (deprecated in favor of `@inject` decorator)
+- `Injectable` metaclass and related utilities
+- `container.auto_register()` method (no longer needed with @autowire)
+- `Injectable.get_registry()` method (use type-based resolution instead)
+- `container.inject()` anti-pattern method (deprecated in favor of `@inject` decorator)
 
 ## [0.1.0] - 2025-01-15
 
@@ -81,12 +104,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 **Note:** This release supersedes 0.1.0a1 and establishes the baseline for the project.
 
+**⚠️ Deprecation Notice:** The `Injectable` metaclass introduced in this version was removed in v0.2.0. See [Migration Guide](docs/migration-v0.2.md) for upgrading to `@autowire` decorator.
+
 - Type-safe dependency injection with full static type checking
 - Thread-safe and async-safe resolution using ContextVars
 - O(1) performance for type lookups with pre-computed hash tokens
 - Zero external dependencies
 - Protocol-based type safety
-- Metaclass auto-registration for declarative DI patterns
+- Metaclass auto-registration for declarative DI patterns (REMOVED in v0.2.0 - use `@autowire` instead)
 - PEP 561 compliant with py.typed support
 - Memory efficient with proper cleanup
 - Comprehensive scope management (Singleton, Request, Session, Transient)

@@ -326,6 +326,167 @@ def handler(service: Service = Depends(lambda: ServiceImpl())) -> None:
     pass
 ```
 
+## Automatic Registration with Decorators
+
+### @autowire Decorator
+
+**`injx.autowire(cls=None, *, scope=Scope.SINGLETON)`**
+
+Automatically register a class with the active container by analyzing its constructor dependencies.
+
+#### Parameters
+
+- `cls`: Class to autowire (optional for `@autowire` vs `@autowire()`)
+- `scope`: Dependency scope (default: `Scope.SINGLETON`)
+
+#### Returns
+
+Original class unchanged (identity decorator)
+
+#### Usage
+
+```python
+from injx import autowire, Container, Scope
+
+# Basic usage with default SINGLETON scope
+@autowire
+class Logger:
+    def __init__(self) -> None:
+        self.enabled = True
+
+# Custom scope
+@autowire(scope=Scope.REQUEST)
+class UserService:
+    def __init__(self, logger: Logger):
+        self.logger = logger
+
+# Services are automatically registered within activate context
+container = Container()
+with container.activate():
+    # @autowire registrations happen here
+    pass
+
+# Resolution can happen outside activate context
+service = container[UserService]
+```
+
+#### Key Features
+
+- **Identity Decorator**: Does not modify the class, only registers it with the container
+- **Type-based Resolution**: Uses constructor type hints to automatically resolve dependencies
+- **Requires Active Container**: Must be used within `container.activate()` context
+- **Zero Boilerplate**: No need for manual provider functions or token creation
+- **Thread-Safe**: Uses pre-computed resolution paths for O(1) performance
+
+#### Application Startup Pattern
+
+```python
+from injx import Container, autowire, Scope
+
+container = Container()
+
+# Define all services within activate context at startup
+with container.activate():
+    @autowire
+    class Database:
+        def __init__(self) -> None:
+            self.connected = False
+
+    @autowire
+    class Repository:
+        def __init__(self, db: Database):
+            self.db = db
+
+    @autowire
+    class Service:
+        def __init__(self, repo: Repository):
+            self.repo = repo
+
+# Resolution happens anywhere in the application
+def handler():
+    service = container[Service]
+    # use service
+```
+
+#### Migration from Injectable Metaclass
+
+```python
+# OLD (v0.1.x - metaclass pattern) ❌
+class EmailService(metaclass=Injectable):
+    __injectable__ = True
+    __token_name__ = "email_service"
+    __scope__ = Scope.SINGLETON
+
+    def __init__(self, logger: Logger):
+        self.logger = logger
+
+container.auto_register()  # Required second step
+
+# NEW (v0.2.0+ - decorator pattern) ✅
+with container.activate():
+    @autowire(scope=Scope.SINGLETON)
+    class EmailService:
+        def __init__(self, logger: Logger):
+            self.logger = logger
+
+# No auto_register() needed - immediate registration
+```
+
+### wire() Function
+
+**`injx.wire(cls, *, container=None)`**
+
+Advanced wiring with manual control over dependency resolution and overrides.
+
+#### Parameters
+
+- `cls`: Class to wire
+- `container`: Container instance (optional, uses active container if not provided)
+
+#### Returns
+
+`WireBuilder[T]` - Fluent builder for configuring registration
+
+#### Usage
+
+```python
+from injx import wire, Container
+
+container = Container()
+
+class Service:
+    def __init__(self, db: Database, cache: Cache):
+        self.db = db
+        self.cache = cache
+
+# Wire with custom overrides
+test_db = MockDatabase()
+wire(Service, container=container) \
+    .with_override("db", test_db) \
+    .with_scope(Scope.TRANSIENT) \
+    .register()
+
+# Resolve
+service = container[Service]
+assert isinstance(service.db, MockDatabase)
+```
+
+#### WireBuilder Methods
+
+- `.with_override(param: str, value: object)` - Override a specific constructor parameter
+- `.with_scope(scope: Scope)` - Set the registration scope
+- `.register()` - Register the class with the container
+
+#### Use Cases
+
+- **Testing**: Override dependencies with mocks
+- **Partial Autowiring**: Mix automatic and manual dependency resolution
+- **Dynamic Configuration**: Runtime-determined dependency values
+
+---
+
+See [Autowiring Specification](../specs/autowiring-spec.rst) for complete implementation details.
+
 ## Contextual Containers
 
 ### ContextualContainer
@@ -433,26 +594,6 @@ Get the global default container.
 Set the global default container.
 
 - `container`: Container instance to use as default
-
-## Metaclass Support
-
-### Injectable
-
-**`injx.Injectable`**
-
-Metaclass for automatic service registration.
-
-#### Usage
-
-```python
-class EmailService(metaclass=Injectable):
-    __injectable__ = True
-    __token_name__ = "email_service"
-    __scope__ = Scope.SINGLETON
-    
-    def __init__(self, logger: Logger):
-        self.logger = logger
-```
 
 ## Type Annotations
 
