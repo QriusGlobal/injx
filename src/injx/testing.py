@@ -132,6 +132,17 @@ class TestContainer:
         # Fall back to base container
         return self.base_container.get(normalized_token)
 
+    def __getitem__(self, token: Token[T] | type[T]) -> T:
+        """Get a dependency using subscript syntax, applying overrides first.
+
+        Args:
+            token: The token or type to resolve
+
+        Returns:
+            The resolved instance with overrides applied
+        """
+        return self.get(token)
+
     async def aget(self, token: Token[T] | type[T]) -> T:
         """Async version of get.
 
@@ -179,6 +190,43 @@ class TestScope:
         self.container = container
         self._context_manager: Any = None
         self._async_context_manager: Any = None
+
+    def get(self, token: Token[T] | type[T]) -> T:
+        """Delegate get to container."""
+        return self.container.get(token)
+
+    def override(self, token: Token[T] | type[T], mock: T | Callable[[], T]) -> None:
+        """Delegate override to container."""
+        if hasattr(self.container, "override"):
+            self.container.override(token, mock)
+
+    def mock(
+        self, token: Token[T] | type[T], implementation: Callable[[], T] | None = None
+    ) -> None:
+        """Delegate mock to container."""
+        if hasattr(self.container, "mock"):
+            self.container.mock(token, implementation)
+
+    async def aget(self, token: Token[T] | type[T]) -> T:
+        """Delegate async get to container."""
+        if hasattr(self.container, "aget"):
+            return await self.container.aget(token)
+        return self.container.get(token)
+
+    def clear_overrides(self) -> None:
+        """Delegate clear_overrides to container."""
+        if hasattr(self.container, "clear_overrides"):
+            self.container.clear_overrides()
+
+    def list_overrides(self) -> list[Token[Any]]:
+        """Delegate list_overrides to container."""
+        if hasattr(self.container, "list_overrides"):
+            return self.container.list_overrides()
+        return []
+
+    def __getitem__(self, token: Token[T] | type[T]) -> T:
+        """Get dependency using subscript syntax."""
+        return self.get(token)
 
     def __enter__(self) -> TestScope:
         """Enter test scope."""

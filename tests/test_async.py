@@ -334,3 +334,20 @@ class TestAsyncInjection:
 
         with pytest.raises(CircularDependencyError):
             await container.aget(token_a)
+
+
+def test_subscript_with_async_provider_raises():
+    """Test that subscript access raises for async providers."""
+    container = Container()
+
+    async def async_provider() -> str:
+        return "async result"
+
+    token = Token("async_string", str)
+    container.register(token, async_provider)
+
+    # Subscript should raise (sync context with async provider)
+    with pytest.raises(ResolutionError) as exc_info:
+        _ = container[token]
+
+    assert "Use aget() for async providers" in str(exc_info.value)

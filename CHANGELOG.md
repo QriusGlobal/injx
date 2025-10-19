@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Features
 
+- Pythonic subscript access syntax (`container[Token]`) for dependency resolution
+  - Subscript access support in Container, TestContainer, and TestScope classes
+  - Type-safe overloads for subscript access with full IDE autocomplete support
+  - Equivalent to `container.get(token)` for synchronous resolution
+  - For async resolution, continue using `await container.aget(token)`
 - `Dependencies` pattern for grouping multiple dependencies (#PRD-003)
 - `Container.get_active()` and `Container.set_active()` class methods (#PRD-001)
 - `ContainerProtocol` for type-safe contracts (#PRD-002)

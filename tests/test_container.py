@@ -328,3 +328,111 @@ class TestSingletonLocks:
         # Clean up the second one
         container._cleanup_singleton_lock(obj_token2)
         assert obj_token2 not in container._singleton_locks
+
+
+class TestSubscriptAccess:
+    """Test subscript access syntax for Container."""
+
+    def test_subscript_access_basic(self):
+        """Test basic subscript syntax for dependency resolution."""
+        container = Container()
+
+        class Service:
+            def __init__(self):
+                self.value = 42
+
+        container.register(Service, Service)
+
+        # Subscript access should work like get()
+        service = container[Service]
+        assert isinstance(service, Service)
+        assert service.value == 42
+
+    def test_subscript_access_with_token(self):
+        """Test subscript access with Token instances."""
+        container = Container()
+
+        class Database:
+            pass
+
+        db_token = Token("database", Database)
+        db_instance = Database()
+
+        container.register(db_token, lambda: db_instance)
+
+        # Should work with Token
+        result = container[db_token]
+        assert result is db_instance
+
+    def test_subscript_access_singleton(self):
+        """Test subscript access respects singleton scope."""
+        container = Container()
+
+        class Database:
+            pass
+
+        call_count = 0
+
+        def create_db() -> Database:
+            nonlocal call_count
+            call_count += 1
+            return Database()
+
+        container.register(Database, create_db, scope=Scope.SINGLETON)
+
+        # Multiple subscript accesses should return same instance
+        db1 = container[Database]
+        db2 = container[Database]
+        assert db1 is db2
+        assert call_count == 1
+
+    def test_subscript_access_error(self):
+        """Test subscript access raises ResolutionError for unregistered."""
+        container = Container()
+
+        class Database:
+            pass
+
+        from injx.exceptions import ResolutionError
+
+        with pytest.raises(ResolutionError):
+            _ = container[Database]
+
+    def test_subscript_access_with_overrides(self):
+        """Test subscript access respects context overrides."""
+        container = Container()
+
+        class Database:
+            pass
+
+        original_db = Database()
+        mock_db = Database()
+
+        db_token = Token("database", Database)
+        container.register(db_token, lambda: original_db)
+
+        # Normal access
+        assert container[db_token] is original_db
+
+        # With override
+        with container.use_overrides({db_token: mock_db}):
+            # Subscript should respect override
+            assert container[db_token] is mock_db
+
+        # Back to normal
+        assert container[db_token] is original_db
+
+    def test_subscript_equivalent_to_get(self):
+        """Test that subscript access is equivalent to get()."""
+        container = Container()
+
+        class Thing:
+            pass
+
+        container.register(Thing, Thing, scope=Scope.SINGLETON)
+
+        # Should produce identical results
+        result_get = container.get(Thing)
+        result_subscript = container[Thing]
+
+        assert result_get is result_subscript

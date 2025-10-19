@@ -148,6 +148,7 @@ def get_user_info(
     This follows modern Python patterns used by FastAPI and Pydantic.
     """
     # Extract services from dependencies container
+    # Traditional method syntax
     db = deps[Database]
     http = deps[HTTPClient]
     cache = deps[Cache]
@@ -247,6 +248,10 @@ Service registry that manages registration and resolution:
 ```python
 container = Container()
 container.register(DB_TOKEN, PostgresDatabase, scope=Scope.SINGLETON)
+
+# Resolve dependencies - two equivalent syntaxes
+db = container.get(DB_TOKEN)     # Explicit method syntax
+db = container[DB_TOKEN]         # Pythonic subscript syntax (recommended)
 ```
 
 ### @inject Decorator with Dependencies Pattern

@@ -74,6 +74,30 @@ class ContainerProtocol(Protocol):
         ...
 
     @overload
+    def __getitem__(self, token: Token[T]) -> T: ...
+
+    @overload
+    def __getitem__(self, token: type[T]) -> T: ...
+
+    def __getitem__(self, token: Token[T] | type[T]) -> T:
+        """Resolve a dependency using subscript syntax.
+
+        Args:
+            token: Token or type for the dependency to resolve
+
+        Returns:
+            The resolved dependency instance
+
+        Raises:
+            ResolutionError: If the dependency cannot be resolved
+            CircularDependencyError: If a circular dependency is detected
+
+        Example:
+            db = container[Database]
+        """
+        ...
+
+    @overload
     def register(
         self,
         token: Token[T],
@@ -318,6 +342,17 @@ class TestScopeProtocol(Protocol):
 
     def get(self, token: Token[T] | type[T]) -> T:
         """Get a dependency, applying overrides first.
+
+        Args:
+            token: Token or type to resolve
+
+        Returns:
+            The resolved instance with overrides applied
+        """
+        ...
+
+    def __getitem__(self, token: Token[T] | type[T]) -> T:
+        """Get a dependency using subscript syntax.
 
         Args:
             token: Token or type to resolve

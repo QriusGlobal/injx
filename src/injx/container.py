@@ -50,9 +50,9 @@ from .exceptions import (
     CircularDependencyError,
     ResolutionError,
 )
-from .protocols.container import ContainerProtocol, TestScopeProtocol
 from .logging import log_performance_metric, log_resolution_path, logger
 from .metaclasses import Injectable
+from .protocols.container import TestScopeProtocol
 from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .provider_spec import ProviderSpec
 from .registry import TypedRegistry
@@ -161,6 +161,10 @@ class Container:
         LOGGER = Token[Logger]("logger")
         container.register_singleton(LOGGER, ConsoleLogger)
 
+        # Resolve dependencies using either syntax
+        logger = container.get(LOGGER)        # Explicit method syntax
+        logger = container[LOGGER]            # Pythonic subscript syntax
+
         @inject
         def handler(logger: Inject[Logger]):
             logger.info("hello")
@@ -168,7 +172,9 @@ class Container:
     Testing Example:
         with container.test_scope() as test:
             test.override(LOGGER, MockLogger())
+            # Both syntaxes work in test scope
             service = test.get(MyService)
+            service = test[MyService]
             # Test with isolated dependencies
     """
 
@@ -740,6 +746,41 @@ class Container:
                 "resolve", duration_ms, {"token": token.name, "scope": token.scope.name}
             )
             return result
+
+    @overload
+    def __getitem__(self, token: Token[U]) -> U: ...
+
+    @overload
+    def __getitem__(self, token: type[U]) -> U: ...
+
+    def __getitem__(self, token: Token[U] | type[U]) -> U:
+        """Resolve a dependency using subscript syntax.
+
+        Provides Pythonic syntax for dependency resolution:
+            db = container[Database]
+
+        This is equivalent to container.get() and provides type-safe
+        access to registered dependencies.
+
+        Args:
+            token: The Token[T] or type[T] to resolve.
+
+        Returns:
+            The resolved instance.
+
+        Raises:
+            ResolutionError: If no provider is registered or resolution fails.
+
+        Note:
+            For async resolution, use `await container.aget(token)` instead.
+            Subscript access is synchronous only.
+
+        Example:
+            >>> container = Container()
+            >>> container.register(Database, PostgresDatabase)
+            >>> db = container[Database]  # Type-safe subscript access
+        """
+        return self.get(token)
 
     def _resolve_fast_path(self, token: Token[U] | type[U]) -> U | None:
         """Attempt fast resolution for cached or given instances.
