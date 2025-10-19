@@ -1,0 +1,4 @@
+# file: /Users/mishal/code/work/injx/.venv/bin/pytest
+# hypothesis_version: 6.142.1
+
+['-script.pyw', '.exe', '__main__']

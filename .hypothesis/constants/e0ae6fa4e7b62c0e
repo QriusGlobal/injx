@@ -1,0 +1,4 @@
+# file: /Users/mishal/code/work/injx/src/injx/injection.py
+# hypothesis_version: 6.142.1
+
+[256, 1000, '<lambda>', 'DependencyRequest', 'Depends', 'Given', 'Inject', 'Inject()', 'Inject[T]', 'Inject[object]', 'P', 'R', 'T', '__module__', '__name__', '_inject_type', 'aget', 'analyze_dependencies', 'builtins', 'count', 'inject', 'resolve_dependencies', 'set_type', 'type']

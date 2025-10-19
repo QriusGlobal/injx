@@ -1,0 +1,4 @@
+# file: /Users/mishal/code/work/injx/src/injx/container.py
+# hypothesis_version: 6.142.1
+
+[0.0, 512, 1000, 'Container', 'Container | None', 'T', 'U', '__name__', '_old_active', 'aclose', 'async_locks', 'avg_resolution_time', 'cache_hit_rate', 'cache_hits', 'cache_misses', 'close', 'injx_overrides', 'injx_resolution_set', 'lock', 'overrides', 'performance_stats', 'providers', 'providers_count', 'resolution_times', 'resolve', 'resources', 'scope', 'scopes', 'set_container_bridge', 'singleton', 'singleton_locks', 'singletons', 'singletons_count', 'token', 'tokens', 'total_providers', 'type_index']

@@ -1,0 +1,4 @@
+# file: /Users/mishal/code/work/injx/src/injx/provider_spec.py
+# hypothesis_version: 6.142.1
+
+['ProviderSpec[T]', 'T', 'Token[Any]']

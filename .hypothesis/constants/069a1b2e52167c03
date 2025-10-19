@@ -1,0 +1,4 @@
+# file: /Users/mishal/code/work/injx/src/injx/debug.py
+# hypothesis_version: 6.142.1
+
+['\nDependencies:', ' [SINGLETON]', '=', 'ContainerDebugger', 'Dependency Graph:', 'DependencyVisualizer', 'NONE', 'T', '__module__', '__name__', 'average_ms', 'by_scope', 'cache_hit_rate', 'cache_hits', 'cache_misses', 'cache_performance', 'can_resolve', 'cleanup', 'contexts', 'count', 'details', 'edges', 'has_context', 'hit_rate', 'hits', 'id', 'instance_id', 'instance_type', 'instances', 'is_async', 'is_singleton', 'issues', 'max_ms', 'memory_usage', 'min_ms', 'misses', 'module', 'name', 'nodes', 'performance', 'providers', 'registered', 'request_active', 'resolution_path', 'resolution_times', 'scope', 'session_active', 'singleton_cached', 'singletons', 'stats', 'token', 'total_edges', 'total_nodes', 'total_providers', 'tracked_resources', 'type', 'unknown']

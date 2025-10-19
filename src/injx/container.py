@@ -42,7 +42,6 @@ from typing import (
     overload,
 )
 
-from . import analyzer
 from .cleanup_strategy import CleanupStrategy
 from .contextual import ContextualContainer
 from .exceptions import (
@@ -50,9 +49,8 @@ from .exceptions import (
     CircularDependencyError,
     ResolutionError,
 )
-from .protocols.container import ContainerProtocol, TestScopeProtocol
+from .protocols.container import TestScopeProtocol
 from .logging import log_performance_metric, log_resolution_path, logger
-from .metaclasses import Injectable
 from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .provider_spec import ProviderSpec
 from .registry import TypedRegistry
@@ -197,52 +195,6 @@ class Container:
         self._core = _CoreRegistry()
         self._runtime = _RuntimeState()
         self._context_state = _ContextState()
-
-        self._auto_register()
-
-    def _auto_register(self) -> None:
-        """Automatically register classes marked with Injectable metaclass.
-
-        Examines the Injectable registry and registers each class with its
-        dependencies automatically resolved.
-        """
-        registry = Injectable.get_registry()
-
-        for cls, token in registry.items():
-            scope: Scope = analyzer.get_token_metadata(cls)[1]
-            deps = analyzer.analyze_dependencies(cls)
-
-            provider = self._create_provider_for_class(cls, deps)
-            self.register(token, provider, scope=scope)
-
-    def _create_provider_for_class(
-        self, cls: type[object], deps: dict[str, type[object]]
-    ) -> ProviderLike[object]:
-        """Create a provider function for a class with dependencies.
-
-        Args:
-            cls: The class to create a provider for
-            deps: Dictionary of dependency names to types
-
-        Returns:
-            A provider function that resolves dependencies and instantiates the class
-        """
-        # Early return for classes without dependencies
-        if not deps:
-            return cast(ProviderLike[object], cls)
-
-        # Create factory with dependency injection
-        def make_factory(
-            target_cls: type[object] = cls,
-            deps_map: dict[str, type[object]] = deps,
-        ) -> Callable[[], object]:
-            def provider() -> object:
-                kwargs = {name: self.get(typ) for name, typ in deps_map.items()}
-                return target_cls(**kwargs)
-
-            return provider
-
-        return make_factory()
 
     def _coerce_to_token(self, spec: Token[U] | type[U]) -> Token[U]:
         """Convert a type or token specification to a Token instance.

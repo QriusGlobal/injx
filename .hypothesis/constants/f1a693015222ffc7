@@ -1,0 +1,4 @@
+# file: /Users/mishal/code/work/injx/src/injx/exceptions.py
+# hypothesis_version: 6.142.1
+
+['    [root]\n', ' -> ', 'CleanupContractError', 'DependencyChainError', 'InjxError', 'ResolutionError', 'Token[Any]', '__name__', 'scope']

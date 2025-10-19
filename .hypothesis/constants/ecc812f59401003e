@@ -1,0 +1,4 @@
+# file: /Users/mishal/code/work/injx/src/injx/contextual.py
+# hypothesis_version: 6.142.1
+
+['ContextualContainer', 'RequestScope', 'SessionScope', 'T', '_core', 'get_current_context', 'injx_context_stack', 'injx_session_context', 'maps', 'providers', 'scope', 'set_context']
