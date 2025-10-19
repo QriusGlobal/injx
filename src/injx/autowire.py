@@ -1,7 +1,7 @@
 """Automatic dependency injection via decorators."""
 
 import inspect
-from functools import cache
+import sys
 from typing import Any, Callable
 
 from injx.container import Container
@@ -54,7 +54,9 @@ def _analyze_autowire_class(
         if caller_locals:
             localns.update(caller_locals)
 
-        type_hints = get_type_hints(cls.__init__, globalns=globalns, localns=localns, include_extras=True)
+        type_hints = get_type_hints(
+            cls.__init__, globalns=globalns, localns=localns, include_extras=True
+        )
     except (NameError, AttributeError, TypeError):
         # Fallback: use raw annotations if type hint resolution fails
         type_hints = {}

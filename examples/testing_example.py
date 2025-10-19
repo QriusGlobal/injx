@@ -492,7 +492,7 @@ async def demo_testing_strategies():
     print("1. Production container:")
     prod_container = create_production_container()
     service_token = Token[OrderService]("order_service", expected_type=OrderService)
-    prod_service = container.get(service_token)
+    prod_service = prod_container.get(service_token)
     print(f"  Payment gateway type: {type(prod_service.payment_gateway).__name__}")
 
     print("\n2. Test container with mocks:")

@@ -34,7 +34,7 @@ __author__ = "Qrius Global"
 __email__ = "mishal@qrius.global"
 __repo__ = "https://github.com/QriusGlobal/injx"
 __docs__ = "https://qriusglobal.github.io/injx/"
-from injx.autowire import autowire, wire
+from injx.autowire import WireBuilder, autowire, wire
 from injx.container import Container
 from injx.contextual import ContextualContainer, RequestScope, SessionScope
 from injx.debug import ContainerDebugger, debug_container
@@ -49,7 +49,7 @@ from injx.exceptions import (
     ResolutionError,
 )
 from injx.injection import Depends, Given, Inject, inject
-from injx.protocols.container import ContainerProtocol
+from injx.protocols.container import ContainerProtocol, TestScopeProtocol
 from injx.testing import TestContainer, TestScope, mock_dependency, test_container
 from injx.tokens import Scope, Token, TokenFactory
 
@@ -68,6 +68,7 @@ __all__ = [
     # Autowiring
     "autowire",
     "wire",
+    "WireBuilder",
     # Testing
     "TestContainer",
     "TestScope",
@@ -88,7 +89,6 @@ __all__ = [
     "ResolutionError",
     "CircularDependencyError",
     "AsyncCleanupRequiredError",
-    "DependencyChainError",
     "DependencyChainError",
     # Deprecated (will be removed in v2.0.0)
     "get_default_container",
