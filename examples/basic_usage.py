@@ -3,7 +3,7 @@
 import asyncio
 from typing import Protocol, runtime_checkable
 
-from injx import Container, Injectable, Scope, Token
+from injx import Container, Scope, Token, autowire
 
 
 # Define protocols for type safety
@@ -83,24 +83,7 @@ class UserService:
             raise
 
 
-# Auto-registration with metaclass (alternative approach)
-class EmailService(metaclass=Injectable):
-    """Email service with auto-registration."""
-
-    __injectable__ = True
-    __token_name__ = "email_service"
-    __scope__ = Scope.SINGLETON
-
-    def __init__(self, logger: ConsoleLogger):
-        self.logger = logger
-
-    def send_email(self, to: str, subject: str, body: str) -> bool:
-        self.logger.info(f"Sending email to {to}: {subject}")
-        # Simulate email sending
-        print(f"📧 To: {to}")
-        print(f"📧 Subject: {subject}")
-        print(f"📧 Body: {body}")
-        return True
+# Placeholder for EmailService - will be defined inside main() using @autowire
 
 
 async def main():
@@ -109,6 +92,24 @@ async def main():
 
     # Create container
     container = Container()
+
+    # Application startup pattern: Register all services in activate context
+    with container.activate():
+        # Automatically registered services using @autowire
+        @autowire(scope=Scope.SINGLETON)
+        class EmailService:
+            """Email service with automatic registration."""
+
+            def __init__(self, logger: ConsoleLogger):
+                self.logger = logger
+
+            def send_email(self, to: str, subject: str, body: str) -> bool:
+                self.logger.info(f"Sending email to {to}: {subject}")
+                # Simulate email sending
+                print(f"📧 To: {to}")
+                print(f"📧 Subject: {subject}")
+                print(f"📧 Body: {body}")
+                return True
 
     # Define tokens
     logger_token = Token[Logger]("logger", protocol=Logger)
@@ -121,8 +122,8 @@ async def main():
 
     # Register service with dependencies
     def create_user_service() -> UserService:
-        logger = container.resolve_protocol(Logger)
-        database = container.resolve_protocol(Database)
+        logger = container[Logger]
+        database = container[Database]
         return UserService(logger, database)
 
     container.register(user_service_token, create_user_service, Scope.SINGLETON)
@@ -143,16 +144,15 @@ async def main():
     business_result = business_logic()
     print(f"Business result: {business_result}\n")
 
-    print("3. Auto-registered services (metaclass):")
-    # Email service was auto-registered via metaclass
-    email_token = Injectable.get_registry()[EmailService]
-    email_service = container.get(email_token)
+    print("3. Auto-registered services (@autowire):")
+    # Email service was auto-registered via @autowire decorator
+    email_service = container[EmailService]
     email_service.send_email("bob@example.com", "Welcome!", "Welcome to our service!")
 
-    print("\n4. Protocol-based resolution:")
-    # Resolve by protocol instead of token
-    direct_logger = container.resolve_protocol(Logger)
-    direct_logger.info("This logger was resolved by protocol")
+    print("\n4. Type-based resolution:")
+    # Resolve by type (class serves as token)
+    direct_logger = container[Logger]
+    direct_logger.info("This logger was resolved by type")
 
     print("\n5. Testing with overrides:")
 

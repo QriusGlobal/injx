@@ -33,7 +33,7 @@ except ImportError:
             pass
 
 
-from injx import Container, Injectable, Scope, Token
+from injx import Container, Scope, Token, autowire
 
 
 # Domain models
@@ -143,13 +143,10 @@ class DatabaseConnection:
             print("Database connection closed")
 
 
-# Business services using auto-registration
-class UserService(metaclass=Injectable):
-    """User service with dependency injection via metaclass."""
-
-    __injectable__ = True
-    __token_name__ = "user_service"
-    __scope__ = Scope.SINGLETON
+# Business services using @autowire decorator
+@autowire(scope=Scope.SINGLETON)
+class UserService:
+    """User service with automatic dependency injection."""
 
     def __init__(
         self,
@@ -195,7 +192,7 @@ container = Container()
 
 
 def setup_dependencies():
-    """Setup dependency injection container."""
+    """Setup dependency injection container with FastAPI application startup pattern."""
     # Define tokens
     logger_token = Token[Logger]("logger", protocol=Logger)
     db_token = Token[DatabaseConnection]("database", expected_type=DatabaseConnection)
@@ -209,10 +206,16 @@ def setup_dependencies():
 
     # Register email service with dependency
     def create_email_service() -> MockEmailService:
-        logger = container.resolve_protocol(Logger)
+        logger = container[Logger]
         return MockEmailService(logger)
 
     container.register(email_service_token, create_email_service, Scope.SINGLETON)
+
+    # Activate @autowire decorator registration
+    with container.activate():
+        # UserService is already decorated with @autowire above
+        # The decorator will register it when activate() is called
+        pass
 
     # Initialize database connection
     async def init_database():
@@ -230,9 +233,8 @@ def get_container() -> Container:
 
 def get_user_service(container: Container = Depends(get_container)) -> UserService:
     """FastAPI dependency to get user service."""
-    # Get auto-registered service
-    user_service_token = Injectable.get_registry()[UserService]
-    return container.get(user_service_token)
+    # Get auto-registered service using type-based resolution
+    return container[UserService]
 
 
 # Application lifespan management
@@ -294,8 +296,12 @@ async def get_all_users(
 @app.get("/health")
 async def health_check(container: Container = Depends(get_container)):
     """Health check with container status."""
-    user_service_token = Injectable.get_registry()[UserService]
-    is_registered = container.is_registered(user_service_token)
+    # Check if UserService is registered using type-based resolution
+    try:
+        _ = container[UserService]
+        is_registered = True
+    except Exception:
+        is_registered = False
 
     return {
         "status": "healthy",
@@ -313,9 +319,8 @@ async def test_manually():
     init_db = setup_dependencies()
     await init_db()
 
-    # Get user service
-    user_service_token = Injectable.get_registry()[UserService]
-    user_service = container.get(user_service_token)
+    # Get user service using type-based resolution
+    user_service = container[UserService]
 
     # Test user creation
     user_data = CreateUserRequest(name="Alice", email="alice@example.com")
