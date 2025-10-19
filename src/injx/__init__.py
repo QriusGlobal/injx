@@ -34,6 +34,7 @@ __author__ = "Qrius Global"
 __email__ = "mishal@qrius.global"
 __repo__ = "https://github.com/QriusGlobal/injx"
 __docs__ = "https://qriusglobal.github.io/injx/"
+from injx.autowire import autowire, wire
 from injx.container import Container
 from injx.contextual import ContextualContainer, RequestScope, SessionScope
 from injx.debug import ContainerDebugger, debug_container
@@ -48,7 +49,6 @@ from injx.exceptions import (
     ResolutionError,
 )
 from injx.injection import Depends, Given, Inject, inject
-from injx.metaclasses import Injectable
 from injx.protocols.container import ContainerProtocol
 from injx.testing import TestContainer, TestScope, mock_dependency, test_container
 from injx.tokens import Scope, Token, TokenFactory
@@ -65,6 +65,9 @@ __all__ = [
     "Inject",
     "Given",
     "Depends",
+    # Autowiring
+    "autowire",
+    "wire",
     # Testing
     "TestContainer",
     "TestScope",
@@ -80,8 +83,6 @@ __all__ = [
     "ContextualContainer",
     "RequestScope",
     "SessionScope",
-    # Compatibility
-    "Injectable",
     # Exceptions
     "InjxError",
     "ResolutionError",
