@@ -136,7 +136,7 @@ class OrderService:
             await self.order_repository.save_order(order)
 
             # Process payment
-            transaction_id = await self.payment_gateway.process_payment(
+            _transaction_id = await self.payment_gateway.process_payment(
                 order.amount, payment_method
             )
 
@@ -254,9 +254,9 @@ def create_production_container() -> Container:
 
     # Register service with dependencies
     def create_order_service() -> OrderService:
-        payment = container.resolve_protocol(PaymentGateway)
-        email = container.resolve_protocol(EmailService)
-        repo = container.resolve_protocol(OrderRepository)
+        payment = container.get(payment_token)
+        email = container.get(email_token)
+        repo = container.get(repo_token)
         return OrderService(payment, email, repo)
 
     container.register(service_token, create_order_service, Scope.SINGLETON)
@@ -281,9 +281,9 @@ def create_test_container() -> Container:
 
     # Register service with dependencies
     def create_order_service() -> OrderService:
-        payment = container.resolve_protocol(PaymentGateway)
-        email = container.resolve_protocol(EmailService)
-        repo = container.resolve_protocol(OrderRepository)
+        payment = container.get(payment_token)
+        email = container.get(email_token)
+        repo = container.get(repo_token)
         return OrderService(payment, email, repo)
 
     container.register(service_token, create_order_service, Scope.SINGLETON)
@@ -305,9 +305,12 @@ class TestOrderServiceIntegration:
         service = container.get(service_token)
 
         # Get mocks for verification
-        payment_mock = container.resolve_protocol(PaymentGateway)
-        email_mock = container.resolve_protocol(EmailService)
-        repo_mock = container.resolve_protocol(OrderRepository)
+        payment_token = Token[PaymentGateway]("payment_gateway", protocol=PaymentGateway)
+        email_token = Token[EmailService]("email_service", protocol=EmailService)
+        repo_token = Token[OrderRepository]("order_repository", protocol=OrderRepository)
+        payment_mock = container.get(payment_token)
+        email_mock = container.get(email_token)
+        repo_mock = container.get(repo_token)
 
         # Create test order
         order = Order("order_123", 99.99, "customer@example.com")
@@ -346,8 +349,10 @@ class TestOrderServiceIntegration:
         service = container.get(service_token)
 
         # Get mocks for verification
-        email_mock = container.resolve_protocol(EmailService)
-        repo_mock = container.resolve_protocol(OrderRepository)
+        email_token = Token[EmailService]("email_service", protocol=EmailService)
+        repo_token = Token[OrderRepository]("order_repository", protocol=OrderRepository)
+        email_mock = container.get(email_token)
+        repo_mock = container.get(repo_token)
 
         # Create test order
         order = Order("order_456", 199.99, "customer@example.com")
@@ -452,7 +457,7 @@ class TestContainerTesting:
         container.override(payment_token, test_payment)
 
         # Service now uses test double
-        test_service = container.get(service_token)
+        _test_service = container.get(service_token)
         # Note: Since it's a singleton, we get the same instance
         # For this test, we'd need to clear the singleton cache or use different scopes
 
@@ -460,14 +465,14 @@ class TestContainerTesting:
         container.clear_overrides()
 
         # Back to original
-        restored_service = container.get(service_token)
+        _restored_service = container.get(service_token)
         # Same singleton instance, but demonstrates the pattern
 
     @pytest.mark.asyncio
     async def test_isolated_container_per_test(self):
         """Test using isolated containers per test."""
         # Each test gets its own container
-        test_container = Container()
+        _test_container = Container()
 
         # Register only what this test needs
         mock_payment = MockPaymentGateway()
