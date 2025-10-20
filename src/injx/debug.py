@@ -7,7 +7,7 @@ dependency graphs, and debugging resolution issues.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Dict, List, TypeVar
+from typing import Any, Dict, List, NotRequired, TypedDict, TypeVar, cast
 
 from .container import Container
 from .tokens import Token
@@ -18,6 +18,28 @@ __all__ = [
 ]
 
 T = TypeVar("T")
+
+
+class TokenInfo(TypedDict):
+    """Type information for a token."""
+
+    name: str
+    type: str
+    scope: str
+
+
+class DiagnosticResult(TypedDict):
+    """Diagnostic result for token resolution."""
+
+    token: TokenInfo
+    registered: bool
+    singleton_cached: bool
+    has_context: bool
+    can_resolve: bool
+    resolution_path: list[str]
+    issues: list[str]
+    instance_type: NotRequired[str]
+    instance_id: NotRequired[int]
 
 
 class ContainerDebugger:
@@ -63,7 +85,7 @@ class ContainerDebugger:
     def _group_by_scope(self, providers: Any) -> Dict[str, int]:
         """Group providers by scope."""
         scope_counts: Dict[str, int] = defaultdict(int)
-        for token, spec in providers.items():
+        for _token, spec in providers.items():
             scope_counts[spec.scope.name] += 1
         return dict(scope_counts)
 
@@ -86,11 +108,13 @@ class ContainerDebugger:
         """Format singleton information for display."""
         formatted: List[Dict[str, Any]] = []
         for token, instance in singletons.items():
+            instance_type = cast(type[object], type(instance))
+            module = cast(str, getattr(instance_type, "__module__", "unknown"))
             formatted.append(
                 {
                     "name": token.name,
-                    "type": type(instance).__name__,
-                    "module": getattr(type(instance), "__module__", "unknown"),
+                    "type": instance_type.__name__,
+                    "module": module,
                     "id": id(instance),
                 }
             )
@@ -114,7 +138,7 @@ class ContainerDebugger:
         except Exception:
             return False
 
-    def check_token_resolution(self, token: Token[T] | type[T]) -> Dict[str, Any]:
+    def check_token_resolution(self, token: Token[T] | type[T]) -> DiagnosticResult:
         """Check if a token can be resolved and provide diagnostic information.
 
         Args:
@@ -127,14 +151,16 @@ class ContainerDebugger:
             token if isinstance(token, Token) else Token(token.__name__, token)
         )
 
-        diagnostic = {
-            "token": {
-                "name": normalized_token.name,
-                "type": normalized_token.type_.__name__
-                if hasattr(normalized_token.type_, "__name__")
-                else str(normalized_token.type_),
-                "scope": normalized_token.scope.name,
-            },
+        token_info: TokenInfo = {
+            "name": normalized_token.name,
+            "type": normalized_token.type_.__name__
+            if hasattr(normalized_token.type_, "__name__")
+            else str(normalized_token.type_),
+            "scope": normalized_token.scope.name,
+        }
+
+        diagnostic: DiagnosticResult = {
+            "token": token_info,
             "registered": normalized_token in self.container.get_providers_view(),
             "singleton_cached": self.container.get_singleton_cached(normalized_token)
             is not None,
