@@ -274,7 +274,9 @@ class InjxTestScope:
 
 
 @contextmanager
-def injx_test_container(base_container: Container | None = None) -> Iterator[InjxTestContainer]:
+def injx_test_container(
+    base_container: Container | None = None,
+) -> Iterator[InjxTestContainer]:
     """Create a test container with automatic cleanup.
 
     Args:
