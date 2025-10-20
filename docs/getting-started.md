@@ -57,9 +57,61 @@ Defines the lifecycle of dependencies:
 - **SESSION**: One instance per session context
 - **TRANSIENT**: New instance every time
 
-## Basic Example
+## Quick Start with Autowiring (Recommended)
 
-Here's a complete example showing the fundamental pattern:
+**New in v0.2:** The `@autowire` decorator provides automatic registration and dependency resolution without explicit tokens:
+
+```python
+from injx import Container, autowire, Scope
+
+# Create and activate container
+container = Container()
+
+with container.activate():
+    # Simple autowiring - automatically registered as singleton
+    @autowire
+    class Logger:
+        def info(self, message: str) -> None:
+            print(f"INFO: {message}")
+
+        def error(self, message: str) -> None:
+            print(f"ERROR: {message}")
+
+    @autowire
+    class Database:
+        def query(self, sql: str) -> list[dict[str, str]]:
+            return [{"id": "1", "name": "Alice"}]
+
+    # Dependencies are automatically injected by type
+    @autowire(scope=Scope.TRANSIENT)
+    class UserService:
+        def __init__(self, logger: Logger, db: Database):
+            self.logger = logger
+            self.db = db
+
+        def process_users(self) -> None:
+            self.logger.info("Processing users")
+            users = self.db.query("SELECT * FROM users")
+
+            for user in users:
+                self.logger.info(f"Processing user: {user['name']}")
+
+# Use it - container resolves all dependencies automatically
+service = container[UserService]
+service.process_users()
+```
+
+**Key advantages:**
+- No explicit `Token` creation needed
+- Type annotations drive dependency resolution
+- Less boilerplate code
+- Full type safety maintained
+
+See [Migration Guide](migration-v0.2.md) for upgrading from token-based patterns.
+
+## Traditional Token-Based Pattern
+
+For fine-grained control, you can use explicit tokens:
 
 ```python
 from typing import Protocol
@@ -77,7 +129,7 @@ class Database(Protocol):
 class ConsoleLogger:
     def info(self, message: str) -> None:
         print(f"INFO: {message}")
-    
+
     def error(self, message: str) -> None:
         print(f"ERROR: {message}")
 
@@ -104,6 +156,12 @@ logger.info("Application started")
 users = db.query("SELECT * FROM users")
 logger.info(f"Found {len(users)} users")
 ```
+
+**When to use tokens:**
+- Multiple implementations of the same type
+- Protocol-based dependency injection
+- Runtime provider selection
+- Advanced lifecycle management
 
 ## Type-Safe Injection Patterns
 

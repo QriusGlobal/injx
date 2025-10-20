@@ -28,9 +28,14 @@ theme:
 nav:
   - Overview: index.md
   - Getting Started: getting-started.md
+  - Migration Guide (v0.2): migration-v0.2.md
   - Type Safety: type-safety.md
   - Usage: usage.md
-  - Advanced: advanced.md
+  - Advanced Topics:
+      - Advanced Patterns: advanced.md
+      - Concurrency: concurrency.md
+      - Internals: internals.md
+      - Philosophy: philosophy.md
   - Testing: testing.md
   - Performance: performance.md
   - Troubleshooting: troubleshooting.md

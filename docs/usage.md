@@ -85,6 +85,59 @@ async def get_user_v2(
     return user_service.get_user(user_id)
 ```
 
+#### Option 3: Autowiring (v0.2+, Simplest)
+
+**New in v0.2:** Use `@autowire` to eliminate tokens and boilerplate:
+
+```python
+from typing import Annotated
+from fastapi import FastAPI, Depends
+from injx import Container, autowire, Scope
+
+app = FastAPI()
+container = Container()
+
+# Define and register services automatically
+with container.activate():
+    @autowire
+    class Logger:
+        def info(self, message: str) -> None:
+            print(f"INFO: {message}")
+
+    @autowire
+    class Database:
+        def query(self, sql: str) -> list[dict[str, str]]:
+            return [{"id": "1", "name": "Alice"}]
+
+    @autowire(scope=Scope.SINGLETON)
+    class UserService:
+        def __init__(self, db: Database, logger: Logger):
+            self.db = db
+            self.logger = logger
+
+        def get_user(self, user_id: int) -> dict[str, str]:
+            self.logger.info(f"Fetching user {user_id}")
+            return self.db.query(f"SELECT * FROM users WHERE id = {user_id}")[0]
+
+# FastAPI dependency using container resolution
+def get_user_service() -> UserService:
+    return container[UserService]
+
+# Endpoints
+@app.get("/users/{user_id}")
+async def get_user(
+    user_id: int,
+    user_service: Annotated[UserService, Depends(get_user_service)]
+) -> dict[str, str]:
+    return user_service.get_user(user_id)
+```
+
+**Key benefits:**
+- No explicit tokens needed
+- Dependencies auto-resolved by type
+- Less boilerplate than Option 1 or 2
+- Full type safety preserved
+
 #### Request-Scoped Dependencies
 
 ```python

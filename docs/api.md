@@ -537,7 +537,7 @@ print(f"Cache hit rate: {info['hits'] / (info['hits'] + info['misses']):.1%}")
 
 ---
 
-See [Autowiring Specification](../specs/autowiring-spec.rst) for complete implementation details.
+See [Autowiring Specification](specs/autowiring-spec.rst) for complete implementation details.
 
 ## Contextual Containers
 
