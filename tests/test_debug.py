@@ -13,7 +13,7 @@ class TestContainerDebugger:
         debugger = ContainerDebugger(container)
 
         # Register some providers
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
         container.register(SERVICE_TOKEN, lambda: "test", scope=Scope.SINGLETON)
 
         state = debugger.get_container_state()
@@ -31,7 +31,7 @@ class TestContainerDebugger:
         container = Container()
         debugger = ContainerDebugger(container)
 
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
         container.register(SERVICE_TOKEN, lambda: "test")
 
         diagnostic = debugger.check_token_resolution(SERVICE_TOKEN)
@@ -46,7 +46,7 @@ class TestContainerDebugger:
         container = Container()
         debugger = ContainerDebugger(container)
 
-        UNREGISTERED_TOKEN = Token[str]("unregistered")
+        UNREGISTERED_TOKEN = Token("unregistered", str)
 
         diagnostic = debugger.check_token_resolution(UNREGISTERED_TOKEN)
 
@@ -60,7 +60,7 @@ class TestContainerDebugger:
         debugger = ContainerDebugger(container)
 
         # Trigger some resolutions to generate stats
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
         container.register(SERVICE_TOKEN, lambda: "test")
         container.get(SERVICE_TOKEN)
 
@@ -82,7 +82,7 @@ class TestDependencyVisualizer:
         container = Container()
         visualizer = DependencyVisualizer(container)
 
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
         container.register(SERVICE_TOKEN, lambda: "test")
 
         graph = visualizer.get_dependency_graph()
@@ -100,7 +100,7 @@ class TestDependencyVisualizer:
         container = Container()
         visualizer = DependencyVisualizer(container)
 
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
         container.register(SERVICE_TOKEN, lambda: "test")
 
         output = visualizer.print_graph()
@@ -128,7 +128,7 @@ class TestIntegrationWithContainer:
     def test_container_debug_info_method(self):
         """Test Container.debug_info() method."""
         container = Container()
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
         container.register(SERVICE_TOKEN, lambda: "test", scope=Scope.SINGLETON)
 
         debug_info = container.debug_info()
@@ -147,7 +147,7 @@ class TestIntegrationWithContainer:
     def test_container_list_tokens_method(self):
         """Test Container.list_tokens() method."""
         container = Container()
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
         container.register(SERVICE_TOKEN, lambda: "test")
 
         tokens = container.list_tokens()
@@ -159,8 +159,8 @@ class TestIntegrationWithContainer:
         """Test Container.is_singleton() method."""
         container = Container()
 
-        SINGLETON_TOKEN = Token[str]("singleton")
-        TRANSIENT_TOKEN = Token[str]("transient")
+        SINGLETON_TOKEN = Token("singleton", str)
+        TRANSIENT_TOKEN = Token("transient", str)
 
         container.register(SINGLETON_TOKEN, lambda: "test", scope=Scope.SINGLETON)
         container.register(TRANSIENT_TOKEN, lambda: "test", scope=Scope.TRANSIENT)
@@ -171,7 +171,7 @@ class TestIntegrationWithContainer:
     def test_container_dependency_graph_method(self):
         """Test Container.dependency_graph() method."""
         container = Container()
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
         container.register(SERVICE_TOKEN, lambda: "test")
 
         graph = container.dependency_graph()

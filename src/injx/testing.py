@@ -166,6 +166,14 @@ class TestContainer:
         """List all overridden tokens."""
         return list(self._overrides.keys()) + list(self._temp_providers.keys())
 
+    def request_scope(self):
+        """Delegate request_scope to base container."""
+        return self.base_container.request_scope()
+
+    def async_request_scope(self):
+        """Delegate async_request_scope to base container."""
+        return self.base_container.async_request_scope()
+
 
 class TestScope:
     """Context manager for isolated test scopes with automatic cleanup."""
@@ -182,11 +190,11 @@ class TestScope:
 
     def __enter__(self) -> TestScope:
         """Enter test scope."""
-        self._context_manager = (
-            self.container.base_container.request_scope()
-            if hasattr(self.container, "base_container")
-            else self.container.request_scope()
-        )
+        # Use base_container for TestContainer, otherwise use the container directly
+        if isinstance(self.container, TestContainer):
+            self._context_manager = self.container.base_container.request_scope()
+        else:
+            self._context_manager = self.container.request_scope()
         self._context_manager.__enter__()
         return self
 
@@ -206,7 +214,8 @@ class TestScope:
 
     async def __aenter__(self) -> TestScope:
         """Enter async test scope."""
-        if hasattr(self.container, "base_container"):
+        # Use base_container for TestContainer, otherwise use the container directly
+        if isinstance(self.container, TestContainer):
             self._async_context_manager = (
                 self.container.base_container.async_request_scope()
             )

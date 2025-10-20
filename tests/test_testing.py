@@ -20,29 +20,31 @@ class TestTestContainer:
 
     def test_override_with_instance(self):
         """Test overriding with direct instance."""
+        SERVICE = Token("service", str)
         base = Container()
-        base.register("service", lambda: "original")
+        base.register(SERVICE, lambda: "original")
 
         test_cont = TestContainer(base)
-        test_cont.override("service", "mocked")
+        test_cont.override(SERVICE, "mocked")
 
-        result = test_cont.get("service")
+        result = test_cont.get(SERVICE)
         assert result == "mocked"
 
     def test_override_with_factory(self):
         """Test overriding with factory function."""
+        SERVICE = Token("service", str)
         base = Container()
-        base.register("service", lambda: "original")
+        base.register(SERVICE, lambda: "original")
 
         test_cont = TestContainer(base)
-        test_cont.override("service", lambda: "mocked_factory")
+        test_cont.override(SERVICE, lambda: "mocked_factory")
 
-        result = test_cont.get("service")
+        result = test_cont.get(SERVICE)
         assert result == "mocked_factory"
 
     def test_mock_with_token(self):
         """Test mocking with Token."""
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
 
         test_cont = TestContainer()
         test_cont.mock(SERVICE_TOKEN)
@@ -64,23 +66,25 @@ class TestTestContainer:
 
     def test_clear_overrides(self):
         """Test clearing overrides."""
+        SERVICE = Token("service", str)
         base = Container()
-        base.register("service", lambda: "original")
+        base.register(SERVICE, lambda: "original")
 
         test_cont = TestContainer(base)
-        test_cont.override("service", "mocked")
-        assert test_cont.get("service") == "mocked"
+        test_cont.override(SERVICE, "mocked")
+        assert test_cont.get(SERVICE) == "mocked"
 
         test_cont.clear_overrides()
-        assert test_cont.get("service") == "original"
+        assert test_cont.get(SERVICE) == "original"
 
     def test_list_overrides(self):
         """Test listing overridden tokens."""
         test_cont = TestContainer()
 
-        SERVICE_TOKEN = Token[str]("service")
+        SERVICE_TOKEN = Token("service", str)
+        ANOTHER_SERVICE_TOKEN = Token("another_service", str)
         test_cont.override(SERVICE_TOKEN, "mock")
-        test_cont.mock("another_service")
+        test_cont.mock(ANOTHER_SERVICE_TOKEN)
 
         overrides = test_cont.list_overrides()
         assert len(overrides) == 2
@@ -123,7 +127,7 @@ class TestMockFactory:
 
     def test_create_mock_with_implementation(self):
         """Test creating mock with custom implementation."""
-        TOKEN = Token[str]("test")
+        TOKEN = Token("test", str)
 
         def custom_impl():
             return "custom"
@@ -133,7 +137,7 @@ class TestMockFactory:
 
     def test_create_mock_without_implementation(self):
         """Test creating mock without custom implementation."""
-        TOKEN = Token[str]("test")
+        TOKEN = Token("test", str)
 
         mock = MockFactory.create_mock(TOKEN)
         assert repr(mock) == "<Mock test>"
@@ -144,23 +148,24 @@ class TestGlobalFunctions:
 
     def test_test_container_context_manager(self):
         """Test test_container context manager."""
+        SERVICE = Token("service", str)
         base = Container()
-        base.register("service", lambda: "original")
+        base.register(SERVICE, lambda: "original")
 
         with test_container(base) as test_cont:
-            test_cont.override("service", "mocked")
-            assert test_cont.get("service") == "mocked"
+            test_cont.override(SERVICE, "mocked")
+            assert test_cont.get(SERVICE) == "mocked"
 
     def test_mock_dependency_function(self):
         """Test mock_dependency global function."""
-        TOKEN = Token[str]("test")
+        TOKEN = Token("test", str)
 
         mock = mock_dependency(TOKEN)
         assert repr(mock) == "<Mock test>"
 
     def test_mock_dependency_with_implementation(self):
         """Test mock_dependency with custom implementation."""
-        TOKEN = Token[str]("test")
+        TOKEN = Token("test", str)
 
         def custom():
             return "custom"
@@ -174,28 +179,30 @@ class TestIntegrationWithContainer:
 
     def test_container_test_scope_method(self):
         """Test Container.test_scope() method."""
+        SERVICE = Token("service", str)
         container = Container()
-        container.register("service", lambda: "original")
+        container.register(SERVICE, lambda: "original")
 
         with container.test_scope() as test:
-            test.override("service", "mocked")
-            result = test.get("service")
+            test.override(SERVICE, "mocked")
+            result = test.get(SERVICE)
             assert result == "mocked"
 
     def test_test_scope_isolation(self):
         """Test that test_scope provides isolation."""
+        SERVICE = Token("service", str)
         container = Container()
-        container.register("service", lambda: "original")
+        container.register(SERVICE, lambda: "original")
 
         # Get original in main container
-        original = container.get("service")
+        original = container.get(SERVICE)
         assert original == "original"
 
         # Override in test scope
         with container.test_scope() as test:
-            test.override("service", "mocked")
-            assert test.get("service") == "mocked"
+            test.override(SERVICE, "mocked")
+            assert test.get(SERVICE) == "mocked"
 
         # Verify original is unchanged after scope exit
-        after_scope = container.get("service")
+        after_scope = container.get(SERVICE)
         assert after_scope == "original"

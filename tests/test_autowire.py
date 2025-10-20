@@ -752,7 +752,7 @@ class TestCacheBehavior:
         with container.activate():
             autowire(IsolatedService1)
 
-        info1 = get_analysis_cache_info()
+        get_analysis_cache_info()
 
         # Clear for next test
         clear_analysis_cache()
@@ -801,8 +801,9 @@ class TestCacheBehavior:
             info_after_second = get_analysis_cache_info()
 
             # Verify cache hit occurred
-            assert info_after_second["hits"] > info_before_second["hits"], \
+            assert info_after_second["hits"] > info_before_second["hits"], (
                 "Second wire() operation should hit cache"
+            )
 
 
 class TestGenericNormalization:
@@ -834,7 +835,6 @@ class TestGenericNormalization:
             autowire(StrRepo)
 
         info_after_first = get_analysis_cache_info()
-        first_misses = info_after_first["misses"]
 
         # Register Repository[int] - should hit cache due to normalization
         container2 = Container()
@@ -845,8 +845,9 @@ class TestGenericNormalization:
         info_after_second = get_analysis_cache_info()
 
         # Verify cache hit (same base class after normalization)
-        assert info_after_second["hits"] > info_after_first["hits"], \
+        assert info_after_second["hits"] > info_after_first["hits"], (
             "Generic aliases should share cache entry after normalization"
+        )
 
     def test_generic_normalization_fixes_signature_bug(self) -> None:
         """Test that generic normalization correctly extracts __init__ signature.
@@ -908,9 +909,15 @@ class TestThreadSafety:
         service_classes = []
         for i in range(10):
             # Dynamically create unique class for each thread
-            cls = type(f"ThreadSafeService{i}", (), {
-                "__init__": lambda self: setattr(self, "thread_id", threading.get_ident())
-            })
+            cls = type(
+                f"ThreadSafeService{i}",
+                (),
+                {
+                    "__init__": lambda self: setattr(
+                        self, "thread_id", threading.get_ident()
+                    )
+                },
+            )
             service_classes.append(cls)
 
         containers: list[Container] = []
@@ -929,7 +936,9 @@ class TestThreadSafety:
                 errors.append(e)
 
         # Spawn 10 threads that concurrently analyze different classes
-        threads = [threading.Thread(target=register_and_resolve, args=(i,)) for i in range(10)]
+        threads = [
+            threading.Thread(target=register_and_resolve, args=(i,)) for i in range(10)
+        ]
 
         for thread in threads:
             thread.start()

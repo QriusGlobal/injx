@@ -986,7 +986,10 @@ class Container:
         Args:
             value: The value to track
         """
-        if isinstance(value, (SupportsClose, SupportsAsyncClose)):
+        # Track resources that have close() or aclose() methods (duck typing)
+        # More flexible than protocol checking, as many resources have close()
+        # but don't implement the full context manager protocol
+        if hasattr(value, "close") or hasattr(value, "aclose"):
             self._runtime.resources.append(value)
 
     async def aget(self, token: Token[U] | type[U]) -> U:
@@ -1413,6 +1416,40 @@ class Container:
         if self._context_state.overrides.get() is not None:
             self._context_state.overrides.set(None)
 
+    def list_overrides(self) -> list[Token[Any]]:
+        """List all currently active overrides for the current context.
+
+        Returns:
+            List of tokens that have overrides in the current context
+        """
+        current = self._context_state.overrides.get()
+        if current is None:
+            return []
+        return list(current.keys())
+
+    def mock(
+        self, token: Token[U] | type[U], implementation: Callable[[], U] | None = None
+    ) -> None:
+        """Create and register a mock for the given token.
+
+        This is a convenience method that combines mock creation and override.
+        Useful for testing scenarios where you want to quickly mock a dependency.
+
+        Args:
+            token: The token or type to mock
+            implementation: Optional custom implementation factory
+
+        Example:
+            container.mock(Database, lambda: MockDatabase())
+            # Or with default mock:
+            container.mock(Logger)
+        """
+        from .testing import MockFactory
+
+        normalized_token = self._coerce_to_token(token)
+        mock_instance = MockFactory.create_mock(normalized_token, implementation)
+        self.override(normalized_token, mock_instance)
+
     def _validate_and_track(self, token: Token[Any], instance: object) -> None:
         if not token.validate(instance):
             raise TypeError(
@@ -1575,7 +1612,8 @@ class Container:
             "cache_hit_rate": self.cache_hit_rate,
             "tokens": [token.name for token in self.list_tokens()],
             "scopes": {
-                token.name: token.scope.name for token in self._core.providers.keys()
+                token.name: spec.scope.name
+                for token, spec in self._core.providers.items()
             },
             "performance_stats": self.get_stats(),
         }

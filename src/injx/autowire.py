@@ -19,7 +19,9 @@ __all__ = [
 
 
 @lru_cache(maxsize=256)
-def _analyze_autowire_class_cached(cls: type[object]) -> tuple[tuple[str, Token[Any]], ...]:
+def _analyze_autowire_class_cached(
+    cls: type[object],
+) -> tuple[tuple[str, Token[Any]], ...]:
     """Analyze class constructor dependencies (cached path).
 
     This cached version handles the common case where caller_locals is not needed.
