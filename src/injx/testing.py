@@ -16,10 +16,10 @@ from .container import Container
 from .tokens import Token
 
 __all__ = [
-    "TestContainer",
-    "TestScope",
+    "InjxTestContainer",
+    "InjxTestScope",
     "MockFactory",
-    "test_container",
+    "injx_test_container",
     "mock_dependency",
     "override_dependency",
 ]
@@ -57,7 +57,7 @@ class MockFactory:
         return cast(T, MockInstance(token.name))
 
 
-class TestContainer:
+class InjxTestContainer:
     """Container wrapper specifically for testing with enhanced override capabilities.
 
     Provides isolated testing contexts, automatic cleanup, and convenient
@@ -175,10 +175,10 @@ class TestContainer:
         return self.base_container.async_request_scope()
 
 
-class TestScope:
+class InjxTestScope:
     """Context manager for isolated test scopes with automatic cleanup."""
 
-    def __init__(self, container: Container | TestContainer) -> None:
+    def __init__(self, container: Container | InjxTestContainer) -> None:
         """Initialize test scope.
 
         Args:
@@ -188,10 +188,44 @@ class TestScope:
         self._context_manager: Any = None
         self._async_context_manager: Any = None
 
-    def __enter__(self) -> TestScope:
+    def get(self, token: Token[T] | type[T]) -> T:
+        """Delegate get to container."""
+        return self.container.get(token)
+
+    def override(self, token: Token[T] | type[T], mock: T | Callable[[], T]) -> None:
+        """Delegate override to container."""
+        if hasattr(self.container, "override"):
+            self.container.override(token, mock)
+
+    def mock(
+        self, token: Token[T] | type[T], implementation: Callable[[], T] | None = None
+    ) -> None:
+        """Delegate mock to container."""
+        if hasattr(self.container, "mock"):
+            self.container.mock(token, implementation)
+
+    async def aget(self, token: Token[T] | type[T]) -> T:
+        """Delegate async get to container."""
+        if hasattr(self.container, "aget"):
+            return await self.container.aget(token)
+        return self.container.get(token)
+
+    def clear_overrides(self) -> None:
+        """Delegate clear_overrides to container."""
+        if hasattr(self.container, "clear_overrides"):
+            self.container.clear_overrides()
+
+    def list_overrides(self) -> list[Token[Any]]:
+        """Delegate list_overrides to container."""
+        if hasattr(self.container, "list_overrides"):
+            return self.container.list_overrides()
+        return []
+
+    def __enter__(self) -> InjxTestScope:
+    def __enter__(self) -> InjxTestScope:
         """Enter test scope."""
-        # Use base_container for TestContainer, otherwise use the container directly
-        if isinstance(self.container, TestContainer):
+        # Use base_container for InjxTestContainer, otherwise use the container directly
+        if isinstance(self.container, InjxTestContainer):
             self._context_manager = self.container.base_container.request_scope()
         else:
             self._context_manager = self.container.request_scope()
@@ -212,10 +246,10 @@ class TestScope:
         if hasattr(self.container, "clear_overrides"):
             self.container.clear_overrides()
 
-    async def __aenter__(self) -> TestScope:
+    async def __aenter__(self) -> InjxTestScope:
         """Enter async test scope."""
-        # Use base_container for TestContainer, otherwise use the container directly
-        if isinstance(self.container, TestContainer):
+        # Use base_container for InjxTestContainer, otherwise use the container directly
+        if isinstance(self.container, InjxTestContainer):
             self._async_context_manager = (
                 self.container.base_container.async_request_scope()
             )
@@ -240,16 +274,16 @@ class TestScope:
 
 
 @contextmanager
-def test_container(base_container: Container | None = None) -> Iterator[TestContainer]:
+def injx_test_container(base_container: Container | None = None) -> Iterator[InjxTestContainer]:
     """Create a test container with automatic cleanup.
 
     Args:
         base_container: Optional base container to copy from
 
     Yields:
-        A TestContainer instance ready for testing
+        An InjxTestContainer instance ready for testing
     """
-    test_cont = TestContainer(base_container)
+    test_cont = InjxTestContainer(base_container)
     try:
         yield test_cont
     finally:
@@ -275,7 +309,7 @@ def mock_dependency(
 
 
 def override_dependency(
-    container: Container | TestContainer,
+    container: Container | InjxTestContainer,
     token: Token[T] | type[T],
     mock: T | Callable[[], T],
 ) -> None:

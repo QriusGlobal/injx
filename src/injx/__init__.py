@@ -56,7 +56,12 @@ from injx.exceptions import (
 )
 from injx.injection import Depends, Given, Inject, inject
 from injx.protocols.container import ContainerProtocol, TestScopeProtocol
-from injx.testing import TestContainer, TestScope, mock_dependency, test_container
+from injx.testing import (
+    InjxTestContainer,
+    InjxTestScope,
+    injx_test_container,
+    mock_dependency,
+)
 from injx.tokens import Scope, Token, TokenFactory
 
 __all__ = [
@@ -78,9 +83,9 @@ __all__ = [
     "clear_analysis_cache",
     "get_analysis_cache_info",
     # Testing
-    "TestContainer",
-    "TestScope",
-    "test_container",
+    "InjxTestContainer",
+    "InjxTestScope",
+    "injx_test_container",
     "mock_dependency",
     # Debugging
     "ContainerDebugger",

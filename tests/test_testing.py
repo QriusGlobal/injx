@@ -1,21 +1,21 @@
 """Tests for the testing utilities module."""
 
-from injx import Container, Token, mock_dependency, test_container
-from injx.testing import MockFactory, TestContainer, TestScope
+from injx import Container, Token, injx_test_container, mock_dependency
+from injx.testing import InjxTestContainer, InjxTestScope, MockFactory
 
 
 class TestTestContainer:
-    """Test cases for TestContainer."""
+    """Test cases for InjxTestContainer."""
 
     def test_initialization_with_base_container(self):
-        """Test TestContainer initialization with base container."""
+        """Test InjxTestContainer initialization with base container."""
         base = Container()
-        test_cont = TestContainer(base)
+        test_cont = InjxTestContainer(base)
         assert test_cont.base_container is base
 
     def test_initialization_without_base_container(self):
-        """Test TestContainer initialization without base container."""
-        test_cont = TestContainer()
+        """Test InjxTestContainer initialization without base container."""
+        test_cont = InjxTestContainer()
         assert isinstance(test_cont.base_container, Container)
 
     def test_override_with_instance(self):
@@ -24,7 +24,7 @@ class TestTestContainer:
         base = Container()
         base.register(SERVICE, lambda: "original")
 
-        test_cont = TestContainer(base)
+        test_cont = InjxTestContainer(base)
         test_cont.override(SERVICE, "mocked")
 
         result = test_cont.get(SERVICE)
@@ -36,7 +36,7 @@ class TestTestContainer:
         base = Container()
         base.register(SERVICE, lambda: "original")
 
-        test_cont = TestContainer(base)
+        test_cont = InjxTestContainer(base)
         test_cont.override(SERVICE, lambda: "mocked_factory")
 
         result = test_cont.get(SERVICE)
@@ -46,7 +46,7 @@ class TestTestContainer:
         """Test mocking with Token."""
         SERVICE_TOKEN = Token("service", str)
 
-        test_cont = TestContainer()
+        test_cont = InjxTestContainer()
         test_cont.mock(SERVICE_TOKEN)
 
         result = test_cont.get(SERVICE_TOKEN)
@@ -58,7 +58,7 @@ class TestTestContainer:
         class TestService:
             pass
 
-        test_cont = TestContainer()
+        test_cont = InjxTestContainer()
         test_cont.mock(TestService)
 
         result = test_cont.get(TestService)
@@ -70,7 +70,7 @@ class TestTestContainer:
         base = Container()
         base.register(SERVICE, lambda: "original")
 
-        test_cont = TestContainer(base)
+        test_cont = InjxTestContainer(base)
         test_cont.override(SERVICE, "mocked")
         assert test_cont.get(SERVICE) == "mocked"
 
@@ -79,7 +79,7 @@ class TestTestContainer:
 
     def test_list_overrides(self):
         """Test listing overridden tokens."""
-        test_cont = TestContainer()
+        test_cont = InjxTestContainer()
 
         SERVICE_TOKEN = Token("service", str)
         ANOTHER_SERVICE_TOKEN = Token("another_service", str)
@@ -93,12 +93,12 @@ class TestTestContainer:
 
 
 class TestTestScope:
-    """Test cases for TestScope."""
+    """Test cases for InjxTestScope."""
 
     def test_sync_scope_cleanup(self):
         """Test synchronous scope cleanup."""
         base = Container()
-        scope = TestScope(base)
+        scope = InjxTestScope(base)
 
         with scope:
             # Test that we're in a scope
@@ -112,7 +112,7 @@ class TestTestScope:
         import asyncio
 
         base = Container()
-        scope = TestScope(base)
+        scope = InjxTestScope(base)
 
         async def test_async():
             async with scope:
@@ -147,12 +147,12 @@ class TestGlobalFunctions:
     """Test cases for global testing utility functions."""
 
     def test_test_container_context_manager(self):
-        """Test test_container context manager."""
+        """Test injx_test_container context manager."""
         SERVICE = Token("service", str)
         base = Container()
         base.register(SERVICE, lambda: "original")
 
-        with test_container(base) as test_cont:
+        with injx_test_container(base) as test_cont:
             test_cont.override(SERVICE, "mocked")
             assert test_cont.get(SERVICE) == "mocked"
 

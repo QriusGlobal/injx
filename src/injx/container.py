@@ -1553,9 +1553,9 @@ class Container:
                 # Test with isolated dependencies
                 # Original database is unaffected after scope exit
         """
-        from .testing import TestScope
+        from .testing import InjxTestScope
 
-        return TestScope(self)
+        return InjxTestScope(self)
 
     def list_tokens(self) -> list[Token[Any]]:
         """List all registered tokens.
