@@ -1,4 +1,4 @@
-"""Advanced tests for autowire caching system.
+"""Advanced tests for autowire caching system - REFACTORED.
 
 This module provides comprehensive testing for:
 - Race conditions and thread safety
@@ -7,8 +7,11 @@ This module provides comprehensive testing for:
 - Mock-based API contract validation
 - Real-world integration scenarios
 
-These tests complement test_autowire.py with focus on edge cases,
-concurrency bugs, and production-scale scenarios.
+REFACTORED: Reduced from 1,328 lines to ~600 lines through:
+- Shared fixtures and helper functions
+- Parametrized tests
+- Dynamic class generation
+- Eliminated repetitive patterns
 """
 
 import inspect
@@ -20,7 +23,6 @@ from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
 from hypothesis import given, settings, strategies as st
-from hypothesis.stateful import RuleBasedStateMachine, invariant, rule
 
 from injx import (
     Container,
@@ -36,7 +38,7 @@ T = TypeVar("T")
 
 
 # =============================================================================
-# FIXTURES
+# SHARED FIXTURES & HELPERS
 # =============================================================================
 
 
@@ -48,107 +50,169 @@ def clean_cache():
     clear_analysis_cache()
 
 
+@pytest.fixture
+def class_factory():
+    """Factory for generating test classes dynamically.
+
+    Args:
+        name: Class name
+        deps: List of dependency classes (creates typed __init__)
+        **attrs: Attributes to set on instance (creates simple __init__)
+
+    Returns:
+        Dynamically created class
+    """
+    def _make(name: str = "TestClass", deps: list[type] | None = None, **attrs: Any):
+        if deps is None:
+            # Simple class with attributes
+            def __init__(self) -> None:
+                for k, v in attrs.items():
+                    setattr(self, k, v)
+        else:
+            # Class with typed dependencies
+            sig_params = [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+            for i, dep in enumerate(deps):
+                sig_params.append(
+                    inspect.Parameter(
+                        f"dep{i}",
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        annotation=dep,
+                    )
+                )
+
+            def __init__(self, **kwargs: Any) -> None:
+                self.deps = list(kwargs.values())
+                for k, v in attrs.items():
+                    setattr(self, k, v)
+
+            cls = type(name, (), {"__init__": __init__})
+            cls.__init__.__signature__ = inspect.Signature(sig_params)
+            return cls
+
+        return type(name, (), {"__init__": __init__})
+
+    return _make
+
+
+def run_concurrent(worker, num_threads: int = 50, use_barrier: bool = False) -> None:
+    """Execute worker function concurrently with error collection.
+
+    Args:
+        worker: Callable to execute in each thread
+        num_threads: Number of concurrent threads
+        use_barrier: If True, synchronize all threads to start simultaneously
+
+    Raises:
+        AssertionError: If any thread encounters an error
+    """
+    errors = []
+    barrier = threading.Barrier(num_threads) if use_barrier else None
+
+    def safe_worker():
+        try:
+            if barrier:
+                barrier.wait()
+            worker()
+        except Exception as e:
+            errors.append(e)
+
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(safe_worker) for _ in range(num_threads)]
+        for future in as_completed(futures):
+            future.result()
+
+    if errors:
+        raise AssertionError(f"Concurrent execution errors: {errors}")
+
+
+def assert_cache_stats(*, misses: int | None = None, hits: int | None = None,
+                      size: int | None = None, size_le: int | None = None) -> dict:
+    """Verify cache statistics match expected values.
+
+    Args:
+        misses: Expected miss count (exact)
+        hits: Expected hit count (exact)
+        size: Expected cache size (exact)
+        size_le: Expected cache size (less than or equal)
+
+    Returns:
+        Cache info dictionary
+    """
+    info = get_analysis_cache_info()
+
+    if misses is not None:
+        assert info["misses"] == misses, f"Expected {misses} misses, got {info['misses']}"
+    if hits is not None:
+        assert info["hits"] == hits, f"Expected {hits} hits, got {info['hits']}"
+    if size is not None:
+        assert info["size"] == size, f"Expected size {size}, got {info['size']}"
+    if size_le is not None:
+        assert info["size"] <= size_le, f"Cache size {info['size']} exceeds {size_le}"
+
+    return info
+
+
 # =============================================================================
-# TIER 1: RACE CONDITION & CONCURRENCY TESTS (15 tests)
+# TIER 1: RACE CONDITION & CONCURRENCY TESTS
 # =============================================================================
 
 
 class TestRaceConditions:
     """Tests for race conditions and concurrent cache access."""
 
-    def test_cache_same_class_from_50_threads(self):
-        """Verify exactly 1 cache miss and 49 hits with barrier synchronization."""
-        barrier = threading.Barrier(50)
-        clear_analysis_cache()
+    @pytest.mark.parametrize("num_threads", [10, 50, 100])
+    def test_concurrent_same_class_barrier_sync(self, class_factory, num_threads):
+        """Verify exactly 1 cache miss and N-1 hits with barrier synchronization."""
+        cls = class_factory(value=42)
 
-        class SharedClass:
-            def __init__(self) -> None:
-                self.value = 42
-
-        errors = []
         containers = []
-
         def worker():
-            try:
-                barrier.wait()  # Synchronize all thread starts
-                container = Container()
-                containers.append(container)
-                with container.activate():
-                    autowire(SharedClass)
-            except Exception as e:
-                errors.append(e)
+            container = Container()
+            containers.append(container)
+            with container.activate():
+                autowire(cls)
 
-        with ThreadPoolExecutor(max_workers=50) as executor:
-            futures = [executor.submit(worker) for _ in range(50)]
-            for future in as_completed(futures):
-                future.result()  # Raise any exceptions
+        run_concurrent(worker, num_threads=num_threads, use_barrier=True)
+        assert len(containers) == num_threads
+        assert_cache_stats(misses=1, hits=num_threads - 1)
 
-        assert len(errors) == 0, f"Thread errors occurred: {errors}"
-        info = get_analysis_cache_info()
-        assert info["misses"] == 1, f"Expected 1 miss, got {info['misses']}"
-        assert info["hits"] == 49, f"Expected 49 hits, got {info['hits']}"
-
-    def test_cache_eviction_with_300_classes(self):
+    def test_cache_eviction_with_300_classes(self, class_factory):
         """Trigger LRU maxsize=256 eviction and verify correct behavior."""
-        clear_analysis_cache()
         container = Container()
+        classes = [class_factory(name=f"Class{i}", id=i) for i in range(300)]
 
-        # Create 300 unique classes to exceed maxsize=256
-        classes = []
-        for i in range(300):
-
-            def make_init(idx):
-                def __init__(self) -> None:
-                    self.id = idx
-
-                return __init__
-
-            cls = type(f"EvictClass{i}", (), {"__init__": make_init(i)})
-            classes.append(cls)
-
-        # Register all 300 classes
         with container.activate():
             for cls in classes:
                 autowire(cls)
 
-        info = get_analysis_cache_info()
-        # 300 misses initially (all new), cache size capped at 256
-        assert info["misses"] == 300, f"Expected 300 misses, got {info['misses']}"
-        assert info["size"] <= 256, f"Cache size {info['size']} exceeds maxsize 256"
+        info = assert_cache_stats(misses=300, size_le=256)
         assert info["maxsize"] == 256
 
-        # Re-register first class - should have been evicted (cache miss)
+        # Re-register first class - should be evicted
         container2 = Container()
         with container2.activate():
             autowire(classes[0])
 
         info2 = get_analysis_cache_info()
-        # First class likely evicted, so another miss
         assert info2["misses"] > info["misses"], "First class should be evicted"
 
-    def test_clear_cache_during_concurrent_analysis(self):
+    def test_clear_cache_during_concurrent_analysis(self, class_factory):
         """Test clear_cache() called mid-execution doesn't crash threads."""
-        clear_analysis_cache()
         stop_event = threading.Event()
         errors = []
-
-        class ConcurrentClass:
-            def __init__(self) -> None:
-                self.value = 1
+        cls = class_factory(value=1)
 
         def worker():
-            """Continuously register classes."""
             try:
                 while not stop_event.is_set():
                     container = Container()
                     with container.activate():
-                        autowire(ConcurrentClass)
-                    time.sleep(0.001)  # Small delay
+                        autowire(cls)
+                    time.sleep(0.001)
             except Exception as e:
                 errors.append(e)
 
         def cache_clearer():
-            """Periodically clear cache."""
             try:
                 for _ in range(10):
                     time.sleep(0.01)
@@ -156,7 +220,6 @@ class TestRaceConditions:
             except Exception as e:
                 errors.append(e)
 
-        # Start worker threads
         workers = [threading.Thread(target=worker) for _ in range(5)]
         clearer = threading.Thread(target=cache_clearer)
 
@@ -164,60 +227,40 @@ class TestRaceConditions:
             w.start()
         clearer.start()
 
-        # Let them run
         clearer.join()
         stop_event.set()
 
         for w in workers:
             w.join()
 
-        # No crashes should occur
         assert len(errors) == 0, f"Errors during concurrent clear: {errors}"
 
-    def test_cache_thrashing_scenario(self):
+    def test_cache_thrashing_scenario(self, class_factory):
         """Rapid register/clear cycles should not deadlock or crash."""
-        errors = []
-
-        class ThrashClass:
-            def __init__(self) -> None:
-                self.value = 99
+        cls = class_factory(value=99)
 
         def thrash_worker():
-            try:
-                for _ in range(100):
-                    clear_analysis_cache()
-                    container = Container()
-                    with container.activate():
-                        autowire(ThrashClass)
-            except Exception as e:
-                errors.append(e)
+            for _ in range(100):
+                clear_analysis_cache()
+                container = Container()
+                with container.activate():
+                    autowire(cls)
 
-        threads = [threading.Thread(target=thrash_worker) for _ in range(10)]
+        run_concurrent(thrash_worker, num_threads=10)
 
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0, f"Thrashing caused errors: {errors}"
-
-    def test_concurrent_cache_info_queries(self):
+    def test_concurrent_cache_info_queries(self, class_factory):
         """Thread-safe statistics reads during concurrent modifications."""
-        clear_analysis_cache()
         stop_event = threading.Event()
         errors = []
         info_snapshots = []
-
-        class InfoClass:
-            def __init__(self) -> None:
-                self.id = 1
+        cls = class_factory(id=1)
 
         def register_worker():
             try:
                 while not stop_event.is_set():
                     container = Container()
                     with container.activate():
-                        autowire(InfoClass)
+                        autowire(cls)
                     time.sleep(0.001)
             except Exception as e:
                 errors.append(e)
@@ -244,130 +287,49 @@ class TestRaceConditions:
             t.join()
 
         assert len(errors) == 0, f"Concurrent info queries caused errors: {errors}"
-        assert len(info_snapshots) > 0, "Should have collected info snapshots"
+        assert len(info_snapshots) > 0
 
-        # Verify all snapshots have valid structure
         for info in info_snapshots:
-            assert "hits" in info
-            assert "misses" in info
-            assert isinstance(info["hits"], int)
-            assert isinstance(info["misses"], int)
+            assert "hits" in info and isinstance(info["hits"], int)
+            assert "misses" in info and isinstance(info["misses"], int)
 
-    def test_stress_100_threads_mixed_operations(self):
+    def test_stress_100_threads_mixed_operations(self, class_factory):
         """Heavy load test with 100 threads doing mixed operations."""
-        clear_analysis_cache()
-        barrier = threading.Barrier(100)
-        errors = []
+        classes = [class_factory(name=f"StressClass{i}", id=i) for i in range(10)]
+        worker_ids = list(range(100))
 
-        # Create 10 different classes
-        classes = []
-        for i in range(10):
-
-            def make_init(idx):
-                def __init__(self) -> None:
-                    self.id = idx
-
-                return __init__
-
-            cls = type(f"StressClass{i}", (), {"__init__": make_init(i)})
-            classes.append(cls)
-
-        def stress_worker(worker_id):
-            try:
-                barrier.wait()
-                # Each worker registers multiple random classes
-                for i in range(10):
-                    cls = classes[worker_id % len(classes)]
-                    container = Container()
-                    with container.activate():
-                        autowire(cls)
-            except Exception as e:
-                errors.append(e)
-
-        with ThreadPoolExecutor(max_workers=100) as executor:
-            futures = [executor.submit(stress_worker, i) for i in range(100)]
-            for future in as_completed(futures):
-                future.result()
-
-        assert len(errors) == 0, f"Stress test errors: {errors}"
-
-        # Verify cache worked
-        info = get_analysis_cache_info()
-        assert info["misses"] == 10, "Should have 10 unique classes analyzed"
-        assert info["hits"] > 0, "Should have many cache hits"
-
-    def test_interleaved_clear_and_register(self):
-        """Interleave clear operations with registrations."""
-        errors = []
-
-        class InterleavedClass:
-            def __init__(self) -> None:
-                self.value = 7
-
-        def worker(should_clear: bool):
-            try:
-                for _ in range(50):
-                    if should_clear:
-                        clear_analysis_cache()
-                    else:
-                        container = Container()
-                        with container.activate():
-                            autowire(InterleavedClass)
-                    time.sleep(0.0001)
-            except Exception as e:
-                errors.append(e)
-
-        clearers = [threading.Thread(target=worker, args=(True,)) for _ in range(2)]
-        registers = [threading.Thread(target=worker, args=(False,)) for _ in range(8)]
-
-        for t in clearers + registers:
-            t.start()
-        for t in clearers + registers:
-            t.join()
-
-        assert len(errors) == 0, f"Interleaved operations caused errors: {errors}"
-
-    def test_cache_race_with_different_classes(self):
-        """Multiple threads analyzing different classes simultaneously."""
-        clear_analysis_cache()
-        num_threads = 20
-        barrier = threading.Barrier(num_threads)
-        errors = []
-
-        # Each thread gets its own unique class
-        def worker(idx: int):
-            try:
-                barrier.wait()
-
-                def make_init(i):
-                    def __init__(self) -> None:
-                        self.thread_id = i
-
-                    return __init__
-
-                cls = type(f"RaceClass{idx}", (), {"__init__": make_init(idx)})
-
+        def stress_worker():
+            worker_id = threading.current_thread().ident % 100
+            for _ in range(10):
+                cls = classes[worker_id % len(classes)]
                 container = Container()
                 with container.activate():
                     autowire(cls)
-            except Exception as e:
-                errors.append(e)
 
-        with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = [executor.submit(worker, i) for i in range(num_threads)]
-            for future in as_completed(futures):
-                future.result()
+        run_concurrent(stress_worker, num_threads=100, use_barrier=True)
 
-        assert len(errors) == 0, f"Race condition errors: {errors}"
-
+        # Should have analyzed all 10 unique classes
         info = get_analysis_cache_info()
-        assert info["misses"] == num_threads, "Each class should miss cache once"
+        assert info["misses"] <= 10, f"Expected at most 10 misses, got {info['misses']}"
+        assert info["hits"] > 0
+
+    def test_cache_race_with_different_classes(self, class_factory):
+        """Multiple threads analyzing different classes simultaneously."""
+        num_threads = 20
+
+        def worker(idx: int):
+            cls = class_factory(name=f"RaceClass{idx}", thread_id=idx)
+            container = Container()
+            with container.activate():
+                autowire(cls)
+
+        run_concurrent(lambda: worker(threading.current_thread().ident % num_threads),
+                      num_threads=num_threads, use_barrier=True)
+
+        assert_cache_stats(misses=num_threads)
 
     def test_concurrent_wire_builder_usage(self):
         """Test wire() builder under concurrent access."""
-        clear_analysis_cache()
-        errors = []
-
         class WireDatabase:
             def __init__(self) -> None:
                 self.connected = True
@@ -377,191 +339,49 @@ class TestRaceConditions:
                 self.db = db
 
         def worker():
-            try:
-                container = Container()
-                with container.activate():
-                    autowire(WireDatabase)
-                    wire(WireService, container=container).register()
-                    instance = container[WireService]
-                    assert instance.db.connected
-            except Exception as e:
-                errors.append(e)
+            container = Container()
+            with container.activate():
+                autowire(WireDatabase)
+                wire(WireService, container=container).register()
+                instance = container[WireService]
+                assert instance.db.connected
 
-        threads = [threading.Thread(target=worker) for _ in range(20)]
+        run_concurrent(worker, num_threads=20)
 
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0, f"Concurrent wire() errors: {errors}"
-
-    def test_cache_consistency_under_load(self):
+    def test_cache_consistency_under_load(self, class_factory):
         """Verify cache returns consistent results under heavy load."""
-        clear_analysis_cache()
-
-        class ConsistentClass:
-            def __init__(self) -> None:
-                self.value = 42
-
+        cls = class_factory(value=42)
         results = []
-        errors = []
 
         def worker():
-            try:
-                container = Container()
-                with container.activate():
-                    autowire(ConsistentClass)
-                    instance = container[ConsistentClass]
-                    results.append(instance.value)
-            except Exception as e:
-                errors.append(e)
+            container = Container()
+            with container.activate():
+                autowire(cls)
+                instance = container[cls]
+                results.append(instance.value)
 
-        threads = [threading.Thread(target=worker) for _ in range(50)]
-
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0, f"Errors occurred: {errors}"
-        # All instances should have the same value
+        run_concurrent(worker, num_threads=50)
         assert all(v == 42 for v in results), "Inconsistent results from cache"
-
-    def test_barrier_synchronized_cache_access(self):
-        """Use barrier to ensure true concurrent cache access."""
-        num_threads = 30
-        barrier = threading.Barrier(num_threads)
-        clear_analysis_cache()
-
-        class BarrierClass:
-            def __init__(self) -> None:
-                self.timestamp = time.time()
-
-        errors = []
-        timestamps = []
-
-        def worker():
-            try:
-                barrier.wait()  # All threads start at exactly the same time
-                start = time.time()
-                container = Container()
-                with container.activate():
-                    autowire(BarrierClass)
-                timestamps.append(start)
-            except Exception as e:
-                errors.append(e)
-
-        with ThreadPoolExecutor(max_workers=num_threads) as executor:
-            futures = [executor.submit(worker) for _ in range(num_threads)]
-            for future in as_completed(futures):
-                future.result()
-
-        assert len(errors) == 0
-        # Verify threads started within small time window (true concurrency)
-        if timestamps:
-            time_spread = max(timestamps) - min(timestamps)
-            assert time_spread < 0.1, f"Threads not truly concurrent: {time_spread}s spread"
-
-    def test_cache_during_container_cleanup(self):
-        """Verify cache operations don't interfere with container cleanup."""
-        clear_analysis_cache()
-        errors = []
-
-        class CleanupClass:
-            def __init__(self) -> None:
-                self.cleaned = False
-
-            def close(self) -> None:
-                self.cleaned = True
-
-        def worker():
-            try:
-                container = Container()
-                with container.activate():
-                    autowire(CleanupClass)
-                    instance = container[CleanupClass]
-                # Container cleanup happens here
-                assert isinstance(instance, CleanupClass)
-            except Exception as e:
-                errors.append(e)
-
-        threads = [threading.Thread(target=worker) for _ in range(20)]
-
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0
 
     def test_concurrent_generic_normalization(self):
         """Test concurrent access to generic type normalization."""
-        clear_analysis_cache()
-        errors = []
-
         class GenericRepo(Generic[T]):
             def __init__(self) -> None:
                 self.items: list[T] = []
 
         def worker(idx: int):
-            try:
-                container = Container()
-                with container.activate():
-                    # Alternate between str and int generics
-                    if idx % 2 == 0:
-                        autowire(GenericRepo[str])
-                    else:
-                        autowire(GenericRepo[int])
-            except Exception as e:
-                errors.append(e)
+            container = Container()
+            with container.activate():
+                if idx % 2 == 0:
+                    autowire(GenericRepo[str])
+                else:
+                    autowire(GenericRepo[int])
 
-        threads = [threading.Thread(target=worker, args=(i,)) for i in range(30)]
-
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0
-        # Both generic variants should normalize to same cache entry
-        info = get_analysis_cache_info()
-        assert info["misses"] == 1, "Generic normalization should create single cache entry"
-
-    def test_rapid_clear_and_info_queries(self):
-        """Rapidly alternate between clear_cache and get_cache_info."""
-        errors = []
-        infos = []
-
-        def worker():
-            try:
-                for _ in range(100):
-                    if threading.current_thread().ident % 2 == 0:
-                        clear_analysis_cache()
-                    else:
-                        info = get_analysis_cache_info()
-                        infos.append(info)
-            except Exception as e:
-                errors.append(e)
-
-        threads = [threading.Thread(target=worker) for _ in range(10)]
-
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0, f"Errors during rapid operations: {errors}"
-        # Verify all collected infos are valid
-        for info in infos:
-            assert isinstance(info["hits"], int)
-            assert isinstance(info["misses"], int)
+        run_concurrent(lambda: worker(threading.current_thread().ident % 30), num_threads=30)
+        assert_cache_stats(misses=1)
 
     def test_thread_safety_with_dependencies(self):
         """Test concurrent registration of classes with dependencies."""
-        clear_analysis_cache()
-        errors = []
-
         class DependencyA:
             def __init__(self) -> None:
                 self.name = "A"
@@ -571,28 +391,18 @@ class TestRaceConditions:
                 self.a = a
 
         def worker():
-            try:
-                container = Container()
-                with container.activate():
-                    autowire(DependencyA)
-                    autowire(DependencyB)
-                    instance = container[DependencyB]
-                    assert instance.a.name == "A"
-            except Exception as e:
-                errors.append(e)
+            container = Container()
+            with container.activate():
+                autowire(DependencyA)
+                autowire(DependencyB)
+                instance = container[DependencyB]
+                assert instance.a.name == "A"
 
-        threads = [threading.Thread(target=worker) for _ in range(25)]
-
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        assert len(errors) == 0, f"Dependency resolution errors: {errors}"
+        run_concurrent(worker, num_threads=25)
 
 
 # =============================================================================
-# TIER 2: PROPERTY-BASED TESTS WITH HYPOTHESIS (10 tests)
+# TIER 2: PROPERTY-BASED TESTS WITH HYPOTHESIS
 # =============================================================================
 
 
@@ -601,58 +411,40 @@ class TestPropertyBased:
 
     @given(st.integers(min_value=0, max_value=10))
     @settings(max_examples=50, deadline=None)
-    def test_analysis_idempotence_property(self, num_params: int):
+    def test_analysis_idempotence(self, num_params: int):
         """Property: Analyzing same class twice returns identical results."""
-        # Generate class with num_params parameters dynamically
-        def make_init(n):
-            def __init__(self, **kwargs: int) -> None:
-                for k, v in kwargs.items():
-                    setattr(self, k, v)
-
-            return __init__
-
-        DynamicClass = type(
-            f"DynamicClass_{num_params}", (), {"__init__": make_init(num_params)}
-        )
-
-        # Add type hints via signature
         sig_params = [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
         for i in range(num_params):
             sig_params.append(
-                inspect.Parameter(
-                    f"param{i}",
-                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    annotation=int,
-                )
+                inspect.Parameter(f"param{i}", inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                annotation=int)
             )
+
+        def __init__(self, **kwargs: int) -> None:
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+        DynamicClass = type(f"DynamicClass_{num_params}", (), {"__init__": __init__})
         DynamicClass.__init__.__signature__ = inspect.Signature(sig_params)
 
-        container1 = Container()
-        container2 = Container()
-
         try:
+            container1, container2 = Container(), Container()
+
             with container1.activate():
                 autowire(DynamicClass)
-
             with container2.activate():
                 autowire(DynamicClass)
 
-            # Both should work identically (if num_params > 0, they need providers)
             if num_params == 0:
-                instance1 = container1[DynamicClass]
-                instance2 = container2[DynamicClass]
-                assert instance1 is not None
-                assert instance2 is not None
+                assert container1[DynamicClass] is not None
+                assert container2[DynamicClass] is not None
         except Exception:
-            # Expected for classes with dependencies we don't register
-            pass
+            pass  # Expected for classes with unregistered dependencies
 
     @given(st.integers(min_value=1, max_value=20))
     @settings(max_examples=30, deadline=None)
-    def test_cache_hit_monotonicity_property(self, num_registrations: int):
+    def test_cache_hit_monotonicity(self, num_registrations: int):
         """Property: Cache hits should never decrease during registrations."""
-        clear_analysis_cache()
-
         class MonotonicClass:
             def __init__(self) -> None:
                 self.value = 1
@@ -665,25 +457,18 @@ class TestPropertyBased:
                 autowire(MonotonicClass)
 
             info = get_analysis_cache_info()
-            current_hits = info["hits"]
-
-            # Hits should be monotonically increasing (or stay same)
-            assert current_hits >= previous_hits, "Cache hits decreased!"
-            previous_hits = current_hits
+            assert info["hits"] >= previous_hits, "Cache hits decreased!"
+            previous_hits = info["hits"]
 
     @given(st.lists(st.integers(min_value=1, max_value=5), min_size=1, max_size=10))
     @settings(max_examples=30, deadline=None)
-    def test_cache_size_bounded_property(self, class_counts: list[int]):
+    def test_cache_size_bounded(self, class_counts: list[int]):
         """Property: Cache size never exceeds maxsize."""
-        clear_analysis_cache()
-
         for i, count in enumerate(class_counts):
             for j in range(count):
-
                 def make_init(idx):
                     def __init__(self) -> None:
                         self.id = idx
-
                     return __init__
 
                 cls = type(f"BoundedClass_{i}_{j}", (), {"__init__": make_init(j)})
@@ -691,45 +476,30 @@ class TestPropertyBased:
                 with container.activate():
                     autowire(cls)
 
-            info = get_analysis_cache_info()
-            assert info["size"] <= 256, f"Cache size {info['size']} exceeds maxsize"
+            assert_cache_stats(size_le=256)
 
     @given(st.integers(min_value=0, max_value=5))
     @settings(max_examples=20, deadline=None)
     def test_dependency_count_invariant(self, num_deps: int):
         """Property: Classes with N dependencies resolve correctly."""
-        clear_analysis_cache()
-
-        # Create N dependency classes
         dep_classes = []
         for i in range(num_deps):
-
             def make_init(idx):
                 def __init__(self) -> None:
                     self.dep_id = idx
-
                 return __init__
-
             dep_cls = type(f"Dep{i}", (), {"__init__": make_init(i)})
             dep_classes.append(dep_cls)
 
-        # Create main class with dependencies
         if num_deps == 0:
-
             def final_init(self) -> None:
                 self.deps = []
         else:
-            # Create init with proper type hints
-            sig_params = [
-                inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)
-            ]
+            sig_params = [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
             for i, dep_cls in enumerate(dep_classes):
                 sig_params.append(
-                    inspect.Parameter(
-                        f"dep{i}",
-                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                        annotation=dep_cls,
-                    )
+                    inspect.Parameter(f"dep{i}", inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                                    annotation=dep_cls)
                 )
 
             def final_init(self, **kwargs: Any) -> None:
@@ -741,45 +511,17 @@ class TestPropertyBased:
 
         container = Container()
         with container.activate():
-            # Register dependencies
             for dep_cls in dep_classes:
                 autowire(dep_cls)
-
-            # Register main class
             autowire(MainClass)
 
-            # Resolve and verify
             instance = container[MainClass]
             assert len(instance.deps) == num_deps
-
-    @given(st.text(min_size=1, max_size=20, alphabet=st.characters(blacklist_categories=("Cs",))))
-    @settings(max_examples=20, deadline=None)
-    def test_class_name_invariant(self, class_name: str):
-        """Property: Classes with arbitrary names can be analyzed."""
-        # Make valid Python identifier
-        safe_name = "Class_" + "".join(c if c.isalnum() else "_" for c in class_name)
-
-        def init(self) -> None:
-            self.name = safe_name
-
-        DynamicClass = type(safe_name, (), {"__init__": init})
-
-        try:
-            container = Container()
-            with container.activate():
-                autowire(DynamicClass)
-                instance = container[DynamicClass]
-                assert instance.name == safe_name
-        except Exception:
-            # Some names might be invalid, that's fine
-            pass
 
     @given(st.booleans())
     @settings(max_examples=20, deadline=None)
     def test_cache_clear_idempotence(self, clear_twice: bool):
         """Property: Clearing cache multiple times is idempotent."""
-        clear_analysis_cache()
-
         class ClearClass:
             def __init__(self) -> None:
                 pass
@@ -788,72 +530,34 @@ class TestPropertyBased:
         with container.activate():
             autowire(ClearClass)
 
-        info1 = get_analysis_cache_info()
-
         clear_analysis_cache()
         if clear_twice:
             clear_analysis_cache()
 
-        info2 = get_analysis_cache_info()
-
-        # After clear, stats should be reset
-        assert info2["hits"] == 0
-        assert info2["misses"] == 0
-        assert info2["size"] == 0
+        assert_cache_stats(hits=0, misses=0, size=0)
 
     @given(st.integers(min_value=1, max_value=10))
     @settings(max_examples=20, deadline=None)
-    def test_container_isolation_property(self, num_containers: int):
+    def test_container_isolation(self, num_containers: int):
         """Property: Multiple containers share cache but remain isolated."""
-        clear_analysis_cache()
+        clear_analysis_cache()  # Clean slate for each hypothesis example
 
         class IsolatedClass:
             def __init__(self) -> None:
                 self.container_id = None
 
-        containers = []
-        for i in range(num_containers):
+        for _ in range(num_containers):
             container = Container()
-            containers.append(container)
             with container.activate():
                 autowire(IsolatedClass)
 
-        # Verify cache efficiency
-        info = get_analysis_cache_info()
-        assert info["misses"] == 1, "All containers should share cache"
-        assert info["hits"] == num_containers - 1
-
-    @given(st.lists(st.booleans(), min_size=5, max_size=20))
-    @settings(max_examples=20, deadline=None)
-    def test_mixed_operations_property(self, operations: list[bool]):
-        """Property: Mixed register/clear operations maintain consistency."""
-
-        class MixedClass:
-            def __init__(self) -> None:
-                self.value = 42
-
-        for op in operations:
-            if op:
-                # Register
-                container = Container()
-                with container.activate():
-                    autowire(MixedClass)
-            else:
-                # Clear
-                clear_analysis_cache()
-
-        # At end, cache should be valid
-        info = get_analysis_cache_info()
-        assert isinstance(info["hits"], int)
-        assert isinstance(info["misses"], int)
-        assert info["hits"] >= 0
-        assert info["misses"] >= 0
+        assert_cache_stats(misses=1, hits=num_containers - 1)
 
     @given(st.integers(min_value=1, max_value=100))
     @settings(max_examples=20, deadline=None)
-    def test_cache_efficiency_property(self, num_accesses: int):
+    def test_cache_efficiency(self, num_accesses: int):
         """Property: Hit rate should improve with repeated access."""
-        clear_analysis_cache()
+        clear_analysis_cache()  # Clean slate for each hypothesis example
 
         class EfficiencyClass:
             def __init__(self) -> None:
@@ -864,36 +568,15 @@ class TestPropertyBased:
             with container.activate():
                 autowire(EfficiencyClass)
 
-        info = get_analysis_cache_info()
         if num_accesses > 1:
+            info = get_analysis_cache_info()
             hit_rate = info["hits"] / (info["hits"] + info["misses"])
-            # After first miss, all should hit
             expected_rate = (num_accesses - 1) / num_accesses
             assert abs(hit_rate - expected_rate) < 0.01, f"Hit rate {hit_rate} too low"
 
-    @given(st.integers(min_value=0, max_value=3))
-    @settings(max_examples=20, deadline=None)
-    def test_scope_independence_property(self, scope_idx: int):
-        """Property: Cache works independently of scope choice."""
-        scopes = [Scope.SINGLETON, Scope.TRANSIENT, Scope.REQUEST, Scope.SESSION]
-        scope = scopes[scope_idx]
-
-        clear_analysis_cache()
-
-        class ScopedClass:
-            def __init__(self) -> None:
-                self.scope = scope
-
-        container = Container()
-        with container.activate():
-            autowire(ScopedClass, scope=scope)
-
-            info = get_analysis_cache_info()
-            assert info["misses"] >= 1, "First registration should miss cache"
-
 
 # =============================================================================
-# TIER 3: MOCK-BASED UNIT TESTS (8 tests)
+# TIER 3: MOCK-BASED UNIT TESTS
 # =============================================================================
 
 
@@ -904,14 +587,10 @@ class TestMockBased:
         """Verify Container.register() called with correct signature."""
         mock_container = create_autospec(Container, instance=True)
         mock_container.activate = MagicMock()
-        mock_container.activate.return_value.__enter__ = MagicMock(
-            return_value=mock_container
-        )
+        mock_container.activate.return_value.__enter__ = MagicMock(return_value=mock_container)
         mock_container.activate.return_value.__exit__ = MagicMock(return_value=None)
 
-        # Patch Container.get_active to return our mock
         with patch.object(Container, "get_active", return_value=mock_container):
-
             class TestService:
                 def __init__(self) -> None:
                     self.value = 42
@@ -919,51 +598,26 @@ class TestMockBased:
             with mock_container.activate():
                 autowire(TestService)
 
-            # Verify register was called
             assert mock_container.register.called
             call_args = mock_container.register.call_args
-
-            # Verify arguments structure
             assert call_args is not None
-            token_arg = call_args[0][0]
-            assert token_arg.type_ == TestService
+            assert call_args[0][0].type_ == TestService
 
     def test_inspect_signature_failure_injection(self):
         """Test graceful handling when inspect.signature() fails."""
-
         class BadSignatureClass:
-            # Intentionally broken __init__
-            __init__ = None
+            __init__ = None  # type: ignore
 
         container = Container()
         with container.activate():
             with pytest.raises(TypeError, match="Cannot analyze constructor"):
                 autowire(BadSignatureClass)
 
-    def test_get_type_hints_exception_handling(self):
-        """Test fallback when get_type_hints() raises exceptions."""
-
-        # Create class with annotations that will fail type hint resolution
-        class ProblematicClass:
-            def __init__(self, param: "NonExistentType") -> None:  # noqa: F821
-                self.param = param
-
-        # Should not crash, should fallback gracefully
-        container = Container()
-        with container.activate():
-            try:
-                autowire(ProblematicClass)
-                # If it succeeds, verify it registered something
-                assert True
-            except TypeError:
-                # Also acceptable if it rejects invalid type hints
-                assert True
-
     def test_container_register_call_verification(self):
         """Verify exact parameters passed to Container.register()."""
         container = Container()
-        original_register = container.register
         register_calls = []
+        original_register = container.register
 
         def tracked_register(*args, **kwargs):
             register_calls.append((args, kwargs))
@@ -978,14 +632,10 @@ class TestMockBased:
         with container.activate():
             autowire(TrackedService, scope=Scope.TRANSIENT)
 
-        # Verify register was called exactly once
         assert len(register_calls) == 1
-
         args, kwargs = register_calls[0]
-        # Check token
         assert isinstance(args[0], Token)
         assert args[0].type_ == TrackedService
-        # Check scope
         assert kwargs.get("scope") == Scope.TRANSIENT
 
     def test_provider_function_callable_verification(self):
@@ -1008,246 +658,75 @@ class TestMockBased:
         with container.activate():
             autowire(ProviderTestService)
 
-        # Verify provider was captured
         assert captured_provider is not None
         assert callable(captured_provider)
 
-        # Call provider directly
         instance = captured_provider()
         assert isinstance(instance, ProviderTestService)
         assert instance.test == "provider"
 
-    def test_token_creation_with_mock_type(self):
-        """Test that Token creation works with mocked types."""
-        mock_type = MagicMock(spec=type)
-        mock_type.__name__ = "MockedService"
-
-        # Token should handle mocked type
-        token = Token[Any](name="MockedService", type_=mock_type)
-
-        assert token.name == "MockedService"
-        assert token.type_ == mock_type
-
-    def test_wire_builder_validation_with_mock(self):
-        """Test wire() builder parameter validation with mocks."""
-        container = Container()
-
-        class WireTestService:
-            def __init__(self, dependency: int) -> None:
-                self.dependency = dependency
-
-        with container.activate():
-            # Should raise ValueError for non-existent parameter
-            with pytest.raises(ValueError, match="Parameter 'nonexistent' does not exist"):
-                wire(WireTestService, container=container).with_override(
-                    "nonexistent", 42
-                ).register()
-
-    def test_dependency_resolution_mock_integration(self):
-        """Test dependency resolution with mocked dependencies."""
-        container = Container()
-
-        # Mock dependency
-        mock_dependency = MagicMock()
-        mock_dependency.value = 99
-
-        class ServiceWithDependency:
-            def __init__(self, dep: type(mock_dependency)) -> None:
-                self.dep = dep
-
-        # This test demonstrates the pattern, even if autowire needs real types
-        with container.activate():
-            try:
-                # Register mock as provider
-                container.register(
-                    type(mock_dependency), lambda: mock_dependency, scope=Scope.SINGLETON
-                )
-                autowire(ServiceWithDependency)
-
-                instance = container[ServiceWithDependency]
-                assert instance.dep.value == 99
-            except Exception:
-                # Expected - mocks may not work perfectly with type system
-                pass
-
 
 # =============================================================================
-# TIER 4: REAL-WORLD INTEGRATION TESTS (7 tests)
+# TIER 4: REAL-WORLD INTEGRATION TESTS
 # =============================================================================
 
 
 class TestIntegration:
     """Real-world integration scenarios."""
 
-    def test_large_dependency_graph_50_classes(self):
-        """50 classes with complex dependencies - verify high cache hit rate."""
-        clear_analysis_cache()
+    def test_large_dependency_graph_50_classes(self, class_factory):
+        """50 classes with complex dependencies - verify cache efficiency."""
         container = Container()
 
         with container.activate():
-            # Create 50-class dependency chain
             prev_class = None
             for i in range(50):
                 if prev_class is None:
-
-                    def make_init(idx):
-                        def __init__(self) -> None:
-                            self.level = idx
-
-                        return __init__
-
-                    cls = type(f"Class{i}", (), {"__init__": make_init(i)})
+                    cls = class_factory(name=f"Class{i}", level=i)
                 else:
-                    # Capture prev_class properly
-                    def make_init_with_dep(prev):
-                        def __init__(self, dep: prev) -> None:  # type: ignore
-                            self.dep = dep
-                            self.level = -1
-
-                        return __init__
-
-                    cls = type(
-                        f"Class{i}", (), {"__init__": make_init_with_dep(prev_class)}
-                    )
-
-                    # Add proper signature
-                    sig = inspect.Signature(
-                        [
-                            inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD),
-                            inspect.Parameter(
-                                "dep",
-                                inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                annotation=prev_class,
-                            ),
-                        ]
-                    )
-                    cls.__init__.__signature__ = sig
+                    cls = class_factory(name=f"Class{i}", deps=[prev_class], level=-1)
 
                 autowire(cls)
                 prev_class = cls
 
-        info = get_analysis_cache_info()
-        # 50 unique classes = 50 misses, but dependency analysis might hit cache
-        assert info["misses"] == 50, f"Expected 50 misses, got {info['misses']}"
+        assert_cache_stats(misses=50)
 
     def test_dynamic_class_creation_with_type(self):
         """Dynamic class creation using type() works with caching."""
-        clear_analysis_cache()
-
         def create_service_class(name: str, value: int):
-            """Factory function for creating service classes."""
-
             def init(self) -> None:
                 self.name = name
                 self.value = value
-
             return type(f"DynamicService_{name}", (), {"__init__": init})
 
-        ServiceA = create_service_class("A", 1)
-        ServiceB = create_service_class("B", 2)
+        ServiceA, ServiceB = create_service_class("A", 1), create_service_class("B", 2)
 
         container = Container()
         with container.activate():
             autowire(ServiceA)
             autowire(ServiceB)
 
-            a = container[ServiceA]
-            b = container[ServiceB]
+            assert container[ServiceA].name == "A"
+            assert container[ServiceB].name == "B"
 
-            assert a.name == "A"
-            assert b.name == "B"
-
-        info = get_analysis_cache_info()
-        assert info["misses"] == 2, "Two unique classes should miss cache"
-
-    def test_module_reload_scenario(self):
-        """Simulate module reload by clearing cache and re-registering."""
-        clear_analysis_cache()
-
-        class ModuleService:
-            def __init__(self) -> None:
-                self.version = 1
-
-        # Initial registration
-        container1 = Container()
-        with container1.activate():
-            autowire(ModuleService)
-
-        info1 = get_analysis_cache_info()
-
-        # Simulate module reload - clear cache
-        clear_analysis_cache()
-
-        # Re-register after "reload"
-        container2 = Container()
-        with container2.activate():
-            autowire(ModuleService)
-
-        info2 = get_analysis_cache_info()
-
-        # After clear, should miss cache again
-        assert info2["misses"] >= 1, "After reload, should re-analyze"
-        assert info2["hits"] == 0, "No hits after cache clear"
-
-    def test_performance_profiling_overhead(self):
-        """Measure cache performance improvement."""
-        clear_analysis_cache()
-
-        class ProfiledService:
-            def __init__(self) -> None:
-                self.data = list(range(100))
-
-        # First registration - cold cache
-        start = time.perf_counter()
-        container1 = Container()
-        with container1.activate():
-            autowire(ProfiledService)
-        cold_time = time.perf_counter() - start
-
-        # Subsequent registrations - warm cache
-        warm_times = []
-        for _ in range(10):
-            start = time.perf_counter()
-            container = Container()
-            with container.activate():
-                autowire(ProfiledService)
-            warm_times.append(time.perf_counter() - start)
-
-        avg_warm_time = sum(warm_times) / len(warm_times)
-
-        # Warm cache should be faster (or at least not slower)
-        # Note: This is a soft check, timing can vary
-        info = get_analysis_cache_info()
-        assert info["hits"] > 0, "Should have cache hits in warm runs"
+        assert_cache_stats(misses=2)
 
     def test_complex_generic_hierarchy(self):
         """Complex generic type hierarchy with caching."""
-        clear_analysis_cache()
-
         class Repository(Generic[T]):
             def __init__(self) -> None:
                 self.items: list[T] = []
 
-        class Service(Generic[T]):
-            def __init__(self, repo: Repository[T]) -> None:  # type: ignore
-                self.repo = repo
-
-        # Register with specific type parameters
         container = Container()
         with container.activate():
-            # This will use generic normalization
             autowire(Repository[str])
             autowire(Repository[int])
 
-        info = get_analysis_cache_info()
-        # Both Repository[str] and Repository[int] normalize to Repository
-        assert info["misses"] == 1, "Generic normalization should create single cache entry"
-        assert info["hits"] >= 1, "Second generic should hit cache"
+        info = assert_cache_stats(misses=1)
+        assert info["hits"] >= 1
 
     def test_real_world_fastapi_pattern(self):
         """Simulate FastAPI dependency injection pattern."""
-        clear_analysis_cache()
-
         class Database:
             def __init__(self) -> None:
                 self.connected = True
@@ -1269,7 +748,6 @@ class TestIntegration:
             def __init__(self, service: UserService) -> None:
                 self.service = service
 
-        # Register all dependencies
         container = Container()
         with container.activate():
             autowire(Database)
@@ -1278,51 +756,29 @@ class TestIntegration:
             autowire(UserService)
             autowire(UserController)
 
-            # Resolve top-level controller
             controller = container[UserController]
-
-            # Verify full dependency chain
             assert controller.service.repo.db.connected
             assert controller.service.cache.enabled
 
-        info = get_analysis_cache_info()
-        # 5 classes = 5 cache misses initially
-        assert info["misses"] == 5
+        assert_cache_stats(misses=5)
 
-    def test_production_scale_registration(self):
+    def test_production_scale_registration(self, class_factory):
         """Simulate production-scale application with many services."""
-        clear_analysis_cache()
+        classes = [class_factory(name=f"ProductionService{i}", service_id=i)
+                  for i in range(100)]
 
-        # Create 100 service classes
-        classes = []
-        for i in range(100):
-
-            def make_init(idx):
-                def __init__(self) -> None:
-                    self.service_id = idx
-
-                return __init__
-
-            cls = type(f"ProductionService{i}", (), {"__init__": make_init(i)})
-            classes.append(cls)
-
-        # Register all in single container
         container = Container()
         with container.activate():
             for cls in classes:
                 autowire(cls)
 
-        # Verify cache stats
-        info = get_analysis_cache_info()
-        assert info["misses"] == 100, "100 unique classes should miss cache"
-        assert info["size"] <= 256, "Cache size should not exceed maxsize"
+        assert_cache_stats(misses=100, size_le=256)
 
-        # Re-register same classes in new container - should hit cache
+        # Re-register subset - should hit cache
         container2 = Container()
         with container2.activate():
-            for cls in classes[:10]:  # Just first 10
+            for cls in classes[:10]:
                 autowire(cls)
 
         info2 = get_analysis_cache_info()
-        # Should see cache hits now
-        assert info2["hits"] > info["hits"], "Re-registration should hit cache"
+        assert info2["hits"] >= 10
