@@ -34,7 +34,13 @@ __author__ = "Qrius Global"
 __email__ = "mishal@qrius.global"
 __repo__ = "https://github.com/QriusGlobal/injx"
 __docs__ = "https://qriusglobal.github.io/injx/"
-from injx.autowire import WireBuilder, autowire, wire
+from injx.autowire import (
+    WireBuilder,
+    autowire,
+    clear_analysis_cache,
+    get_analysis_cache_info,
+    wire,
+)
 from injx.container import Container
 from injx.contextual import ContextualContainer, RequestScope, SessionScope
 from injx.debug import ContainerDebugger, debug_container
@@ -69,6 +75,8 @@ __all__ = [
     "autowire",
     "wire",
     "WireBuilder",
+    "clear_analysis_cache",
+    "get_analysis_cache_info",
     # Testing
     "TestContainer",
     "TestScope",

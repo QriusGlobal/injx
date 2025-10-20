@@ -1,6 +1,7 @@
 """Unit tests for autowire decorator."""
 
-from typing import Annotated
+import threading
+from typing import Annotated, Generic, TypeVar
 
 import pytest
 
@@ -11,8 +12,12 @@ from injx import (
     Scope,
     Token,
     autowire,
+    clear_analysis_cache,
+    get_analysis_cache_info,
     wire,
 )
+
+T = TypeVar("T")
 
 
 class TestAutowireBasic:
@@ -628,3 +633,317 @@ class TestTypeHints:
             mixed = container[_MixedService]
             assert mixed.db is test_db  # Overridden
             assert isinstance(mixed.svc_b, _TypeHintServiceB)  # Resolved from container
+
+
+class TestCacheBehavior:
+    """Tests for class analysis caching functionality."""
+
+    def setup_method(self) -> None:
+        """Clear cache before each test."""
+        clear_analysis_cache()
+
+    def teardown_method(self) -> None:
+        """Clear cache after each test."""
+        clear_analysis_cache()
+
+    def test_cache_hit_rate_for_repeated_analysis(self) -> None:
+        """Test that repeated analysis of same class hits the cache."""
+        container = Container()
+
+        # Define a test class
+        class CachedService:
+            def __init__(self) -> None:
+                self.value = 42
+
+        # Clear cache and get baseline
+        clear_analysis_cache()
+        initial_info = get_analysis_cache_info()
+        assert initial_info["hits"] == 0
+        assert initial_info["misses"] == 0
+
+        # First registration - should miss cache
+        with container.activate():
+            autowire(CachedService)
+
+        info_after_first = get_analysis_cache_info()
+        assert info_after_first["misses"] >= 1, "First analysis should miss cache"
+
+        # Register same class again (different container) - should hit cache
+        container2 = Container()
+        with container2.activate():
+            autowire(CachedService)
+
+        info_after_second = get_analysis_cache_info()
+        assert info_after_second["hits"] >= 1, "Second analysis should hit cache"
+        assert info_after_second["hits"] > info_after_first["hits"]
+
+        # Third registration - more cache hits
+        container3 = Container()
+        with container3.activate():
+            autowire(CachedService)
+
+        info_after_third = get_analysis_cache_info()
+        assert info_after_third["hits"] > info_after_second["hits"]
+
+    def test_clear_analysis_cache_resets_statistics(self) -> None:
+        """Test that clear_analysis_cache() resets cache statistics."""
+
+        class TestService1:
+            def __init__(self) -> None:
+                pass
+
+        class TestService2:
+            def __init__(self) -> None:
+                pass
+
+        # Perform some registrations to populate cache
+        container1 = Container()
+        with container1.activate():
+            autowire(TestService1)
+
+        container2 = Container()
+        with container2.activate():
+            autowire(TestService1)  # Should hit cache
+            autowire(TestService2)  # Should miss cache initially
+
+        # Verify cache has statistics
+        info_before_clear = get_analysis_cache_info()
+        assert info_before_clear["hits"] >= 1, "Should have cache hits"
+        assert info_before_clear["misses"] >= 2, "Should have cache misses"
+
+        # Clear cache
+        clear_analysis_cache()
+
+        # Verify statistics are reset
+        info_after_clear = get_analysis_cache_info()
+        assert info_after_clear["hits"] == 0
+        assert info_after_clear["misses"] == 0
+        assert info_after_clear["size"] == 0
+
+    def test_get_analysis_cache_info_structure(self) -> None:
+        """Test that get_analysis_cache_info() returns correct structure."""
+        info = get_analysis_cache_info()
+
+        # Verify all expected keys present
+        assert "hits" in info
+        assert "misses" in info
+        assert "size" in info
+        assert "maxsize" in info
+
+        # Verify types
+        assert isinstance(info["hits"], int)
+        assert isinstance(info["misses"], int)
+        assert isinstance(info["size"], int)
+        assert isinstance(info["maxsize"], int)
+
+        # Verify maxsize matches implementation (256)
+        assert info["maxsize"] == 256
+
+    def test_cache_isolation_between_tests(self) -> None:
+        """Test that cache clearing provides test isolation."""
+        container = Container()
+
+        class IsolatedService1:
+            def __init__(self) -> None:
+                self.id = 1
+
+        # First test scenario
+        clear_analysis_cache()
+        with container.activate():
+            autowire(IsolatedService1)
+
+        info1 = get_analysis_cache_info()
+
+        # Clear for next test
+        clear_analysis_cache()
+        info2 = get_analysis_cache_info()
+
+        # Verify isolation - cache starts fresh
+        assert info2["hits"] == 0
+        assert info2["misses"] == 0
+        assert info2["size"] == 0
+
+    def test_wire_builder_benefits_from_cache(self) -> None:
+        """Test that wire() builder also benefits from caching."""
+        container = Container()
+
+        class WireCachedDatabase:
+            def __init__(self) -> None:
+                self.connected = True
+
+        class WireCachedService:
+            def __init__(self, db: WireCachedDatabase) -> None:
+                self.db = db
+
+        # Clear cache
+        clear_analysis_cache()
+
+        with container.activate():
+            # Register database
+            autowire(WireCachedDatabase)
+
+            # First wire() call - should miss cache
+            info_before = get_analysis_cache_info()
+            wire(WireCachedService, container=container).register()
+            info_after_first = get_analysis_cache_info()
+
+            first_misses = info_after_first["misses"] - info_before["misses"]
+            assert first_misses >= 1, "First wire() should miss cache"
+
+        # Second wire() call with different container - should hit cache
+        container2 = Container()
+        with container2.activate():
+            autowire(WireCachedDatabase)
+
+            # This wire() call should hit the cache
+            info_before_second = get_analysis_cache_info()
+            wire(WireCachedService, container=container2).register()
+            info_after_second = get_analysis_cache_info()
+
+            # Verify cache hit occurred
+            assert info_after_second["hits"] > info_before_second["hits"], \
+                "Second wire() operation should hit cache"
+
+
+class TestGenericNormalization:
+    """Tests for generic type normalization in caching."""
+
+    def setup_method(self) -> None:
+        """Clear cache before each test."""
+        clear_analysis_cache()
+
+    def teardown_method(self) -> None:
+        """Clear cache after each test."""
+        clear_analysis_cache()
+
+    def test_generic_aliases_share_cache_entry(self) -> None:
+        """Test that Repository[User] and Repository[str] share cached analysis."""
+        container = Container()
+
+        # Define generic repository
+        class GenericRepository(Generic[T]):
+            def __init__(self) -> None:
+                self.data: list[T] = []
+
+        # Clear cache
+        clear_analysis_cache()
+
+        # Register Repository[str]
+        with container.activate():
+            StrRepo = GenericRepository[str]
+            autowire(StrRepo)
+
+        info_after_first = get_analysis_cache_info()
+        first_misses = info_after_first["misses"]
+
+        # Register Repository[int] - should hit cache due to normalization
+        container2 = Container()
+        with container2.activate():
+            IntRepo = GenericRepository[int]
+            autowire(IntRepo)
+
+        info_after_second = get_analysis_cache_info()
+
+        # Verify cache hit (same base class after normalization)
+        assert info_after_second["hits"] > info_after_first["hits"], \
+            "Generic aliases should share cache entry after normalization"
+
+    def test_generic_normalization_fixes_signature_bug(self) -> None:
+        """Test that generic normalization correctly extracts __init__ signature.
+
+        This test validates that get_origin() normalization allows generic classes
+        to be analyzed without errors. Before fix: Repository[User].__init__ had
+        wrong signature. After fix: get_origin(Repository[User]) -> Repository.
+        """
+        container = Container()
+
+        # Define a simple generic repository without dependencies
+        class GenericRepository(Generic[T]):
+            def __init__(self) -> None:
+                self.items: list[T] = []
+
+        # Clear cache
+        clear_analysis_cache()
+
+        # First registration with one type parameter
+        with container.activate():
+            StrRepo = GenericRepository[str]
+            autowire(StrRepo)
+
+        # Verify no errors and resolution works
+        repo1 = container[StrRepo]
+        assert isinstance(repo1, GenericRepository)
+
+        # Second registration with different type parameter should hit cache
+        container2 = Container()
+        with container2.activate():
+            IntRepo = GenericRepository[int]
+            autowire(IntRepo)
+
+        repo2 = container2[IntRepo]
+        assert isinstance(repo2, GenericRepository)
+
+        # Verify cache hit occurred (both normalized to GenericRepository)
+        info = get_analysis_cache_info()
+        assert info["hits"] >= 1, "Second generic alias should hit cache"
+
+
+class TestThreadSafety:
+    """Tests for thread safety of cache operations."""
+
+    def setup_method(self) -> None:
+        """Clear cache before each test."""
+        clear_analysis_cache()
+
+    def teardown_method(self) -> None:
+        """Clear cache after each test."""
+        clear_analysis_cache()
+
+    def test_concurrent_analysis_is_thread_safe(self) -> None:
+        """Test that concurrent class analysis from multiple threads is safe."""
+        # Clear cache to start fresh
+        clear_analysis_cache()
+
+        # Create 10 different service classes to avoid registration conflicts
+        service_classes = []
+        for i in range(10):
+            # Dynamically create unique class for each thread
+            cls = type(f"ThreadSafeService{i}", (), {
+                "__init__": lambda self: setattr(self, "thread_id", threading.get_ident())
+            })
+            service_classes.append(cls)
+
+        containers: list[Container] = []
+        errors: list[Exception] = []
+        results: list[object] = []
+
+        def register_and_resolve(idx: int):
+            try:
+                container = Container()
+                containers.append(container)
+                with container.activate():
+                    autowire(service_classes[idx])
+                result = container[service_classes[idx]]
+                results.append(result)
+            except Exception as e:
+                errors.append(e)
+
+        # Spawn 10 threads that concurrently analyze different classes
+        threads = [threading.Thread(target=register_and_resolve, args=(i,)) for i in range(10)]
+
+        for thread in threads:
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        # Verify no errors occurred
+        assert len(errors) == 0, f"Thread safety errors: {errors}"
+
+        # Verify all threads got valid results
+        assert len(results) == 10
+
+        # Verify cache statistics show activity
+        info = get_analysis_cache_info()
+        assert info["misses"] == 10, "Each unique class should miss cache once"
+        assert info["hits"] == 0, "No cache hits expected for unique classes"

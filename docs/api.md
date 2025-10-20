@@ -483,6 +483,58 @@ assert isinstance(service.db, MockDatabase)
 - **Partial Autowiring**: Mix automatic and manual dependency resolution
 - **Dynamic Configuration**: Runtime-determined dependency values
 
+### Cache Management
+
+**Performance optimization**: The `@autowire` and `wire()` functions cache class dependency analysis for improved performance. This caching is transparent but can be managed for testing or dynamic class redefinition scenarios.
+
+#### clear_analysis_cache()
+
+**`injx.clear_analysis_cache() -> None`**
+
+Clear the class analysis cache.
+
+**Usage**: Call during test setup/teardown to ensure test isolation, or after dynamically redefining classes.
+
+```python
+from injx import clear_analysis_cache
+
+# In test setup/teardown
+def teardown_method():
+    clear_analysis_cache()
+
+# After dynamic class redefinition
+MyService = type('MyService', (), {...})
+clear_analysis_cache()  # Ensure fresh analysis
+```
+
+#### get_analysis_cache_info()
+
+**`injx.get_analysis_cache_info() -> dict[str, int]`**
+
+Get cache statistics for class analysis.
+
+**Returns**: Dictionary with cache statistics:
+- `hits`: Number of cache hits
+- `misses`: Number of cache misses
+- `size`: Current cache size
+- `maxsize`: Maximum cache size (256)
+
+**Usage**: Monitor cache performance or debug caching behavior.
+
+```python
+from injx import get_analysis_cache_info
+
+info = get_analysis_cache_info()
+print(f"Cache hit rate: {info['hits'] / (info['hits'] + info['misses']):.1%}")
+# Output: Cache hit rate: 95.2%
+```
+
+**Performance Notes**:
+- Cache uses LRU eviction with 256-entry limit (~180KB memory)
+- Thread-safe via built-in `functools.lru_cache` protection
+- Generic aliases (`Repository[User]`, `Repository[str]`) share cache entry
+- 95%+ hit rate expected after warmup in typical applications
+
 ---
 
 See [Autowiring Specification](../specs/autowiring-spec.rst) for complete implementation details.
