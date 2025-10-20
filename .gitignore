@@ -71,3 +71,4 @@ site/
 # CodeContext dev tool (internal use only)
 .codecontext/
 LSP.md
+.hypothesis/

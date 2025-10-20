@@ -75,6 +75,10 @@ def _analyze_autowire_class_cached(
         ):
             continue
 
+        # Skip parameters with default values - they are optional, not dependencies
+        if param.default is not inspect.Parameter.empty:
+            continue
+
         # Check if parameter has type hint
         annotation: Any = param.annotation
         if annotation is inspect.Parameter.empty:
@@ -178,6 +182,10 @@ def _analyze_autowire_class_uncached(
             inspect.Parameter.VAR_POSITIONAL,
             inspect.Parameter.VAR_KEYWORD,
         ):
+            continue
+
+        # Skip parameters with default values - they are optional, not dependencies
+        if param.default is not inspect.Parameter.empty:
             continue
 
         # Check if parameter has type hint
