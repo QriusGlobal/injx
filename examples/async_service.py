@@ -312,15 +312,15 @@ async def setup_async_services() -> Container:
 
     # Register worker pool with dependency
     def create_worker_pool() -> AsyncWorkerPool:
-        queue = container.resolve_protocol(TaskQueue)
+        queue = container.get(queue_token)
         return AsyncWorkerPool(queue, num_workers=4)
 
     container.register(worker_pool_token, create_worker_pool, Scope.SINGLETON)
 
     # Register processing service with dependencies
     def create_processing_service() -> TaskProcessingService:
-        worker_pool = container.resolve_protocol(WorkerPool)
-        result_store = container.resolve_protocol(ResultStore)
+        worker_pool = container.get(worker_pool_token)
+        result_store = container.get(result_store_token)
         return TaskProcessingService(worker_pool, result_store)
 
     container.register(
@@ -344,7 +344,8 @@ async def demo_async_patterns():
     processing_service = container.get(processing_service_token)
 
     # Start worker pool
-    worker_pool = container.resolve_protocol(WorkerPool)
+    worker_pool_token = Token[WorkerPool]("worker_pool", protocol=WorkerPool)
+    worker_pool = container.get(worker_pool_token)
     if hasattr(worker_pool, "start_workers"):
         await worker_pool.start_workers()
 
