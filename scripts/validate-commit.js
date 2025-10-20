@@ -12,6 +12,14 @@ if (!commitMsgFile) {
 }
 const commitMessage = fs.readFileSync(commitMsgFile, 'utf8');
 
+// 0. Block Co-authored-by trailers (AI/bot attribution not wanted)
+if (/Co-authored-by:/i.test(commitMessage)) {
+  console.error('\n❌ Commit message contains Co-authored-by trailer.');
+  console.error('Please remove all Co-authored-by lines from your commit message.');
+  console.error('\nThis project uses single-author commits only.');
+  process.exit(1);
+}
+
 // 1. Define Rule Sets based on the project's validation hierarchy
 const validationHierarchy = {
   // Highest priority: src/ changes
