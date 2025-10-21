@@ -367,7 +367,7 @@ with container.activate():
     pass
 
 # Resolution can happen outside activate context
-service = container[UserService]
+service = container.get(UserService)
 ```
 
 #### Key Features
@@ -404,7 +404,7 @@ with container.activate():
 
 # Resolution happens anywhere in the application
 def handler():
-    service = container[Service]
+    service = container.get(Service)
     # use service
 ```
 
@@ -467,7 +467,7 @@ wire(Service, container=container) \
     .register()
 
 # Resolve
-service = container[Service]
+service = container.get(Service)
 assert isinstance(service.db, MockDatabase)
 ```
 

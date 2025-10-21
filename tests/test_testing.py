@@ -206,3 +206,28 @@ class TestIntegrationWithContainer:
         # Verify original is unchanged after scope exit
         after_scope = container.get(SERVICE)
         assert after_scope == "original"
+<<<<<<< HEAD
+=======
+
+
+def test_test_scope_subscript_access():
+    """Test subscript access in test scopes."""
+    container = Container()
+
+    class Service:
+        pass
+
+    SERVICE_TOKEN = Token("service", Service)
+    real_service = Service()
+    mock_service = Service()
+
+    container.register(SERVICE_TOKEN, lambda: real_service)
+
+    with container.test_scope() as test:
+        test.override(SERVICE_TOKEN, mock_service)
+
+        # Subscript should work in test scope
+        resolved = test.get(SERVICE_TOKEN)
+        assert resolved is mock_service
+        assert resolved is not real_service
+>>>>>>> f0f8418 (refactor(container)!: remove subscript resolution API\n\n- Delete __getitem__ on Container and test helpers\n- Remove subscript from protocols\n- Standardize on get()/aget() for resolution\n\nBREAKING CHANGE: container[...] removed; use container.get()/aget())

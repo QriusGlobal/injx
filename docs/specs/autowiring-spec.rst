@@ -518,15 +518,15 @@ The ``@autowire`` decorator is EXPLICIT because:
               self.db = db
 
       # ✅ Works - concrete class registered
-      repo = container[PostgresUserRepository]
+      repo = container.get(PostgresUserRepository)
 
       # ❌ Fails - protocol not registered
-      repo = container[IUserRepository]  # ResolutionError: IUserRepository not registered
+      repo = container.get(IUserRepository)  # ResolutionError: IUserRepository not registered
 
       # ✅ If you need protocol-based resolution, register explicitly:
       container.register(
           IUserRepository,
-          lambda: container[PostgresUserRepository]
+          lambda: container.get(PostgresUserRepository)
       )
 
    **Why This Design**:
@@ -661,7 +661,7 @@ The implementation pre-compiles dependency resolution paths for common cases:
           def __init__(self, missing: UnregisteredType):
               pass
 
-      container[MyService]  # ← Raises ResolutionError
+      container.get(MyService)  # ← Raises ResolutionError
 
 3. **Circular Dependencies**: Detected by existing container logic
 
@@ -724,7 +724,7 @@ by ~200 bytes per instance and provides 15% faster attribute access.
        .with_scope(Scope.REQUEST) \
        .register()
 
-   service = container[UserService]
+   service = container.get(UserService)
    assert service.db is custom_database  # ✅ Override applied
 
 **Error Conditions**:
@@ -802,8 +802,8 @@ manually registered providers.
    class SingletonService:
        pass
 
-   s1 = container[SingletonService]
-   s2 = container[SingletonService]
+   s1 = container.get(SingletonService)
+   s2 = container.get(SingletonService)
    assert s1 is s2  # ✅ Same instance
 
    # REQUEST: One instance per request scope
@@ -812,12 +812,12 @@ manually registered providers.
        pass
 
    with container.request_scope():
-       r1 = container[RequestService]
-       r2 = container[RequestService]
+       r1 = container.get(RequestService)
+       r2 = container.get(RequestService)
        assert r1 is r2  # ✅ Same within request
 
    with container.request_scope():
-       r3 = container[RequestService]
+       r3 = container.get(RequestService)
        assert r1 is not r3  # ✅ Different request
 
    # TRANSIENT: New instance every time
@@ -825,8 +825,8 @@ manually registered providers.
    class TransientService:
        pass
 
-   t1 = container[TransientService]
-   t2 = container[TransientService]
+   t1 = container.get(TransientService)
+   t2 = container.get(TransientService)
    assert t1 is not t2  # ✅ Different instances
 
 3.5. FR-5: Error Handling
@@ -858,7 +858,7 @@ manually registered providers.
           def __init__(self, missing: UnregisteredType):
               pass
 
-      container[Service]
+      container.get(Service)
 
       # Error Message:
       # ResolutionError: Cannot resolve UnregisteredType
@@ -879,7 +879,7 @@ manually registered providers.
           def __init__(self, a: ServiceA):
               pass
 
-      container[ServiceA]
+      container.get(ServiceA)
 
       # Error Message:
       # CircularDependencyError: Circular dependency detected
@@ -895,7 +895,7 @@ manually registered providers.
               pass
 
       # If AsyncDependency has async provider
-      service = container[Service]  # Sync access
+      service = container.get(Service)  # Sync access
 
       # Error Message:
       # AsyncCleanupRequiredError: AsyncDependency requires async resolution
@@ -1018,7 +1018,7 @@ strict mode.
            ...
 
    # Type checker knows:
-   service: UserService = container[UserService]  # ✅ Correct type
+   service: UserService = container.get(UserService)  # ✅ Correct type
    user: User = service.get_user(123)  # ✅ Method signature preserved
 
 **Generic Support**:
@@ -1033,7 +1033,7 @@ strict mode.
            self.db = db
 
    # Type checker correctly infers generic parameter
-   user_repo: Repository[User] = container[Repository[User]]
+   user_repo: Repository[User] = container.get(Repository[User])
 
 4.3. NFR-3: Free-Threaded Mode Safety (PEP 703)
 ------------------------------------------------
@@ -1295,7 +1295,7 @@ strict mode.
                self.db = db
                self.cache = cache
 
-       service = container[UserService]  # Auto-wired
+       service = container.get(UserService)  # Auto-wired
 
    Parameter overrides::
 
@@ -1722,7 +1722,7 @@ in source code.
                def __init__(self, dep: Dependency):
                    self.dep = dep
 
-           service = container[Service]
+           service = container.get(Service)
            assert isinstance(service, Service)
            assert isinstance(service.dep, Dependency)
 
@@ -1755,7 +1755,7 @@ in source code.
                    self.cache = cache
                    self.logger = logger
 
-           service = container[UserService]
+           service = container.get(UserService)
            assert isinstance(service.db, Database)
            assert isinstance(service.cache, Cache)
            assert isinstance(service.logger, Logger)
@@ -1784,7 +1784,7 @@ in source code.
                def __init__(self, repo: Repository):
                    self.repo = repo
 
-           service = container[Service]
+           service = container.get(Service)
            assert isinstance(service.repo, Repository)
            assert isinstance(service.repo.db, Database)
 
@@ -1808,7 +1808,7 @@ in source code.
                def __init__(self, dep: Dependency):
                    self.dep = dep
 
-           service = container[Service]
+           service = container.get(Service)
            assert isinstance(service, Service)
 
        def test_autowire_preserves_class(self):
@@ -1840,7 +1840,7 @@ in source code.
            assert Service.class_attr == "test"
 
            # Instance works correctly
-           service = container[Service]
+           service = container.get(Service)
            assert service.method() == "works"
 
 6.1.2. TestAutowireScopes
@@ -1870,8 +1870,8 @@ in source code.
                def __init__(self, dep: Dependency):
                    self.dep = dep
 
-           s1 = container[SingletonService]
-           s2 = container[SingletonService]
+           s1 = container.get(SingletonService)
+           s2 = container.get(SingletonService)
 
            assert s1 is s2  # Same instance
 
@@ -1894,8 +1894,8 @@ in source code.
                def __init__(self, dep: Dependency):
                    self.dep = dep
 
-           t1 = container[TransientService]
-           t2 = container[TransientService]
+           t1 = container.get(TransientService)
+           t2 = container.get(TransientService)
 
            assert t1 is not t2  # Different instances
            assert t1.dep is t2.dep  # But same singleton dependency
@@ -1920,12 +1920,12 @@ in source code.
                    self.dep = dep
 
            with container.request_scope():
-               r1 = container[RequestService]
-               r2 = container[RequestService]
+               r1 = container.get(RequestService)
+               r2 = container.get(RequestService)
                assert r1 is r2  # Same within scope
 
            with container.request_scope():
-               r3 = container[RequestService]
+               r3 = container.get(RequestService)
                assert r1 is not r3  # Different across scopes
 
 6.1.3. TestAutowireErrors
@@ -1979,7 +1979,7 @@ in source code.
 
            from injx.exceptions import ResolutionError
            with pytest.raises(ResolutionError) as exc_info:
-               container[Service]
+               container.get(Service)
 
            error_msg = str(exc_info.value)
            assert "UnregisteredType" in error_msg
@@ -2006,7 +2006,7 @@ in source code.
 
            from injx.exceptions import CircularDependencyError
            with pytest.raises(CircularDependencyError):
-               container[ServiceA]
+               container.get(ServiceA)
 
 6.1.4. TestWireBuilder
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -2037,7 +2037,7 @@ in source code.
 
            wire(container, Service).register()
 
-           service = container[Service]
+           service = container.get(Service)
            assert isinstance(service.dep, Dependency)
 
        def test_wire_with_override(self):
@@ -2067,7 +2067,7 @@ in source code.
                .with_override('db', custom_db) \
                .register()
 
-           service = container[Service]
+           service = container.get(Service)
            assert service.db is custom_db  # Override applied
            assert isinstance(service.cache, Cache)  # Normal resolution
 
@@ -2093,8 +2093,8 @@ in source code.
                .with_scope(Scope.SINGLETON) \
                .register()
 
-           s1 = container[Service]
-           s2 = container[Service]
+           s1 = container.get(Service)
+           s2 = container.get(Service)
            assert s1 is s2  # Singleton behavior
 
        def test_wire_method_chaining(self):
@@ -2129,7 +2129,7 @@ in source code.
 
            assert result is container  # Returns container
 
-           service = container[Service]
+           service = container.get(Service)
            assert service.d1 is override1
            assert service.d2 is override2
 
@@ -2182,7 +2182,7 @@ in source code.
                def __init__(self, host: Annotated[str, DB_HOST]):
                    self.host = host
 
-           db = container[Database]
+           db = container.get(Database)
            assert db.host == "localhost"
 
        def test_autowire_with_inject_marker(self):
@@ -2207,7 +2207,7 @@ in source code.
                def __init__(self, dep: CustomDep = Inject(custom_factory)):
                    self.dep = dep
 
-           service = container[Service]
+           service = container.get(Service)
            assert isinstance(service.dep, CustomDep)
 
        def test_autowire_with_dependencies_tuple(self):
@@ -2235,7 +2235,7 @@ in source code.
                def __init__(self, deps: Dependencies[Dep1, Dep2]):
                    self.dep1, self.dep2 = deps
 
-           service = container[Service]
+           service = container.get(Service)
            assert isinstance(service.dep1, Dep1)
            assert isinstance(service.dep2, Dep2)
 
@@ -2264,7 +2264,7 @@ in source code.
            """Test autowired classes work with subscript syntax.
 
            Acceptance Criteria:
-           - container[AutowiredClass] resolves correctly
+           - container.get(AutowiredClass) resolves correctly
            - Type safety preserved
            """
            container = Container()
@@ -2280,7 +2280,7 @@ in source code.
                    self.dep = dep
 
            # Subscript access
-           service = container[Service]
+           service = container.get(Service)
            assert isinstance(service, Service)
 
        def test_autowire_with_override_context(self):
@@ -2306,16 +2306,16 @@ in source code.
                    self.db = db
 
            # Normal resolution
-           service1 = container[Service]
+           service1 = container.get(Service)
            assert service1.db is real_db
 
            # With override
            with container.use_overrides({Database: mock_db}):
-               service2 = container[Service]
+               service2 = container.get(Service)
                assert service2.db is mock_db
 
            # Back to normal
-           service3 = container[Service]
+           service3 = container.get(Service)
            assert service3.db is real_db
 
        def test_autowire_mixed_with_manual_registration(self):
@@ -2347,9 +2347,9 @@ in source code.
                def __init__(self, auto: AutoService):
                    self.auto = auto
 
-           container.register(ManualService, lambda: ManualService(container[AutoService]))
+           container.register(ManualService, lambda: ManualService(container.get(AutoService)))
 
-           manual = container[ManualService]
+           manual = container.get(ManualService)
            assert isinstance(manual.auto, AutoService)
            assert isinstance(manual.auto.dep, Dep1)
 
@@ -2482,7 +2482,7 @@ in source code.
                    self.dep = dep
 
            def resolve():
-               return container[Service]
+               return container.get(Service)
 
            result = benchmark(resolve)
 
@@ -2525,7 +2525,7 @@ in source code.
 
            # Benchmark resolution
            start = time.perf_counter()
-           instance = container[classes[-1]]
+           instance = container.get(classes[-1])
            elapsed = time.perf_counter() - start
 
            assert elapsed < 0.010  # < 10ms
@@ -2689,7 +2689,7 @@ standard testing tools work without modification.
    def test_user_service_returns_cached(mock_get_user):
        mock_get_user.return_value = User(id=1, name="Cached User")
 
-       service = container[UserService]
+       service = container.get(UserService)
        user = service.get_user(1)
 
        assert user.name == "Cached User"
@@ -2709,7 +2709,7 @@ standard testing tools work without modification.
    @pytest.fixture
    def user_service(container):
        # ✅ Autowired class works in fixtures
-       return container[UserService]
+       return container.get(UserService)
 
    def test_user_creation(user_service):
        user = user_service.create_user("test@example.com")
@@ -2786,9 +2786,9 @@ resolution through explicit registration.
 
    # Explicit protocol → concrete mapping based on environment
    if config.env == "production":
-       container.register(ICache, lambda: container[RedisCache])
+       container.register(ICache, lambda: container.get(RedisCache))
    else:
-       container.register(ICache, lambda: container[MemoryCache])
+       container.register(ICache, lambda: container.get(MemoryCache))
 
    # Services depend on protocol
    @autowire
@@ -2817,9 +2817,9 @@ resolution through explicit registration.
 
    # Register based on feature flag
    if feature_flags.get("use_stripe"):
-       container.register(IPaymentProcessor, lambda: container[StripeProcessor])
+       container.register(IPaymentProcessor, lambda: container.get(StripeProcessor))
    else:
-       container.register(IPaymentProcessor, lambda: container[PayPalProcessor])
+       container.register(IPaymentProcessor, lambda: container.get(PayPalProcessor))
 
 ================================================================================
 8. Documentation Requirements
@@ -3000,7 +3000,7 @@ resolution through explicit registration.
            self.logger = logger
 
    # Automatically registered - just resolve
-   service = container[UserService]
+   service = container.get(UserService)
    ```
 
    ### Parameter Overrides
@@ -3693,7 +3693,7 @@ Appendix A: Complete Example
 
        with container.request_scope():
            # All dependencies auto-wired from type hints
-           service = container[UserService]
+           service = container.get(UserService)
            user = service.get_user(123)
            print(f"Retrieved: {user}")
 
@@ -3711,7 +3711,7 @@ Appendix A: Complete Example
                super().__init__(db, logger)
                self.logger.info("CustomRepository (test mode)")
 
-       custom_repo = CustomRepository(test_db, container[Logger])
+       custom_repo = CustomRepository(test_db, container.get(Logger))
 
        wire(container, UserService) \
            .with_override('repository', custom_repo) \
@@ -3719,7 +3719,7 @@ Appendix A: Complete Example
            .register()
 
        with container.request_scope():
-           service = container[UserService]
+           service = container.get(UserService)
            assert service.repository is custom_repo
            print("Custom repository injected!")
 
@@ -3735,12 +3735,12 @@ Appendix A: Complete Example
 
        container.register(
            ManualService,
-           lambda: ManualService(container[UserService]),
+           lambda: ManualService(container.get(UserService)),
            scope=Scope.REQUEST
        )
 
        with container.request_scope():
-           manual = container[ManualService]
+           manual = container.get(ManualService)
            # UserService was autowired, ManualService uses it
            user = manual.user_service.get_user(456)
            print(f"Retrieved via manual service: {user}")

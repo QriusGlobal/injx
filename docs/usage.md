@@ -121,7 +121,7 @@ with container.activate():
 
 # FastAPI dependency using container resolution
 def get_user_service() -> UserService:
-    return container[UserService]
+    return container.get(UserService)
 
 # Endpoints
 @app.get("/users/{user_id}")

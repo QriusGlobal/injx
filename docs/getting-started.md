@@ -97,7 +97,7 @@ with container.activate():
                 self.logger.info(f"Processing user: {user['name']}")
 
 # Use it - container resolves all dependencies automatically
-service = container[UserService]
+service = container.get(UserService)
 service.process_users()
 ```
 

@@ -16,7 +16,7 @@ This guide helps you migrate from the deprecated `Injectable` metaclass pattern 
 - ✅ `@autowire` decorator for automatic registration
 - ✅ `wire()` function for advanced dependency control
 - ✅ Application startup pattern with `container.activate()` context
-- ✅ Type-based resolution with subscript syntax `container[Type]`
+- ✅ Type-based resolution with explicit syntax `container.get(Type)`
 
 ## Why the Change?
 
@@ -128,7 +128,7 @@ service = container.get(email_service_token)
 **AFTER (v0.2.0+)**:
 ```python
 # Direct type-based resolution with subscript syntax
-service = container[EmailService]
+service = container.get(EmailService)
 
 # OR: Explicit method call
 service = container.get(EmailService)
@@ -136,7 +136,7 @@ service = container.get(EmailService)
 
 **Key Changes**:
 - Remove `Injectable.get_registry()` calls
-- Use type directly as token with `container[Type]` syntax
+- Use type directly as token with `container.get(Type)` syntax
 - Simpler, more Pythonic API
 
 ---
@@ -167,7 +167,7 @@ logger = container.get(LOGGER)
 
 # OR: Register with type directly (simpler)
 container.register(Logger, ConsoleLogger, scope=Scope.SINGLETON)
-logger = container[Logger]  # Works via type index
+logger = container.get(Logger)  # Works via type index
 ```
 
 **Key Changes**:
@@ -269,7 +269,7 @@ def main():
     setup_container()
 
     # Use anywhere in application
-    user_service = container[UserService]
+    user_service = container.get(UserService)
     # ... application logic
 
 if __name__ == "__main__":
@@ -324,7 +324,7 @@ async def startup():
 
 # Simplified dependency provider
 def get_user_service(container: Container = Depends(get_container)) -> UserService:
-    return container[UserService]  # Direct type-based resolution
+    return container.get(UserService)  # Direct type-based resolution
 
 @app.post("/users")
 async def create_user(service: UserService = Depends(get_user_service)):
@@ -334,7 +334,7 @@ async def create_user(service: UserService = Depends(get_user_service)):
 **Key Changes**:
 - Register services in FastAPI startup event
 - Simplified `get_user_service()` - no `Injectable.get_registry()`
-- Use `container[Type]` subscript syntax
+- Use `container.get(Type)` explicit syntax
 
 ---
 
@@ -368,7 +368,7 @@ def test_user_service():
         .register()
 
     # Test
-    service = container[UserService]
+    service = container.get(UserService)
     assert service.db is mock_db
     # ... test
 ```
@@ -386,7 +386,7 @@ def test_user_service():
     # Override for test
     mock_db = MockDatabase()
     with container.override(Database, mock_db):
-        service = container[UserService]
+        service = container.get(UserService)
         assert service.db is mock_db
 ```
 
@@ -425,7 +425,7 @@ token = Injectable.get_registry()[Service]  # ❌
 
 ```python
 # CORRECT: Direct type-based resolution
-service = container[Service]  # ✅
+service = container.get(Service)  # ✅
 ```
 
 ---
@@ -544,7 +544,7 @@ Use this checklist to verify complete migration:
 - [ ] Wrap all `@autowire` usage in `container.activate()` context
 - [ ] Remove all `container.auto_register()` calls
 - [ ] Replace `Injectable.get_registry()[Type]` with `Type` directly
-- [ ] Update all `container.get(token)` to `container[Type]`
+- [ ] Update all `container[Type]` to `container.get(Type)`
 - [ ] Remove `Injectable` from imports
 - [ ] Add `autowire` to imports
 - [ ] Update tests to use `wire()` for overrides or `container.override()`

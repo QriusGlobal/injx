@@ -384,14 +384,14 @@ def autowire(
                 param_name, dep_token = deps[0]
 
                 def provider() -> object:
-                    value = container[dep_token]
+                    value = container.get(dep_token)
                     return target_cls(**{param_name: value})
 
             case _:
                 # Multiple dependencies: dict comprehension
                 def provider() -> object:
                     resolved = {
-                        param_name: container[dep_token]
+                        param_name: container.get(dep_token)
                         for param_name, dep_token in deps
                     }
                     return target_cls(**resolved)
@@ -526,7 +526,7 @@ class WireBuilder[T]:
                 else:
                     # Resolve from container using the token's type
                     # Container will lookup the registered token via type_index
-                    resolved[param_name] = container[dep_token.type_]
+                    resolved[param_name] = container.get(dep_token.type_)
 
             # Instantiate class with resolved dependencies
             return cls(**resolved)  # type: ignore[return-value]

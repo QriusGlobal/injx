@@ -132,6 +132,7 @@ class InjxTestContainer:
         # Fall back to base container
         return self.base_container.get(normalized_token)
 
+    # Subscript access removed to enforce explicit get()/aget()
     async def aget(self, token: Token[T] | type[T]) -> T:
         """Async version of get.
 
@@ -221,7 +222,6 @@ class InjxTestScope:
             return self.container.list_overrides()
         return []
 
-    def __enter__(self) -> InjxTestScope:
     def __enter__(self) -> InjxTestScope:
         """Enter test scope."""
         # Use base_container for InjxTestContainer, otherwise use the container directly

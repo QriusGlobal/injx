@@ -82,13 +82,13 @@ class TestAutowirePerformance:
                     self.repo = repo
 
             # Warm-up: Ensure singletons are initialized
-            _ = container[Service]
+            _ = container.get(Service)
 
             # Benchmark resolution
             iterations = 1000
             start_time = time.perf_counter()
             for _ in range(iterations):
-                _ = container[Service]
+                _ = container.get(Service)
             end_time = time.perf_counter()
 
         # Calculate average time per resolution
@@ -169,13 +169,13 @@ class TestAutowirePerformance:
                     self.level = 1
 
             # Warm-up
-            _ = container[Level1]
+            _ = container.get(Level1)
 
             # Benchmark full dependency chain resolution
             iterations = 100
             start_time = time.perf_counter()
             for _ in range(iterations):
-                _ = container[Level1]
+                _ = container.get(Level1)
             end_time = time.perf_counter()
 
         # Calculate average time
@@ -220,13 +220,13 @@ class TestAutowirePerformance:
             iterations = 10000
             start_time = time.perf_counter()
             for _ in range(iterations):
-                _ = baseline_container[baseline_token]
+                _ = baseline_container.get(baseline_token)
             baseline_time = time.perf_counter() - start_time
 
             # Benchmark optimized
             start_time = time.perf_counter()
             for _ in range(iterations):
-                _ = optimized_container[OptimizedService]
+                _ = optimized_container.get(OptimizedService)
             optimized_time = time.perf_counter() - start_time
 
         # Calculate speedup
@@ -266,7 +266,7 @@ class TestAutowirePerformance:
         baseline_container.register(dep_token, BaselineDep, scope=Scope.SINGLETON)
         baseline_container.register(
             service_token,
-            lambda: BaselineService(baseline_container[dep_token]),
+            lambda: BaselineService(baseline_container.get(dep_token)),
             scope=Scope.TRANSIENT,
         )
 
@@ -285,20 +285,20 @@ class TestAutowirePerformance:
                     self.dep = dep
 
             # Warm-up singletons
-            _ = baseline_container[service_token]
-            _ = optimized_container[OptimizedService]
+            _ = baseline_container.get(service_token)
+            _ = optimized_container.get(OptimizedService)
 
             # Benchmark baseline
             iterations = 10000
             start_time = time.perf_counter()
             for _ in range(iterations):
-                _ = baseline_container[service_token]
+                _ = baseline_container.get(service_token)
             baseline_time = time.perf_counter() - start_time
 
             # Benchmark optimized
             start_time = time.perf_counter()
             for _ in range(iterations):
-                _ = optimized_container[OptimizedService]
+                _ = optimized_container.get(OptimizedService)
             optimized_time = time.perf_counter() - start_time
 
         # Calculate speedup
@@ -353,9 +353,9 @@ class TestAutowirePerformance:
         baseline_container.register(
             service_token,
             lambda: BaselineService(
-                baseline_container[dep1_token],
-                baseline_container[dep2_token],
-                baseline_container[dep3_token],
+                baseline_container.get(dep1_token),
+                baseline_container.get(dep2_token),
+                baseline_container.get(dep3_token),
             ),
             scope=Scope.TRANSIENT,
         )
@@ -389,20 +389,20 @@ class TestAutowirePerformance:
                     self.dep3 = dep3
 
             # Warm-up singletons
-            _ = baseline_container[service_token]
-            _ = optimized_container[OptimizedService]
+            _ = baseline_container.get(service_token)
+            _ = optimized_container.get(OptimizedService)
 
             # Benchmark baseline
             iterations = 10000
             start_time = time.perf_counter()
             for _ in range(iterations):
-                _ = baseline_container[service_token]
+                _ = baseline_container.get(service_token)
             baseline_time = time.perf_counter() - start_time
 
             # Benchmark optimized
             start_time = time.perf_counter()
             for _ in range(iterations):
-                _ = optimized_container[OptimizedService]
+                _ = optimized_container.get(OptimizedService)
             optimized_time = time.perf_counter() - start_time
 
         # Calculate speedup
@@ -521,13 +521,13 @@ class TestAutowirePerformance:
             # First resolution (cold - will instantiate)
             iterations = 1000
             start_time = time.perf_counter()
-            first_result = container[ExpensiveService]
+            first_result = container.get(ExpensiveService)
             first_resolution_time = time.perf_counter() - start_time
 
             # Subsequent resolutions (warm - cached singleton)
             start_time = time.perf_counter()
             for _ in range(iterations):
-                _ = container[ExpensiveService]
+                _ = container.get(ExpensiveService)
             cached_time = time.perf_counter() - start_time
             avg_cached_time = cached_time / iterations
 
@@ -542,7 +542,7 @@ class TestAutowirePerformance:
             )
 
             # Verify same instance is returned
-            second_result = container[ExpensiveService]
+            second_result = container.get(ExpensiveService)
             assert first_result is second_result, (
                 "Singleton should return same instance"
             )

@@ -22,7 +22,8 @@ from typing import Any, Generic, TypeVar
 from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from injx import (
     Container,
@@ -62,6 +63,7 @@ def class_factory():
     Returns:
         Dynamically created class
     """
+
     def _make(name: str = "TestClass", deps: list[type] | None = None, **attrs: Any):
         if deps is None:
             # Simple class with attributes
@@ -70,7 +72,9 @@ def class_factory():
                     setattr(self, k, v)
         else:
             # Class with typed dependencies
-            sig_params = [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+            sig_params = [
+                inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            ]
             for i, dep in enumerate(deps):
                 sig_params.append(
                     inspect.Parameter(
@@ -125,8 +129,13 @@ def run_concurrent(worker, num_threads: int = 50, use_barrier: bool = False) -> 
         raise AssertionError(f"Concurrent execution errors: {errors}")
 
 
-def assert_cache_stats(*, misses: int | None = None, hits: int | None = None,
-                      size: int | None = None, size_le: int | None = None) -> dict:
+def assert_cache_stats(
+    *,
+    misses: int | None = None,
+    hits: int | None = None,
+    size: int | None = None,
+    size_le: int | None = None,
+) -> dict:
     """Verify cache statistics match expected values.
 
     Args:
@@ -141,7 +150,9 @@ def assert_cache_stats(*, misses: int | None = None, hits: int | None = None,
     info = get_analysis_cache_info()
 
     if misses is not None:
-        assert info["misses"] == misses, f"Expected {misses} misses, got {info['misses']}"
+        assert info["misses"] == misses, (
+            f"Expected {misses} misses, got {info['misses']}"
+        )
     if hits is not None:
         assert info["hits"] == hits, f"Expected {hits} hits, got {info['hits']}"
     if size is not None:
@@ -166,6 +177,7 @@ class TestRaceConditions:
         cls = class_factory(value=42)
 
         containers = []
+
         def worker():
             container = Container()
             containers.append(container)
@@ -296,7 +308,6 @@ class TestRaceConditions:
     def test_stress_100_threads_mixed_operations(self, class_factory):
         """Heavy load test with 100 threads doing mixed operations."""
         classes = [class_factory(name=f"StressClass{i}", id=i) for i in range(10)]
-        worker_ids = list(range(100))
 
         def stress_worker():
             worker_id = threading.current_thread().ident % 100
@@ -327,13 +338,17 @@ class TestRaceConditions:
             with container.activate():
                 autowire(cls)
 
-        run_concurrent(lambda: worker(threading.current_thread().ident % num_threads),
-                      num_threads=num_threads, use_barrier=True)
+        run_concurrent(
+            lambda: worker(threading.current_thread().ident % num_threads),
+            num_threads=num_threads,
+            use_barrier=True,
+        )
 
         assert_cache_stats(misses=num_threads)
 
     def test_concurrent_wire_builder_usage(self):
         """Test wire() builder under concurrent access."""
+
         class WireDatabase:
             def __init__(self) -> None:
                 self.connected = True
@@ -347,7 +362,7 @@ class TestRaceConditions:
             with container.activate():
                 autowire(WireDatabase)
                 wire(WireService, container=container).register()
-                instance = container[WireService]
+                instance = container.get(WireService)
                 assert instance.db.connected
 
         run_concurrent(worker, num_threads=20)
@@ -361,7 +376,7 @@ class TestRaceConditions:
             container = Container()
             with container.activate():
                 autowire(cls)
-                instance = container[cls]
+                instance = container.get(cls)
                 results.append(instance.value)
 
         run_concurrent(worker, num_threads=50)
@@ -369,6 +384,7 @@ class TestRaceConditions:
 
     def test_concurrent_generic_normalization(self):
         """Test concurrent access to generic type normalization."""
+
         class GenericRepo(Generic[T]):
             def __init__(self) -> None:
                 self.items: list[T] = []
@@ -381,11 +397,14 @@ class TestRaceConditions:
                 else:
                     autowire(GenericRepo[int])
 
-        run_concurrent(lambda: worker(threading.current_thread().ident % 30), num_threads=30)
+        run_concurrent(
+            lambda: worker(threading.current_thread().ident % 30), num_threads=30
+        )
         assert_cache_stats(misses=1)
 
     def test_thread_safety_with_dependencies(self):
         """Test concurrent registration of classes with dependencies."""
+
         class DependencyA:
             def __init__(self) -> None:
                 self.name = "A"
@@ -399,7 +418,7 @@ class TestRaceConditions:
             with container.activate():
                 autowire(DependencyA)
                 autowire(DependencyB)
-                instance = container[DependencyB]
+                instance = container.get(DependencyB)
                 assert instance.a.name == "A"
 
         run_concurrent(worker, num_threads=25)
@@ -417,11 +436,14 @@ class TestPropertyBased:
     @settings(max_examples=50, deadline=None)
     def test_analysis_idempotence(self, num_params: int):
         """Property: Analyzing same class twice returns identical results."""
-        sig_params = [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+        sig_params = [
+            inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)
+        ]
         for i in range(num_params):
             sig_params.append(
-                inspect.Parameter(f"param{i}", inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                annotation=int)
+                inspect.Parameter(
+                    f"param{i}", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=int
+                )
             )
 
         def __init__(self, **kwargs: int) -> None:
@@ -449,6 +471,7 @@ class TestPropertyBased:
     @settings(max_examples=30, deadline=None)
     def test_cache_hit_monotonicity(self, num_registrations: int):
         """Property: Cache hits should never decrease during registrations."""
+
         class MonotonicClass:
             def __init__(self) -> None:
                 self.value = 1
@@ -470,9 +493,11 @@ class TestPropertyBased:
         """Property: Cache size never exceeds maxsize."""
         for i, count in enumerate(class_counts):
             for j in range(count):
+
                 def make_init(idx):
                     def __init__(self) -> None:
                         self.id = idx
+
                     return __init__
 
                 cls = type(f"BoundedClass_{i}_{j}", (), {"__init__": make_init(j)})
@@ -488,22 +513,31 @@ class TestPropertyBased:
         """Property: Classes with N dependencies resolve correctly."""
         dep_classes = []
         for i in range(num_deps):
+
             def make_init(idx):
                 def __init__(self) -> None:
                     self.dep_id = idx
+
                 return __init__
+
             dep_cls = type(f"Dep{i}", (), {"__init__": make_init(i)})
             dep_classes.append(dep_cls)
 
         if num_deps == 0:
+
             def final_init(self) -> None:
                 self.deps = []
         else:
-            sig_params = [inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)]
+            sig_params = [
+                inspect.Parameter("self", inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            ]
             for i, dep_cls in enumerate(dep_classes):
                 sig_params.append(
-                    inspect.Parameter(f"dep{i}", inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                                    annotation=dep_cls)
+                    inspect.Parameter(
+                        f"dep{i}",
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                        annotation=dep_cls,
+                    )
                 )
 
             def final_init(self, **kwargs: Any) -> None:
@@ -519,13 +553,14 @@ class TestPropertyBased:
                 autowire(dep_cls)
             autowire(MainClass)
 
-            instance = container[MainClass]
+            instance = container.get(MainClass)
             assert len(instance.deps) == num_deps
 
     @given(st.booleans())
     @settings(max_examples=20, deadline=None)
     def test_cache_clear_idempotence(self, clear_twice: bool):
         """Property: Clearing cache multiple times is idempotent."""
+
         class ClearClass:
             def __init__(self) -> None:
                 pass
@@ -591,10 +626,13 @@ class TestMockBased:
         """Verify Container.register() called with correct signature."""
         mock_container = create_autospec(Container, instance=True)
         mock_container.activate = MagicMock()
-        mock_container.activate.return_value.__enter__ = MagicMock(return_value=mock_container)
+        mock_container.activate.return_value.__enter__ = MagicMock(
+            return_value=mock_container
+        )
         mock_container.activate.return_value.__exit__ = MagicMock(return_value=None)
 
         with patch.object(Container, "get_active", return_value=mock_container):
+
             class TestService:
                 def __init__(self) -> None:
                     self.value = 42
@@ -609,6 +647,7 @@ class TestMockBased:
 
     def test_inspect_signature_failure_injection(self):
         """Test graceful handling when inspect.signature() fails."""
+
         class BadSignatureClass:
             __init__ = None  # type: ignore
 
@@ -697,10 +736,12 @@ class TestIntegration:
 
     def test_dynamic_class_creation_with_type(self):
         """Dynamic class creation using type() works with caching."""
+
         def create_service_class(name: str, value: int):
             def init(self) -> None:
                 self.name = name
                 self.value = value
+
             return type(f"DynamicService_{name}", (), {"__init__": init})
 
         ServiceA, ServiceB = create_service_class("A", 1), create_service_class("B", 2)
@@ -710,13 +751,14 @@ class TestIntegration:
             autowire(ServiceA)
             autowire(ServiceB)
 
-            assert container[ServiceA].name == "A"
-            assert container[ServiceB].name == "B"
+            assert container.get(ServiceA).name == "A"
+            assert container.get(ServiceB).name == "B"
 
         assert_cache_stats(misses=2)
 
     def test_complex_generic_hierarchy(self):
         """Complex generic type hierarchy with caching."""
+
         class Repository(Generic[T]):
             def __init__(self) -> None:
                 self.items: list[T] = []
@@ -731,6 +773,7 @@ class TestIntegration:
 
     def test_real_world_fastapi_pattern(self):
         """Simulate FastAPI dependency injection pattern."""
+
         class Database:
             def __init__(self) -> None:
                 self.connected = True
@@ -760,7 +803,7 @@ class TestIntegration:
             autowire(UserService)
             autowire(UserController)
 
-            controller = container[UserController]
+            controller = container.get(UserController)
             assert controller.service.repo.db.connected
             assert controller.service.cache.enabled
 
@@ -768,8 +811,10 @@ class TestIntegration:
 
     def test_production_scale_registration(self, class_factory):
         """Simulate production-scale application with many services."""
-        classes = [class_factory(name=f"ProductionService{i}", service_id=i)
-                  for i in range(100)]
+        classes = [
+            class_factory(name=f"ProductionService{i}", service_id=i)
+            for i in range(100)
+        ]
 
         container = Container()
         with container.activate():

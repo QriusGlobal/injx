@@ -328,3 +328,85 @@ class TestSingletonLocks:
         # Clean up the second one
         container._cleanup_singleton_lock(obj_token2)
         assert obj_token2 not in container._singleton_locks
+
+
+class TestGetAccess:
+    """Test explicit get() access for Container."""
+
+    def test_get_access_basic(self):
+        container = Container()
+
+        class Service:
+            def __init__(self):
+                self.value = 42
+
+        container.register(Service, Service)
+        service = container.get(Service)
+        assert isinstance(service, Service)
+        assert service.value == 42
+
+    def test_get_access_with_token(self):
+        container = Container()
+
+        class Database:
+            pass
+
+        db_token = Token("database", Database)
+        db_instance = Database()
+
+        container.register(db_token, lambda: db_instance)
+        result = container.get(db_token)
+        assert result is db_instance
+
+    def test_get_access_singleton(self):
+        container = Container()
+
+        class Database:
+            pass
+
+        call_count = 0
+
+        def create_db() -> Database:
+            nonlocal call_count
+            call_count += 1
+            return Database()
+
+        container.register(Database, create_db, scope=Scope.SINGLETON)
+
+        db1 = container.get(Database)
+        db2 = container.get(Database)
+        assert db1 is db2
+        assert call_count == 1
+
+    def test_get_access_error(self):
+        container = Container()
+
+        class Database:
+            pass
+
+        from injx.exceptions import ResolutionError
+
+        with pytest.raises(ResolutionError):
+            _ = container.get(Database)
+
+    def test_get_access_with_overrides(self):
+        container = Container()
+
+        class Database:
+            pass
+
+        original_db = Database()
+        mock_db = Database()
+
+        db_token = Token("database", Database)
+        container.register(db_token, lambda: original_db)
+
+        # Normal access
+        assert container.get(db_token) is original_db
+
+        # With override
+        with container.use_overrides({db_token: mock_db}):
+            assert container.get(db_token) is mock_db
+
+        # Back to normal
+        assert container.get(db_token) is original_db

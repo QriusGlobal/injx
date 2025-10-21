@@ -32,54 +32,86 @@ uv add injx
 
 ## Quick Start
 
-Copy this complete example to `main.py` and run it:
+Keep it simple. Declare lifecycles once, then write application code.
 
+1) Build a container (explicit, minimal)
 ```python
-"""Complete working example of dependency injection with Injx."""
+from contextlib import asynccontextmanager
+from injx import Container, Scope, Token
 
-from typing import Protocol, Any, Optional
-from injx import Container, Token, inject, Scope, Dependencies
+class Engine:
+    async def aclose(self) -> None: ...
 
+class Session:
+    def __init__(self, engine: Engine) -> None:
+        self.engine = engine
+    async def aclose(self) -> None: ...
 
-# 1. Define service interfaces using Protocols with type annotations
-class Database(Protocol):
-    """Database service protocol."""
-    def get_user(self, user_id: int) -> dict[str, Any]: ...
-    def save_user(self, user: dict[str, Any]) -> None: ...
+def build_container() -> Container:
+    c = Container()
+    ENGINE = Token[Engine]("engine", Engine, scope=Scope.SINGLETON)
+    SESSION = Token[Session]("session", Session, scope=Scope.REQUEST)
 
+    @asynccontextmanager
+    async def engine_cm():
+        eng = Engine();
+        try:
+            yield eng
+        finally:
+            await eng.aclose()
 
-class HTTPClient(Protocol):
-    """HTTP client protocol."""
-    def get(self, url: str) -> dict[str, Any]: ...
-    def post(self, url: str, data: dict[str, Any]) -> dict[str, Any]: ...
+    @asynccontextmanager
+    async def session_cm():
+        s = Session(engine=await c.aget(ENGINE))
+        try:
+            yield s
+        finally:
+            await s.aclose()
 
+    c.register_context_async(ENGINE, lambda: engine_cm(), scope=Scope.SINGLETON)
+    c.register_context_async(SESSION, lambda: session_cm(), scope=Scope.REQUEST)
+    c.set("ENGINE", ENGINE); c.set("SESSION", SESSION)
+    return c
+```
 
-class Cache(Protocol):
-    """Cache service protocol."""
-    def get(self, key: str) -> Optional[dict[str, Any]]: ...
-    def set(self, key: str, value: dict[str, Any], ttl: int = 3600) -> None: ...
+2) FastAPI (request scope + lifespan)
+```python
+from fastapi import FastAPI
+container = build_container()
 
+from contextlib import asynccontextmanager
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    with container.activate():
+        yield
+    await container.aclose()
 
-# 2. Implement the services
-class PostgresDatabase:
-    """PostgreSQL database implementation."""
+app = FastAPI(lifespan=lifespan)
 
-    def __init__(self) -> None:
-        print("📦 Connecting to PostgreSQL...")
-        # In production: psycopg2.connect(...)
+@app.middleware("http")
+async def injx_request_scope(request, call_next):
+    async with container.async_request_scope():
+        return await call_next(request)
 
-    def get_user(self, user_id: int) -> dict[str, Any]:
-        print(f"  └─ Fetching user {user_id} from database")
-        return {
-            "id": user_id,
-            "name": f"User_{user_id}",
-            "email": f"user{user_id}@example.com"
-        }
+@app.get("/health")
+async def health():
+    session_token = container.get("SESSION")
+    _ = await container.aget(session_token)
+    return {"status": "ok"}
+```
 
-    def save_user(self, user: dict[str, Any]) -> None:
-        print(f"  └─ Saving user {user['id']} to database")
+3) ETL (one job scope)
+```python
+import asyncio
 
+async def run():
+    c = build_container()
+    async with c:
+        async with c.async_request_scope():
+            session = await c.aget(c.get("SESSION"))
+            # do ETL with session
 
+<<<<<<< HEAD
 class APIClient:
     """HTTP client implementation."""
 
@@ -206,32 +238,7 @@ def create_user(
 
 # 6. Run the application
 if __name__ == "__main__":
-    print("🚀 Starting application\n")
-
-    # Initialize container once at startup
-    container = setup_container()
-    Container.set_active(container)
-
-    print("\n" + "=" * 50)
-    print("Container ready with all services")
-    print("=" * 50 + "\n")
-
-    # Example 1: Get user (cache miss)
-    print("📊 Fetching user 42...")
-    user = get_user_info(42)
-    print(f"Result: {user}\n")
-
-    # Example 2: Get same user (cache hit)
-    print("📊 Fetching user 42 again...")
-    user = get_user_info(42)
-    print(f"Result: {user}\n")
-
-    # Example 3: Create new user
-    print("📊 Creating new user...")
-    new_user = create_user("Alice", "alice@example.com")
-    print(f"Created: {new_user}\n")
-
-    print("✅ Application completed successfully!")
+    asyncio.run(run())
 ```
 
 ## Core Concepts
@@ -334,16 +341,9 @@ container.register(DB_TOKEN, InvalidClass)  # Type error!
 
 ## Examples
 
-All examples include comprehensive type annotations and are immediately runnable.
-
-### Basic Patterns
-- [Basic DI Setup](docs/examples/basic_example.py) - Complete working example with DB, HTTP, Cache, Email services
-- [Async Services](docs/examples/async_example.py) - Async/await patterns with proper cleanup
-- [Testing with DI](docs/examples/testing_example.py) - Pytest fixtures with Mock(autospec=True)
-
-### Framework Integration
-- [FastAPI Integration](docs/examples/fastapi_integration.py) - Request-scoped dependencies and background tasks
-- [Django Integration](docs/examples/django_integration.py) - Views, middleware, and DRF integration
+Canonical examples (minimal, production-ready patterns):
+- FastAPI minimal: `docs/examples/fastapi_minimal.py`
+- ETL minimal: `docs/examples/etl_minimal.py`
 
 ## Framework Integration
 

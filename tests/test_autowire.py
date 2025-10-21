@@ -40,7 +40,7 @@ class TestAutowireBasic:
                     self.db = db
 
         # Assertions (outside activate context)
-        repo = container[Repository]
+        repo = container.get(Repository)
         assert isinstance(repo, Repository)
         assert isinstance(repo.db, Database)
         assert repo.db.connected is True
@@ -76,7 +76,7 @@ class TestAutowireBasic:
                     self.cache = cache
 
         # Assertions (outside activate context)
-        service = container[Service]
+        service = container.get(Service)
         assert isinstance(service, Service)
         assert isinstance(service.logger, Logger)
         assert isinstance(service.config, Config)
@@ -107,7 +107,7 @@ class TestAutowireBasic:
                     self.repo = repo
 
         # Assertions (outside activate context)
-        service = container[Service]
+        service = container.get(Service)
         assert isinstance(service, Service)
         assert isinstance(service.repo, Repository)
         assert isinstance(service.repo.db, Database)
@@ -125,7 +125,7 @@ class TestAutowireBasic:
                     self.initialized = True
 
         # Assertions (outside activate context)
-        service = container[SimpleService]
+        service = container.get(SimpleService)
         assert isinstance(service, SimpleService)
         assert service.initialized is True
 
@@ -151,7 +151,7 @@ class TestAutowireBasic:
         assert decorated.__name__ == "OriginalClass"
 
         # Assertions - functionality preserved
-        instance = container[OriginalClass]
+        instance = container.get(OriginalClass)
         assert isinstance(instance, OriginalClass)
         assert instance.instance_attr == "value"
 
@@ -175,7 +175,7 @@ class TestAutowireBasic:
             wire(Service, container=container).with_override("db", test_db).register()
 
         # Verify override works with Annotated types
-        service = container[Service]
+        service = container.get(Service)
         assert service.db is test_db
         assert service.db.connection_string == "test"
 
@@ -208,7 +208,7 @@ class TestAutowireBasic:
             ).register()
 
         # Resolve
-        repo = container[Repository]
+        repo = container.get(Repository)
         assert isinstance(repo, Repository)
         assert repo.db is test_db
         assert repo.db.version == "test"
@@ -229,8 +229,8 @@ class TestAutowireScopes:
                     self.id = id(self)
 
         # Resolve twice from container (outside activate context)
-        instance1 = container[Service]
-        instance2 = container[Service]
+        instance1 = container.get(Service)
+        instance2 = container.get(Service)
 
         # Assert both resolutions return the same instance (object identity)
         assert instance1 is instance2, "Singleton should return same instance"
@@ -248,8 +248,8 @@ class TestAutowireScopes:
                     self.id = id(self)
 
         # Resolve twice from container (outside activate context)
-        instance1 = container[Service]
-        instance2 = container[Service]
+        instance1 = container.get(Service)
+        instance2 = container.get(Service)
 
         # Assert both resolutions return different instances (not same object)
         assert instance1 is not instance2, "Transient should return different instances"
@@ -268,10 +268,10 @@ class TestAutowireScopes:
 
         # Collect instances from two different request contexts
         with container.request_scope():
-            instance1 = container[Service]
+            instance1 = container.get(Service)
 
         with container.request_scope():
-            instance2 = container[Service]
+            instance2 = container.get(Service)
 
         # Each request context should get a different instance
         assert instance1 is not instance2, (
@@ -319,8 +319,8 @@ class TestAutowireErrors:
 
         # Manually create a service provider that depends on unregistered token
         def create_service():
-            db = container[Database]
-            unregistered = container[unregistered_token]  # This will fail
+            db = container.get(Database)
+            unregistered = container.get(unregistered_token)  # This will fail
             return {"db": db, "unregistered": unregistered}
 
         service_token = Token("Service", type_=dict)
@@ -328,7 +328,7 @@ class TestAutowireErrors:
 
         # Attempting to resolve should fail with ResolutionError
         with pytest.raises(ResolutionError):
-            container[service_token]
+            container.get(service_token)
 
     def test_autowire_circular_dependency(self) -> None:
         """Test error on circular dependencies.
@@ -343,10 +343,10 @@ class TestAutowireErrors:
         # Define two interdependent services using manual registration
         # to create a circular dependency that can be detected
         def create_service_a():
-            return container[ServiceB]  # Depends on B
+            return container.get(ServiceB)  # Depends on B
 
         def create_service_b():
-            return container[ServiceA]  # Depends on A (circular!)
+            return container.get(ServiceA)  # Depends on A (circular!)
 
         class ServiceA:
             pass
@@ -362,7 +362,7 @@ class TestAutowireErrors:
         with pytest.raises(
             CircularDependencyError, match="Circular dependency detected"
         ):
-            container[ServiceA]
+            container.get(ServiceA)
 
             class ServiceB:
                 pass  # Will be redefined below with dependency
@@ -390,7 +390,7 @@ class TestAutowireErrors:
         try:
             # This won't actually create a circular dependency with our setup
             # but we can still verify the exception type is available
-            container[ServiceA]
+            container.get(ServiceA)
         except (ResolutionError, CircularDependencyError):
             pass  # Expected - either unregistered or circular
 
@@ -433,7 +433,7 @@ class TestWireBuilder:
             wire(_WireTestService, container=container).register()
 
         # Verify
-        service = container[_WireTestService]
+        service = container.get(_WireTestService)
         assert isinstance(service, _WireTestService)
         assert isinstance(service.db, _WireTestDatabase)
         assert service.db.connected is True
@@ -455,7 +455,7 @@ class TestWireBuilder:
             ).register()
 
         # Resolve Service
-        service = container[_WireTestService]
+        service = container.get(_WireTestService)
         assert isinstance(service, _WireTestService)
         assert service.db is test_db
         assert service.db.connection_string == "test:5432"
@@ -471,8 +471,8 @@ class TestWireBuilder:
             ).register()
 
         # Resolve twice
-        db1 = container[_WireTestDatabase]
-        db2 = container[_WireTestDatabase]
+        db1 = container.get(_WireTestDatabase)
+        db2 = container.get(_WireTestDatabase)
 
         # Assert different instances (TRANSIENT behavior)
         assert db1 is not db2
@@ -497,8 +497,8 @@ class TestWireBuilder:
             ).with_scope(Scope.TRANSIENT).register()
 
         # Resolve twice to verify TRANSIENT scope
-        service1 = container[_WireTestServiceMulti]
-        service2 = container[_WireTestServiceMulti]
+        service1 = container.get(_WireTestServiceMulti)
+        service2 = container.get(_WireTestServiceMulti)
 
         # Verify both configurations applied
         assert service1 is not service2  # TRANSIENT scope
@@ -558,7 +558,7 @@ class TestTypeHints:
             autowire(_TypeHintServiceA, scope=Scope.SINGLETON)
 
             # Resolve
-            service_a = container[_TypeHintServiceA]
+            service_a = container.get(_TypeHintServiceA)
             assert isinstance(service_a, _TypeHintServiceA)
             assert isinstance(service_a.b, _TypeHintServiceB)
             assert service_a.b.value == 42
@@ -630,7 +630,7 @@ class TestTypeHints:
             ).register()
 
             # Resolve
-            mixed = container[_MixedService]
+            mixed = container.get(_MixedService)
             assert mixed.db is test_db  # Overridden
             assert isinstance(mixed.svc_b, _TypeHintServiceB)  # Resolved from container
 
@@ -872,7 +872,7 @@ class TestGenericNormalization:
             autowire(StrRepo)
 
         # Verify no errors and resolution works
-        repo1 = container[StrRepo]
+        repo1 = container.get(StrRepo)
         assert isinstance(repo1, GenericRepository)
 
         # Second registration with different type parameter should hit cache
@@ -881,7 +881,7 @@ class TestGenericNormalization:
             IntRepo = GenericRepository[int]
             autowire(IntRepo)
 
-        repo2 = container2[IntRepo]
+        repo2 = container2.get(IntRepo)
         assert isinstance(repo2, GenericRepository)
 
         # Verify cache hit occurred (both normalized to GenericRepository)
@@ -930,7 +930,7 @@ class TestThreadSafety:
                 containers.append(container)
                 with container.activate():
                     autowire(service_classes[idx])
-                result = container[service_classes[idx]]
+                result = container.get(service_classes[idx])
                 results.append(result)
             except Exception as e:
                 errors.append(e)

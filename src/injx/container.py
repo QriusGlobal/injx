@@ -693,6 +693,7 @@ class Container:
             )
             return result
 
+    # __getitem__ is intentionally not implemented to enforce explicit APIs
     def _resolve_fast_path(self, token: Token[U] | type[U]) -> U | None:
         """Attempt fast resolution for cached or given instances.
 
