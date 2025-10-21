@@ -328,11 +328,7 @@ class TestScopeProtocol(Protocol):
         """
         ...
 
-<<<<<<< HEAD
-=======
     # Subscript syntax intentionally not part of the test scope protocol
-
->>>>>>> f0f8418 (refactor(container)!: remove subscript resolution API\n\n- Delete __getitem__ on Container and test helpers\n- Remove subscript from protocols\n- Standardize on get()/aget() for resolution\n\nBREAKING CHANGE: container[...] removed; use container.get()/aget())
     async def aget(self, token: Token[T] | type[T]) -> T:
         """Async version of get with overrides.
 
