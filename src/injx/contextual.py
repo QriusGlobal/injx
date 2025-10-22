@@ -62,6 +62,14 @@ _session_cleanup_async: ContextVar[list[Callable[[], Awaitable[None]]] | None] =
     ContextVar("injx_session_cleanup_async", default=None)
 )
 
+# New: request/session cleanup task deques (LIFO) available during scopes
+_request_cleanup_tasks: ContextVar[deque[Callable[[], Any]] | None] = ContextVar(
+    "injx_request_cleanup_tasks", default=None
+)
+_session_cleanup_tasks: ContextVar[deque[Callable[[], Any]] | None] = ContextVar(
+    "injx_session_cleanup_tasks", default=None
+)
+
 
 def get_current_context() -> ChainMap[Token[Any], Any] | None:
     """Get current dependency context."""
@@ -323,18 +331,13 @@ class ScopeManager:
         token = _context_stack.set(new_context)
         req_sync_token = _request_cleanup_sync.set([])
         req_async_token = _request_cleanup_async.set([])
+        req_tasks_token = _request_cleanup_tasks.set(request_cleanup)
         logger.info("Entering request scope")
         try:
             yield
         finally:
             logger.info("Exiting request scope")
-            # Create cleanup tasks for all cached resources
-            for resource in request_cache.values():
-                strategy = CleanupStrategy.analyze(resource)
-                if strategy != CleanupStrategy.NONE:
-                    task = CleanupStrategy.create_task(resource, strategy)
-                    request_cleanup.append(task)
-            # Clean up resources using cleanup tasks
+            # Clean up resources using tasks queued during instance storage
             self._container.cleanup_scope(request_cleanup)
             try:
                 sync_fns = _request_cleanup_sync.get() or []
@@ -348,6 +351,7 @@ class ScopeManager:
             finally:
                 _request_cleanup_sync.reset(req_sync_token)
             _request_cleanup_async.reset(req_async_token)
+            _request_cleanup_tasks.reset(req_tasks_token)
             _context_stack.reset(token)
 
     @asynccontextmanager
@@ -362,18 +366,13 @@ class ScopeManager:
         token = _context_stack.set(new_context)
         req_sync_token = _request_cleanup_sync.set([])
         req_async_token = _request_cleanup_async.set([])
+        req_tasks_token = _request_cleanup_tasks.set(request_cleanup)
         logger.info("Entering async request scope")
         try:
             yield
         finally:
             logger.info("Exiting async request scope")
-            # Create cleanup tasks for all cached resources
-            for resource in request_cache.values():
-                strategy = CleanupStrategy.analyze(resource)
-                if strategy != CleanupStrategy.NONE:
-                    task = CleanupStrategy.create_task(resource, strategy)
-                    request_cleanup.append(task)
-            # Clean up resources using cleanup tasks
+            # Clean up resources using tasks queued during instance storage
             await self._container.async_cleanup_scope(request_cleanup)
             async_fns = _request_cleanup_async.get() or []
             if async_fns:
@@ -390,6 +389,7 @@ class ScopeManager:
                     )
             _request_cleanup_sync.reset(req_sync_token)
             _request_cleanup_async.reset(req_async_token)
+            _request_cleanup_tasks.reset(req_tasks_token)
             _context_stack.reset(token)
 
     @contextmanager
@@ -400,11 +400,15 @@ class ScopeManager:
             session_token = _session_context.set(session_cache)
             sess_sync_token = _session_cleanup_sync.set([])
             sess_async_token = _session_cleanup_async.set([])
+            session_cleanup: deque[Callable[[], Any]] = deque()
+            sess_tasks_token = _session_cleanup_tasks.set(session_cleanup)
         else:
             session_cache = existing
             session_token = None
             sess_sync_token = None
             sess_async_token = None
+            session_cleanup = None  # type: ignore[assignment]
+            sess_tasks_token = None  # type: ignore[assignment]
         current = _context_stack.get()
         if current is None:
             new_context = ChainMap(session_cache, self._container._singletons_mapping())  # type: ignore[arg-type]
@@ -422,6 +426,8 @@ class ScopeManager:
             logger.info("Exiting session scope")
             _context_stack.reset(context_token)
             if session_token:
+                # Drain queued cleanup tasks for the session
+                self._container.cleanup_scope(session_cleanup)
                 try:
                     sync_fns = _session_cleanup_sync.get() or []
                     for fn in reversed(sync_fns):
@@ -438,6 +444,8 @@ class ScopeManager:
                 if sess_async_token is not None:
                     _session_cleanup_async.reset(sess_async_token)
                 _session_context.reset(session_token)
+                if sess_tasks_token is not None:
+                    _session_cleanup_tasks.reset(sess_tasks_token)
 
     def resolve_from_context(self, token: Token[T]) -> T | None:
         context = _context_stack.get()
@@ -456,15 +464,64 @@ class ScopeManager:
         return None
 
     def store_in_context(self, token: Token[T], instance: T) -> None:
+        # Store instance according to scope
         if token.scope == Scope.SINGLETON:
             self._container.set_singleton_cached(token, instance)
-        elif token.scope == Scope.REQUEST:
+            return
+        if token.scope == Scope.REQUEST:
             self._container.put_in_current_request_cache(token, instance)
-        elif token.scope == Scope.SESSION:
+            # Queue cleanup task based on instance capabilities
+            tasks = _request_cleanup_tasks.get()
+            if tasks is not None:
+                # Avoid duplicating cleanup for context-managed providers
+                try:
+                    # Access provider spec to see if this token was registered as a context manager
+                    record = getattr(self._container, "_core", None)
+                    provider_record = None
+                    if record is not None and hasattr(record, "providers"):
+                        provider_record = record.providers.get(token)  # type: ignore[attr-defined]
+                    if not provider_record or provider_record.cleanup not in (
+                        CleanupStrategy.CONTEXT,
+                        CleanupStrategy.ASYNC_CONTEXT,
+                    ):
+                        strategy = CleanupStrategy.analyze(instance)
+                        if strategy != CleanupStrategy.NONE:
+                            task = CleanupStrategy.create_task(instance, strategy)
+                            tasks.append(task)
+                except Exception:
+                    # Fallback: just analyze and queue if possible
+                    strategy = CleanupStrategy.analyze(instance)
+                    if strategy != CleanupStrategy.NONE:
+                        task = CleanupStrategy.create_task(instance, strategy)
+                        tasks.append(task)
+            return
+        if token.scope == Scope.SESSION:
             session = _session_context.get()
             if session is not None:
                 session[token] = instance
-        elif token.scope == Scope.TRANSIENT:
+            # Queue cleanup task for session-scoped resources
+            tasks = _session_cleanup_tasks.get()
+            if tasks is not None:
+                try:
+                    record = getattr(self._container, "_core", None)
+                    provider_record = None
+                    if record is not None and hasattr(record, "providers"):
+                        provider_record = record.providers.get(token)  # type: ignore[attr-defined]
+                    if not provider_record or provider_record.cleanup not in (
+                        CleanupStrategy.CONTEXT,
+                        CleanupStrategy.ASYNC_CONTEXT,
+                    ):
+                        strategy = CleanupStrategy.analyze(instance)
+                        if strategy != CleanupStrategy.NONE:
+                            task = CleanupStrategy.create_task(instance, strategy)
+                            tasks.append(task)
+                except Exception:
+                    strategy = CleanupStrategy.analyze(instance)
+                    if strategy != CleanupStrategy.NONE:
+                        task = CleanupStrategy.create_task(instance, strategy)
+                        tasks.append(task)
+            return
+        if token.scope == Scope.TRANSIENT:
             pass
 
     def clear_request_context(self) -> None:
