@@ -112,6 +112,12 @@ class ContextualContainer:
         """Connect to the main Container for shared singletons when available."""
         self._container_bridge = container
 
+    def get_provider_spec(self, token: Token[Any]) -> Any:
+        """Delegate provider spec lookup to main Container if available."""
+        if self._container_bridge is not None:
+            return self._container_bridge.get_provider_spec(token)
+        return None
+
     def _singletons_mapping(
         self,
     ) -> MappingProxyType[Token[Any], Any] | dict[Token[Any], Any]:
@@ -319,6 +325,35 @@ class ScopeManager:
     def __init__(self, container: ContextualContainer) -> None:
         self._container = container
 
+    def _queue_cleanup_if_needed(
+        self, token: Token[T], instance: T, tasks: deque[Callable[[], Any]]
+    ) -> None:
+        """Analyze instance and queue cleanup task if necessary.
+
+        Avoids queueing cleanup for resources already registered with
+        context manager cleanup strategies, as those are handled separately.
+
+        Args:
+            token: The token for the resolved instance
+            instance: The resolved instance to analyze
+            tasks: The cleanup task queue for current scope
+        """
+        # Use public API to get provider spec
+        spec = self._container.get_provider_spec(token)
+
+        # If registered as context manager, its cleanup is handled elsewhere
+        if spec and spec.cleanup in (
+            CleanupStrategy.CONTEXT,
+            CleanupStrategy.ASYNC_CONTEXT,
+        ):
+            return
+
+        # For all other cases, analyze the instance
+        strategy = CleanupStrategy.analyze(instance)
+        if strategy != CleanupStrategy.NONE:
+            task = CleanupStrategy.create_task(instance, strategy)
+            tasks.append(task)
+
     @contextmanager
     def request_scope(self) -> Iterator[None]:
         request_cache: dict[Token[object], object] = {}
@@ -464,63 +499,27 @@ class ScopeManager:
         return None
 
     def store_in_context(self, token: Token[T], instance: T) -> None:
-        # Store instance according to scope
+        """Store instance in appropriate scope and queue cleanup if needed."""
         if token.scope == Scope.SINGLETON:
             self._container.set_singleton_cached(token, instance)
             return
+
         if token.scope == Scope.REQUEST:
             self._container.put_in_current_request_cache(token, instance)
-            # Queue cleanup task based on instance capabilities
             tasks = _request_cleanup_tasks.get()
             if tasks is not None:
-                # Avoid duplicating cleanup for context-managed providers
-                try:
-                    # Access provider spec to see if this token was registered as a context manager
-                    record = getattr(self._container, "_core", None)
-                    provider_record = None
-                    if record is not None and hasattr(record, "providers"):
-                        provider_record = record.providers.get(token)  # type: ignore[attr-defined]
-                    if not provider_record or provider_record.cleanup not in (
-                        CleanupStrategy.CONTEXT,
-                        CleanupStrategy.ASYNC_CONTEXT,
-                    ):
-                        strategy = CleanupStrategy.analyze(instance)
-                        if strategy != CleanupStrategy.NONE:
-                            task = CleanupStrategy.create_task(instance, strategy)
-                            tasks.append(task)
-                except Exception:
-                    # Fallback: just analyze and queue if possible
-                    strategy = CleanupStrategy.analyze(instance)
-                    if strategy != CleanupStrategy.NONE:
-                        task = CleanupStrategy.create_task(instance, strategy)
-                        tasks.append(task)
+                self._queue_cleanup_if_needed(token, instance, tasks)
             return
+
         if token.scope == Scope.SESSION:
             session = _session_context.get()
             if session is not None:
                 session[token] = instance
-            # Queue cleanup task for session-scoped resources
             tasks = _session_cleanup_tasks.get()
             if tasks is not None:
-                try:
-                    record = getattr(self._container, "_core", None)
-                    provider_record = None
-                    if record is not None and hasattr(record, "providers"):
-                        provider_record = record.providers.get(token)  # type: ignore[attr-defined]
-                    if not provider_record or provider_record.cleanup not in (
-                        CleanupStrategy.CONTEXT,
-                        CleanupStrategy.ASYNC_CONTEXT,
-                    ):
-                        strategy = CleanupStrategy.analyze(instance)
-                        if strategy != CleanupStrategy.NONE:
-                            task = CleanupStrategy.create_task(instance, strategy)
-                            tasks.append(task)
-                except Exception:
-                    strategy = CleanupStrategy.analyze(instance)
-                    if strategy != CleanupStrategy.NONE:
-                        task = CleanupStrategy.create_task(instance, strategy)
-                        tasks.append(task)
+                self._queue_cleanup_if_needed(token, instance, tasks)
             return
+
         if token.scope == Scope.TRANSIENT:
             pass
 

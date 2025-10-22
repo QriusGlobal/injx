@@ -34,6 +34,21 @@ class TestContainer:
         assert stats["cache_hits"] == 0
         assert stats["cache_misses"] == 0
 
+    def test_get_provider_spec(self) -> None:
+        """Test public API for getting provider specifications."""
+        container = Container()
+        token = Token("database", Database)
+
+        # Before registration
+        assert container.get_provider_spec(token) is None
+
+        # After registration
+        container.register(token, lambda: Database())
+        spec = container.get_provider_spec(token)
+        assert spec is not None
+        assert spec.scope == Scope.TRANSIENT  # Default scope
+        assert spec.is_async is False
+
     def test_register_provider(self) -> None:
         container = Container()
 

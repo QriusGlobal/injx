@@ -547,6 +547,27 @@ class Container:
         self._core.providers.set(token, record)
         return self
 
+    def get_provider_spec(self, token: Token[T]) -> ProviderSpec[T] | None:
+        """Get provider specification for a token.
+
+        Returns the provider metadata including pre-computed cleanup strategy.
+        Used by contextual containers to determine cleanup handling during
+        dependency storage instead of analyzing at scope exit.
+
+        Args:
+            token: The token to look up
+
+        Returns:
+            ProviderSpec if token is registered, None otherwise
+
+        Example:
+            >>> spec = container.get_provider_spec(DatabaseToken)
+            >>> if spec and spec.cleanup == CleanupStrategy.CLOSE:
+            ...     # Resource needs cleanup
+            ...     pass
+        """
+        return self._core.providers.get(token)
+
     def override(self, token: Token[U], value: U) -> None:
         """Override a dependency for the current concurrent context only.
 
