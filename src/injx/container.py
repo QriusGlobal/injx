@@ -50,9 +50,9 @@ from .exceptions import (
     CircularDependencyError,
     ResolutionError,
 )
-from .protocols.container import ContainerProtocol, TestScopeProtocol
 from .logging import log_performance_metric, log_resolution_path, logger
 from .metaclasses import Injectable
+from .protocols.container import TestScopeProtocol
 from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .provider_spec import ProviderSpec
 from .registry import TypedRegistry
