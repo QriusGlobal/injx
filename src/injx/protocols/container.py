@@ -192,7 +192,7 @@ class ContainerProtocol(Protocol):
         """
         ...
 
-    def test_scope(self) -> ContextManager["TestScopeProtocol"]:
+    def test_scope(self) -> ContextManager["TestScope"]:
         """Create an isolated test scope with automatic cleanup.
 
         Returns:
@@ -289,89 +289,4 @@ class ContainerProtocol(Protocol):
 
     def __repr__(self) -> str:
         """Return a readable representation of the container."""
-        ...
-
-
-@runtime_checkable
-class TestScopeProtocol(Protocol):
-    """Protocol for test scope functionality."""
-
-    def override(self, token: Token[T] | type[T], mock: T | Callable[[], T]) -> None:
-        """Override a dependency in the test scope.
-
-        Args:
-            token: Token or type to override
-            mock: Mock instance or factory function
-        """
-        ...
-
-    def mock(
-        self, token: Token[T] | type[T], implementation: Callable[[], T] | None = None
-    ) -> None:
-        """Create and register a mock for the given token.
-
-        Args:
-            token: Token or type to mock
-            implementation: Optional custom implementation
-        """
-        ...
-
-    def get(self, token: Token[T] | type[T]) -> T:
-        """Get a dependency, applying overrides first.
-
-        Args:
-            token: Token or type to resolve
-
-        Returns:
-            The resolved instance with overrides applied
-        """
-        ...
-
-    async def aget(self, token: Token[T] | type[T]) -> T:
-        """Async version of get with overrides.
-
-        Args:
-            token: Token or type to resolve
-
-        Returns:
-            The resolved instance with overrides applied
-        """
-        ...
-
-    def clear_overrides(self) -> None:
-        """Clear all overrides in this test scope."""
-        ...
-
-    def list_overrides(self) -> list[Token[Any]]:
-        """List all overridden tokens.
-
-        Returns:
-            List of tokens that have been overridden
-        """
-        ...
-
-    def __enter__(self) -> "TestScopeProtocol":
-        """Enter the test scope."""
-        ...
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: Any,
-    ) -> None:
-        """Exit the test scope with cleanup."""
-        ...
-
-    async def __aenter__(self) -> "TestScopeProtocol":
-        """Enter the async test scope."""
-        ...
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: Any,
-    ) -> None:
-        """Exit the async test scope with cleanup."""
         ...

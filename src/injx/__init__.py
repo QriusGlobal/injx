@@ -75,7 +75,6 @@ __all__ = [
     "debug_container",
     # Protocols
     "ContainerProtocol",
-    "TestScopeProtocol",
     # Scoping
     "ContextualContainer",
     "RequestScope",
