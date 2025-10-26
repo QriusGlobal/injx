@@ -63,8 +63,8 @@ class ContainerDebugger:
     def _group_by_scope(self, providers: Any) -> Dict[str, int]:
         """Group providers by scope."""
         scope_counts: Dict[str, int] = defaultdict(int)
-        for token in providers.keys():
-            scope_counts[token.scope.name] += 1
+        for token, spec in providers.items():
+            scope_counts[spec.scope.name] += 1
         return dict(scope_counts)
 
     def _format_providers(self, providers: Any) -> List[Dict[str, Any]]:
@@ -75,7 +75,7 @@ class ContainerDebugger:
                 {
                     "name": token.name,
                     "type": getattr(token.type_, "__name__", str(token.type_)),
-                    "scope": token.scope.name,
+                    "scope": spec.scope.name,
                     "is_async": getattr(spec, "is_async", False),
                     "cleanup": getattr(getattr(spec, "cleanup", None), "name", "NONE"),
                 }
@@ -209,14 +209,14 @@ class DependencyVisualizer:
         edges: List[Dict[str, Any]] = []
 
         # Build nodes
-        for token in providers.keys():
+        for token, spec in providers.items():
             nodes.append(
                 {
                     "id": token.name,
                     "type": token.type_.__name__
                     if hasattr(token.type_, "__name__")
                     else str(token.type_),
-                    "scope": token.scope.name,
+                    "scope": spec.scope.name,
                     "is_singleton": self.container.get_singleton_cached(token)
                     is not None,
                 }

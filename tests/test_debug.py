@@ -92,7 +92,7 @@ class TestDependencyVisualizer:
         assert "stats" in graph
 
         assert len(graph["nodes"]) == 1
-        assert graph["nodes"][0]["name"] == "service"
+        assert graph["nodes"][0]["id"] == "service"
         assert graph["nodes"][0]["type"] == "str"
 
     def test_print_graph(self):

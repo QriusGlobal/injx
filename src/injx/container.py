@@ -1647,7 +1647,8 @@ class Container:
             "cache_hit_rate": self.cache_hit_rate,
             "tokens": [token.name for token in self.list_tokens()],
             "scopes": {
-                token.name: token.scope.name for token in self._core.providers.keys()
+                token.name: spec.scope.name
+                for token, spec in self._core.providers.items()
             },
             "performance_stats": self.get_stats(),
         }
