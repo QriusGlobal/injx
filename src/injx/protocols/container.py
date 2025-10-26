@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncContextManager,
     ContextManager,
@@ -18,6 +19,9 @@ from typing import (
 )
 
 from ..tokens import Scope, Token
+
+if TYPE_CHECKING:
+    from ..testing import TestScope
 
 T = TypeVar("T")
 U = TypeVar("U")

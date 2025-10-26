@@ -31,6 +31,7 @@ from functools import lru_cache
 from itertools import groupby
 from types import MappingProxyType, TracebackType
 from typing import (
+    TYPE_CHECKING,
     Any,
     AsyncContextManager,
     Awaitable,
@@ -41,6 +42,9 @@ from typing import (
     cast,
     overload,
 )
+
+if TYPE_CHECKING:
+    from .testing import TestScope
 
 from . import analyzer
 from .cleanup_strategy import CleanupStrategy
@@ -1566,7 +1570,7 @@ class Container:
         """Clear all contexts. Delegates to ContextualContainer."""
         self._contextual.clear_all_contexts()
 
-    def test_scope(self) -> "TestScope":
+    def test_scope(self) -> ContextManager["TestScope"]:
         """Create an isolated test scope with automatic cleanup.
 
         Provides a clean testing environment with scoped overrides

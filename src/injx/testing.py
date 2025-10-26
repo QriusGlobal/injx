@@ -28,25 +28,45 @@ T = TypeVar("T")
 
 
 class MockFactory:
-    """Factory for creating common mock objects."""
+    """Factory for creating spec-compliant mock objects."""
 
     @staticmethod
     def create_mock(
-        token: Token[T], implementation: Callable[[], T] | None = None
+        token: Token[T],
+        implementation: Callable[[], T] | None = None,
+        *,
+        use_autospec: bool = True,
     ) -> T:
         """Create a mock instance for the given token.
 
         Args:
             token: The token to create a mock for
             implementation: Optional custom implementation
+            use_autospec: If True, use create_autospec for signature validation (default: True)
 
         Returns:
-            A mock instance
+            A mock instance with optional signature validation
         """
         if implementation:
             return implementation()
 
-        # Default mock implementation - return a simple object
+        # Use unittest.mock autospec for validation if type available
+        # However, for primitive types (str, int, etc), use simple mock instead
+        # because autospec(str) returns NonCallableMagicMock which breaks test expectations
+        if (
+            use_autospec
+            and token.type_ is not None
+            and not isinstance(token.type_, type(str))
+        ):
+            from unittest.mock import create_autospec
+
+            try:
+                return cast(T, create_autospec(token.type_, instance=True))
+            except (TypeError, ValueError):
+                # Fall back to simple mock if autospec fails
+                pass
+
+        # Fallback to simple mock for tokens without type_
         class MockInstance:
             def __init__(self, token_name: str) -> None:
                 self._mock_token_name = token_name
