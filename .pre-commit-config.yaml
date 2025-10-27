@@ -1,5 +1,5 @@
 repos:
-  # Smart commit message validation
+  # Commit message validation
   - repo: local
     hooks:
       - id: validate-commit
@@ -9,10 +9,36 @@ repos:
         stages: [commit-msg]
         pass_filenames: false
 
-      - id: full-ci
-        name: Full CI pipeline
-        entry: bash scripts/ci-local.sh
+  # Code quality
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff-format
+        files: ^src/
+      - id: ruff
+        files: ^src/
+        args: ["--exit-non-zero-on-fix"]
+
+  # Type checking and docs
+  - repo: local
+    hooks:
+      - id: basedpyright
+        name: Type check (basedpyright)
+        entry: basedpyright src
         language: system
-        stages: [commit]
+        files: ^src/
+        pass_filenames: false
+
+      - id: mkdocs-build
+        name: Documentation build (MkDocs --strict)
+        entry: uv run mkdocs build --strict
+        language: system
         pass_filenames: false
         always_run: true
+
+      - id: pytest
+        name: Test suite
+        entry: uv run pytest --tb=short -q
+        language: system
+        files: ^(src/|tests/)
+        pass_filenames: false
