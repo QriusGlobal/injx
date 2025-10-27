@@ -32,7 +32,6 @@ nav:
   - Usage: usage.md
   - Advanced: advanced.md
   - Testing: testing.md
-  - Local CI: local-ci.md
   - Performance: performance.md
   - Troubleshooting: troubleshooting.md
   - API: api.md
