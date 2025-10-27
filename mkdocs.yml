@@ -35,9 +35,6 @@ nav:
   - Performance: performance.md
   - Troubleshooting: troubleshooting.md
   - API: api.md
-  - LLM Guide (Raw): llm-raw.md
-  - Contributing: contributing.md
-  - Release Process: releases.md
 
 markdown_extensions:
   - admonition
@@ -79,11 +76,6 @@ plugins:
           - troubleshooting.md: "Common issues and solutions"
         Reference:
           - api.md: "API reference"
-          - llm.md: "LLM integration guide"
-          - llm-raw.md: "Raw documentation access"
-        Contributing:
-          - contributing.md: "Contribution guidelines"
-          - releases.md: "Release process"
 
 # Hook to copy extra files
 hooks:
