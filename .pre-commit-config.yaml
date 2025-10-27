@@ -31,6 +31,14 @@ repos:
         additional_dependencies: [basedpyright]
         args: ["src/"]
 
+      - id: mkdocs-build
+        name: Documentation build (MkDocs --strict)
+        entry: uv run mkdocs build --strict
+        language: system
+        files: ^(docs/|mkdocs\.yml)$
+        stages: [commit]
+        pass_filenames: false
+
       - id: actionlint
         name: actionlint (GitHub Actions)
         entry: uv run actionlint
