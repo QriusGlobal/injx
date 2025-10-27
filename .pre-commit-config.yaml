@@ -39,6 +39,14 @@ repos:
         stages: [commit]
         pass_filenames: false
 
+      - id: full-ci
+        name: Full CI pipeline
+        entry: bash scripts/ci-local.sh
+        language: system
+        stages: [commit]
+        pass_filenames: false
+        always_run: true
+
       - id: actionlint
         name: actionlint (GitHub Actions)
         entry: uv run actionlint
