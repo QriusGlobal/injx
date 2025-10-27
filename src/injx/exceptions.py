@@ -61,7 +61,7 @@ class ResolutionError(InjxError):
         if not chain:
             return "    [root]\n"
 
-        formatted_lines = []
+        formatted_lines: list[str] = []
         for i, token in enumerate(chain):
             indent = "    " * (i + 1)
             type_info = (

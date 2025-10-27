@@ -63,7 +63,7 @@ class ContainerDebugger:
     def _group_by_scope(self, providers: Any) -> Dict[str, int]:
         """Group providers by scope."""
         scope_counts: Dict[str, int] = defaultdict(int)
-        for token, spec in providers.items():
+        for _token, spec in providers.items():
             scope_counts[spec.scope.name] += 1
         return dict(scope_counts)
 
@@ -86,11 +86,12 @@ class ContainerDebugger:
         """Format singleton information for display."""
         formatted: List[Dict[str, Any]] = []
         for token, instance in singletons.items():
+            instance_type: type[Any] = type(instance)  # type: ignore[assignment]
             formatted.append(
                 {
                     "name": token.name,
-                    "type": type(instance).__name__,
-                    "module": getattr(type(instance), "__module__", "unknown"),
+                    "type": getattr(instance_type, "__name__", "unknown"),
+                    "module": getattr(instance_type, "__module__", "unknown"),
                     "id": id(instance),
                 }
             )
@@ -127,12 +128,15 @@ class ContainerDebugger:
             token if isinstance(token, Token) else Token(token.__name__, token)
         )
 
-        diagnostic = {
+        issues: List[str] = []
+        diagnostic: Dict[str, Any] = {
             "token": {
                 "name": normalized_token.name,
-                "type": normalized_token.type_.__name__
-                if hasattr(normalized_token.type_, "__name__")
-                else str(normalized_token.type_),
+                "type": (
+                    normalized_token.type_.__name__
+                    if hasattr(normalized_token.type_, "__name__")
+                    else str(normalized_token.type_)
+                ),
                 "scope": normalized_token.scope.name,
             },
             "registered": normalized_token in self.container.get_providers_view(),
@@ -142,7 +146,7 @@ class ContainerDebugger:
             is not None,
             "can_resolve": False,
             "resolution_path": [],
-            "issues": [],
+            "issues": issues,
         }
 
         # Try to resolve and capture any issues
@@ -152,7 +156,7 @@ class ContainerDebugger:
             diagnostic["instance_type"] = type(instance).__name__
             diagnostic["instance_id"] = id(instance)
         except Exception as e:
-            diagnostic["issues"].append(str(e))
+            issues.append(str(e))
 
         return diagnostic
 

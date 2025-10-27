@@ -55,7 +55,6 @@ class MockFactory:
         # because autospec(str) returns NonCallableMagicMock which breaks test expectations
         if (
             use_autospec
-            and token.type_ is not None
             and not isinstance(token.type_, type(str))
         ):
             from unittest.mock import create_autospec
@@ -204,7 +203,7 @@ class TestScope:
         """Enter test scope."""
         self._context_manager = (
             self.container.base_container.request_scope()
-            if hasattr(self.container, "base_container")
+            if isinstance(self.container, TestContainer)
             else self.container.request_scope()
         )
         self._context_manager.__enter__()
@@ -221,12 +220,12 @@ class TestScope:
             self._context_manager.__exit__(exc_type, exc_val, exc_tb)
 
         # Clear test overrides
-        if hasattr(self.container, "clear_overrides"):
+        if isinstance(self.container, TestContainer):
             self.container.clear_overrides()
 
     async def __aenter__(self) -> TestScope:
         """Enter async test scope."""
-        if hasattr(self.container, "base_container"):
+        if isinstance(self.container, TestContainer):
             self._async_context_manager = (
                 self.container.base_container.async_request_scope()
             )
@@ -246,7 +245,7 @@ class TestScope:
             await self._async_context_manager.__aexit__(exc_type, exc_val, exc_tb)
 
         # Clear test overrides
-        if hasattr(self.container, "clear_overrides"):
+        if isinstance(self.container, TestContainer):
             self.container.clear_overrides()
 
 
@@ -297,7 +296,7 @@ def override_dependency(
         token: The token or type to override
         mock: Mock instance or factory function
     """
-    if hasattr(container, "override"):
+    if isinstance(container, TestContainer):
         container.override(token, mock)
     else:
         # For regular Container, use the override method

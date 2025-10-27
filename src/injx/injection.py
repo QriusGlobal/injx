@@ -562,18 +562,6 @@ async def aresolve_dependencies(
     return resolved
 
 
-@overload
-def inject(
-    func: Callable[P, R], *, container: Any | None = ..., cache: bool = ...
-) -> Callable[P, R]: ...
-
-
-@overload
-def inject(
-    func: None = ..., *, container: Any | None = ..., cache: bool = ...
-) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
-
-
 def _extract_overrides(
     deps: dict[str, DependencyType], kwargs: dict[str, Any]
 ) -> dict[str, Any]:
