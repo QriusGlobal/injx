@@ -1,42 +1,12 @@
 repos:
-  # Smart commit message validation with hierarchical rules (replaces standard commitlint)
+  # Smart commit message validation
   - repo: local
     hooks:
       - id: validate-commit
-        name: Validate commit message with hierarchical rules
+        name: Validate commit message
         entry: bun run scripts/validate-commit.js
         language: system
         stages: [commit-msg]
-        files: '^$'  # Run for all commits, not file-based
-        additional_dependencies: []
-
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
-    hooks:
-      - id: ruff-format
-        files: ^src/
-        exclude: ^(tests/|examples/|ref/|docs/)
-      - id: ruff
-        files: ^src/
-        exclude: ^(tests/|examples/|ref/|docs/)
-        args: ["--exit-non-zero-on-fix"]
-
-  - repo: local
-    hooks:
-      - id: basedpyright
-        name: basedpyright
-        entry: basedpyright
-        language: python
-        files: ^src/
-        additional_dependencies: [basedpyright]
-        args: ["src/"]
-
-      - id: mkdocs-build
-        name: Documentation build (MkDocs --strict)
-        entry: uv run mkdocs build --strict
-        language: system
-        files: ^(docs/|mkdocs\.yml)$
-        stages: [commit]
         pass_filenames: false
 
       - id: full-ci
@@ -46,17 +16,3 @@ repos:
         stages: [commit]
         pass_filenames: false
         always_run: true
-
-      - id: actionlint
-        name: actionlint (GitHub Actions)
-        entry: uv run actionlint
-        language: system
-        files: ^.github/workflows/
-        pass_filenames: true
-
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.35.1
-    hooks:
-      - id: yamllint
-        files: ^(.github/workflows/|.*\.ya?ml)$
-        args: ["-c", ".yamllint.yml"]
