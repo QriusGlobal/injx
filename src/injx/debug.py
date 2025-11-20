@@ -7,9 +7,11 @@ dependency graphs, and debugging resolution issues.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Dict, List, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, TypeVar
 
-from .container import Container
+if TYPE_CHECKING:
+    from .container import Container
+
 from .tokens import Token
 
 __all__ = [

@@ -24,7 +24,28 @@ Rationale: DI frameworks MUST balance type safety with runtime flexibility.
 from __future__ import annotations
 
 from enum import IntEnum
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, TypeGuard
+
+
+# TypeGuard functions for type-safe cleanup method detection
+def has_async_context_methods(obj: Any) -> TypeGuard[Any]:
+    """Type guard for async context manager protocol (__aenter__/__aexit__)."""
+    return hasattr(obj, "__aexit__") and hasattr(obj, "__aenter__")
+
+
+def has_sync_context_methods(obj: Any) -> TypeGuard[Any]:
+    """Type guard for sync context manager protocol (__enter__/__exit__)."""
+    return hasattr(obj, "__exit__") and hasattr(obj, "__enter__")
+
+
+def has_aclose_method(obj: Any) -> TypeGuard[Any]:
+    """Type guard for asynchronous aclose() method."""
+    return hasattr(obj, "aclose") and callable(getattr(obj, "aclose", None))
+
+
+def has_close_method(obj: Any) -> TypeGuard[Any]:
+    """Type guard for synchronous close() method."""
+    return hasattr(obj, "close") and callable(getattr(obj, "close", None))
 
 
 class CleanupStrategy(IntEnum):
@@ -90,15 +111,15 @@ class CleanupStrategy(IntEnum):
         """
         # Protocol checking in priority order - async methods take precedence
         # This is intentional: resources with async cleanup are designed for async use
-        if hasattr(provider, "__aexit__") and hasattr(provider, "__aenter__"):
+        if has_async_context_methods(provider):
             return cls.ASYNC_CONTEXT
-        if hasattr(provider, "__exit__") and hasattr(provider, "__enter__"):
+        if has_sync_context_methods(provider):
             return cls.CONTEXT
         # Check for async cleanup methods (aclose takes priority over close)
-        if hasattr(provider, "aclose") and callable(getattr(provider, "aclose", None)):
+        if has_aclose_method(provider):
             return cls.ACLOSE
         # Check for sync cleanup method
-        if hasattr(provider, "close") and callable(getattr(provider, "close", None)):
+        if has_close_method(provider):
             return cls.CLOSE
         return cls.NONE
 
