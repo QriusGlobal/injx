@@ -22,10 +22,11 @@ import threading
 import time
 from collections import deque
 from collections.abc import (
+    AsyncIterator,
     Callable,
     Iterator,
 )
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from functools import lru_cache
 from itertools import groupby
@@ -47,11 +48,18 @@ if TYPE_CHECKING:
     from .testing import TestScope
 
 from . import analyzer
+from .async_tracing import TracingContext, end_trace, start_trace
+from .cancellation import (
+    CancellationToken,
+    reset_cancellation_token,
+    set_cancellation_token,
+)
 from .cleanup_strategy import CleanupStrategy
 from .contextual import ContextualContainer
 from .exceptions import (
     AsyncCleanupRequiredError,
     CircularDependencyError,
+    CleanupFailureGroup,
     ResolutionError,
 )
 from .logging import log_performance_metric, log_resolution_path, logger
@@ -59,6 +67,7 @@ from .metaclasses import Injectable
 from .protocols.resources import SupportsAsyncClose, SupportsClose
 from .provider_spec import ProviderSpec
 from .registry import TypedRegistry
+from .timeouts import TimeoutPolicy
 from .tokens import Scope, Token, TokenFactory
 from .types import ProviderAsync, ProviderLike, ProviderSync
 
@@ -180,8 +189,16 @@ class Container:
         "injx_active_container", default=None
     )
 
-    def __init__(self) -> None:
-        """Initialize container."""
+    def __init__(
+        self,
+        timeout_policy: TimeoutPolicy | None = None,
+    ) -> None:
+        """Initialize container.
+
+        Args:
+            timeout_policy: Optional timeout configuration for async operations.
+                If None, uses TimeoutPolicy.unlimited() for backward compatibility.
+        """
         logger.info("Initializing container")
 
         # Composition instead of inheritance
@@ -200,6 +217,7 @@ class Container:
         self._core = _CoreRegistry()
         self._runtime = _RuntimeState()
         self._context_state = _ContextState()
+        self._timeout_policy = timeout_policy or TimeoutPolicy.unlimited()
 
         self._auto_register()
 
@@ -1075,10 +1093,37 @@ class Container:
         # Normalize token for resolution
         token = self._prepare_token_for_resolution(token)
 
+        # Start tracing if enabled
+        token_name: str = (
+            token.name
+            if hasattr(token, "name")
+            else getattr(token, "__name__", str(token))
+        )
+        trace = start_trace(token_name)
+
         # Async resolution path
         self._runtime.cache_misses += 1
-        with self._resolution_guard(token):
-            return await self._resolve_async(token)
+        provider_timeout = self._timeout_policy.provider_timeout
+
+        try:
+            with self._resolution_guard(token):
+                if provider_timeout is not None:
+                    try:
+                        async with asyncio.timeout(provider_timeout):
+                            result = await self._resolve_async(token)
+                    except TimeoutError:
+                        raise ResolutionError(
+                            token,
+                            [],
+                            f"Provider timed out after {provider_timeout}s",
+                        ) from None
+                else:
+                    result = await self._resolve_async(token)
+                end_trace(trace, success=True)
+                return result
+        except Exception as e:
+            end_trace(trace, success=False, error=str(e))
+            raise
 
     async def _resolve_async(self, token: Token[U]) -> U:
         """Resolve a dependency asynchronously.
@@ -1089,18 +1134,29 @@ class Container:
         Returns:
             The resolved instance
         """
+        # Check for cancellation before resolution
+        CancellationToken.check_cancelled()
+
         record = self._core.providers.get(token)
         effective_scope = self._get_scope(token)
 
         # Dispatch based on registration type
         if record is not None:
             if record.cleanup == CleanupStrategy.ASYNC_CONTEXT:
-                return await self._resolve_async_context(token, record, effective_scope)
+                result = await self._resolve_async_context(
+                    token, record, effective_scope
+                )
+                # Check after expensive operations
+                CancellationToken.check_cancelled()
+                return result
             elif record.cleanup == CleanupStrategy.CONTEXT:
                 # Sync context managers can be used in async context
                 return self._resolve_sync_context(token, record, effective_scope)
 
-        return await self._resolve_async_provider(token, effective_scope)
+        result = await self._resolve_async_provider(token, effective_scope)
+        # Check after provider execution
+        CancellationToken.check_cancelled()
+        return result
 
     async def _resolve_async_context(
         self, token: Token[U], record: ProviderSpec[object], scope: Scope
@@ -1329,12 +1385,67 @@ class Container:
         return results
 
     async def batch_resolve_async(
-        self, tokens: list[Token[object]]
+        self,
+        tokens: list[Token[object]],
+        *,
+        max_concurrency: int | None = None,
     ) -> dict[Token[object], object]:
-        """Async batch resolution with parallel execution."""
-        tasks = {token: self.aget(token) for token in tokens}
-        results_list: list[object] = await asyncio.gather(*tasks.values())
-        return dict(zip(tasks.keys(), results_list, strict=True))
+        """Async batch resolution with structured concurrency and bounded parallelism.
+
+        Uses TaskGroup for automatic cancellation if any resolution fails,
+        preventing wasted work and ensuring consistent error handling. Supports
+        bounded concurrency and optional timeout from timeout_policy.
+
+        Args:
+            tokens: List of tokens to resolve
+            max_concurrency: Max parallel resolutions (default from timeout_policy)
+
+        Returns:
+            Dictionary mapping tokens to resolved instances
+
+        Raises:
+            ResolutionError: If any resolution fails (with all errors aggregated)
+        """
+        concurrency = max_concurrency or self._timeout_policy.max_concurrency
+        timeout = self._timeout_policy.batch_timeout
+
+        results: dict[Token[object], object] = {}
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def resolve_one(token: Token[object]) -> None:
+            async with semaphore:
+                results[token] = await self.aget(token)
+
+        try:
+            if timeout is not None:
+                async with asyncio.timeout(timeout):
+                    async with asyncio.TaskGroup() as tg:
+                        for token in tokens:
+                            tg.create_task(
+                                resolve_one(token), name=f"resolve_{token.name}"
+                            )
+            else:
+                async with asyncio.TaskGroup() as tg:
+                    for token in tokens:
+                        tg.create_task(resolve_one(token), name=f"resolve_{token.name}")
+        except* TimeoutError:
+            raise ResolutionError(
+                Token("batch", object),
+                [],
+                f"Batch resolution timed out after {timeout}s",
+            ) from None
+        except* ResolutionError:
+            # Re-raise resolution errors directly
+            raise
+        except* Exception as eg:
+            # Wrap other exceptions
+            raise ResolutionError(
+                Token("batch", object),
+                [],
+                f"Batch resolution failed with {len(eg.exceptions)} error(s): {eg}",
+            ) from eg
+
+        return results
 
     @lru_cache(maxsize=512)
     def _get_resolution_path(self, token: Token[Any]) -> tuple[Token[Any], ...]:
@@ -1432,20 +1543,52 @@ class Container:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
+        """Exit async context with structured cleanup.
+
+        Uses TaskGroup for proper exception propagation instead of
+        gather(return_exceptions=True) which silently swallows errors.
+
+        Raises:
+            CleanupFailureGroup: If any async cleanup operations fail
+        """
         # Restore previous active container
         self._active.set(getattr(self, "_old_active", None))
 
-        # Perform cleanup
+        # Perform async cleanup with TaskGroup for proper error handling
         if self._runtime.singleton_cleanup_async:
-            tasks = [fn() for fn in reversed(self._runtime.singleton_cleanup_async)]
-            await asyncio.gather(*tasks, return_exceptions=True)
+            try:
+                async with asyncio.TaskGroup() as tg:
+                    for fn in reversed(self._runtime.singleton_cleanup_async):
+                        task_name = getattr(fn, "__name__", "cleanup_task")
+                        tg.create_task(fn(), name=task_name)
+            except* Exception as eg:
+                # Convert to our domain exception after sync cleanup
+                # Store for raising after sync cleanup completes
+                cleanup_error: CleanupFailureGroup | None = CleanupFailureGroup(eg)
+            else:
+                cleanup_error = None
+        else:
+            cleanup_error = None
+
+        # Always run sync cleanup (even if async failed)
+        sync_errors: list[Exception] = []
         for fn in reversed(self._runtime.singleton_cleanup_sync):
             try:
                 fn()
-            except Exception:
-                pass
+            except Exception as e:
+                sync_errors.append(e)
+
         # Clear async locks after cleanup to prevent memory leak
         self._runtime.async_locks.clear()
+
+        # Raise cleanup error if any occurred
+        if cleanup_error is not None:
+            raise cleanup_error
+
+        # If only sync errors, aggregate them
+        if sync_errors:
+            eg = ExceptionGroup("Sync cleanup failures", sync_errors)
+            raise CleanupFailureGroup(eg)
 
     async def aclose(self) -> None:
         """Async close: close tracked resources and clear caches."""
@@ -1592,6 +1735,37 @@ class Container:
 
         return TestScope(self)
 
+    @asynccontextmanager
+    async def with_cancellation(self) -> AsyncIterator[CancellationToken]:
+        """Create a cancellable resolution context.
+
+        All resolution operations within this context will check for
+        cancellation at key checkpoints. If cancelled, they will raise
+        CancelledError.
+
+        Example:
+            async with container.with_cancellation() as token:
+                task = asyncio.create_task(container.aget(SlowService))
+
+                # Cancel after timeout
+                await asyncio.sleep(5.0)
+                token.cancel("Timeout exceeded")
+
+                try:
+                    result = await task
+                except asyncio.CancelledError:
+                    print("Resolution cancelled")
+
+        Yields:
+            CancellationToken that can be used to cancel operations
+        """
+        token = CancellationToken()
+        old_token = set_cancellation_token(token)
+        try:
+            yield token
+        finally:
+            reset_cancellation_token(old_token)
+
     def list_tokens(self) -> list[Token[Any]]:
         """List all registered tokens.
 
@@ -1652,3 +1826,100 @@ class Container:
             },
             "performance_stats": self.get_stats(),
         }
+
+    def trace_resolution(self) -> TracingContext:
+        """Enable resolution tracing for debugging.
+
+        Returns a context manager that captures resolution timing and
+        hierarchy for all dependency resolutions within the context.
+
+        Example:
+            async with container.trace_resolution() as traces:
+                result = await container.aget(MyService)
+
+            for trace in traces:
+                print(trace.format_tree())
+
+            # Output:
+            # ✓ MyService (45.2ms)
+            #   ✓ Database (30.1ms)
+            #   ✓ Logger (5.3ms)
+
+        Returns:
+            TracingContext that yields list of ResolutionTrace objects
+        """
+        return TracingContext()
+
+    async def aget_or_none(self, token: Token[U] | type[U]) -> U | None:
+        """Resolve dependency or return None on failure.
+
+        Useful for optional dependencies that may not be registered.
+
+        Args:
+            token: Token or type to resolve
+
+        Returns:
+            Resolved instance or None if resolution fails
+
+        Example:
+            cache = await container.aget_or_none(CacheService)
+            if cache:
+                return cache.get(key)
+            return compute_value()
+        """
+        try:
+            return await self.aget(token)
+        except (ResolutionError, KeyError):
+            return None
+
+    async def aget_with_fallback(
+        self, token: Token[U] | type[U], fallback: U | Callable[[], U]
+    ) -> U:
+        """Resolve dependency or return fallback value.
+
+        Args:
+            token: Token or type to resolve
+            fallback: Value or factory to use if resolution fails
+
+        Returns:
+            Resolved instance or fallback value
+
+        Example:
+            logger = await container.aget_with_fallback(
+                LoggerService,
+                fallback=ConsoleLogger()
+            )
+        """
+        try:
+            return await self.aget(token)
+        except (ResolutionError, KeyError):
+            if callable(fallback):
+                return cast(U, fallback())
+            return fallback
+
+    async def try_aget(
+        self, token: Token[U] | type[U]
+    ) -> tuple[U | None, Exception | None]:
+        """Resolve dependency with Go-style error handling.
+
+        Returns a tuple of (result, error) instead of raising exceptions.
+        Useful for explicit error handling without try/except.
+
+        Args:
+            token: Token or type to resolve
+
+        Returns:
+            Tuple of (resolved_instance, None) on success
+            Tuple of (None, exception) on failure
+
+        Example:
+            result, err = await container.try_aget(DatabaseService)
+            if err:
+                logger.error(f"Failed to get database: {err}")
+                return None
+            return result.query(...)
+        """
+        try:
+            return (await self.aget(token), None)
+        except Exception as e:
+            return (None, e)

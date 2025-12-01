@@ -34,6 +34,8 @@ __author__ = "Qrius Global"
 __email__ = "mishal@qrius.global"
 __repo__ = "https://github.com/QriusGlobal/injx"
 __docs__ = "https://qriusglobal.github.io/injx/"
+from injx.async_tracing import ResolutionTrace
+from injx.cancellation import CancellationToken
 from injx.container import Container
 from injx.contextual import ContextualContainer, RequestScope, SessionScope
 from injx.debug import ContainerDebugger, debug_container
@@ -51,6 +53,7 @@ from injx.injection import Depends, Given, Inject, inject
 from injx.metaclasses import Injectable
 from injx.protocols.container import ContainerProtocol
 from injx.testing import TestContainer, TestScope, mock_dependency, test_container
+from injx.timeouts import TimeoutPolicy
 from injx.tokens import Scope, Token, TokenFactory
 
 __all__ = [
@@ -60,6 +63,9 @@ __all__ = [
     "Token",
     "TokenFactory",
     "Scope",
+    "TimeoutPolicy",
+    # Cancellation
+    "CancellationToken",
     # Injection
     "inject",
     "Inject",
@@ -73,6 +79,7 @@ __all__ = [
     # Debugging
     "ContainerDebugger",
     "debug_container",
+    "ResolutionTrace",
     # Protocols
     "ContainerProtocol",
     # Scoping

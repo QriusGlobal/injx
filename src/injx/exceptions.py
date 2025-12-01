@@ -16,6 +16,7 @@ __all__ = [
     "AsyncCleanupRequiredError",
     "CleanupContractError",
     "DependencyChainError",
+    "CleanupFailureGroup",
 ]
 
 
@@ -121,3 +122,37 @@ class CleanupContractError(InjxError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+
+class CleanupFailureGroup(InjxError):
+    """Raised when multiple cleanup operations fail during scope exit.
+
+    Wraps BaseExceptionGroup to provide structured error reporting
+    for cleanup failures. This replaces the silent failure pattern
+    of asyncio.gather(return_exceptions=True).
+
+    Attributes:
+        exceptions: List of individual cleanup exceptions
+        message: Formatted error message with all failures
+
+    Example:
+        try:
+            async with container:
+                pass
+        except CleanupFailureGroup as eg:
+            for exc in eg.exceptions:
+                logger.error(f"Cleanup failed: {exc}")
+    """
+
+    def __init__(self, exception_group: BaseExceptionGroup) -> None:
+        self.exceptions: list[BaseException] = list(exception_group.exceptions)
+        message = self._format_errors()
+        super().__init__(message)
+
+    def _format_errors(self) -> str:
+        """Format cleanup errors with clear structure."""
+        lines = [f"Cleanup failed with {len(self.exceptions)} error(s):"]
+        for i, exc in enumerate(self.exceptions, 1):
+            exc_type = type(exc).__name__
+            lines.append(f"  {i}. {exc_type}: {exc}")
+        return "\n".join(lines)

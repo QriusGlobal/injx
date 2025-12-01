@@ -255,31 +255,51 @@ class ContextualContainer:
     async def async_cleanup_scope(
         self, cleanup_tasks: deque[Callable[[], Any]]
     ) -> None:
-        """Async cleanup of resources using cleanup tasks.
+        """Async cleanup of resources using TaskGroup for structured concurrency.
 
-        This method uses tasks created at scope exit time,
-        eliminating runtime type checking and improving performance.
+        Uses TaskGroup instead of gather(return_exceptions=True) for proper
+        exception propagation. Cleanup errors are no longer silently swallowed.
 
         Args:
             cleanup_tasks: Deque of cleanup task callables
-        """
-        tasks: list[Awaitable[Any]] = []
 
-        # Execute cleanup in LIFO order
+        Raises:
+            CleanupFailureGroup: If any cleanup operations fail
+        """
+        from .exceptions import CleanupFailureGroup
+
+        async_tasks: list[Callable[[], Awaitable[Any]]] = []
+        sync_errors: list[Exception] = []
+
+        # Execute cleanup in LIFO order, collecting async tasks
         while cleanup_tasks:
             task = cleanup_tasks.pop()
-            result = task()
+            try:
+                result = task()
+                if asyncio.iscoroutine(result):
+                    # Wrap coroutine in async function for TaskGroup
+                    async def run_coro(coro: Awaitable[Any] = result) -> Any:
+                        return await coro
 
-            if asyncio.iscoroutine(result):
-                # Execute async cleanup directly
-                tasks.append(result)
-            else:
-                # Sync cleanup already executed by calling task()
-                pass
+                    async_tasks.append(run_coro)
+            except Exception as e:
+                sync_errors.append(e)
 
-        # Execute all cleanup tasks concurrently
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+        # Execute all async cleanup tasks with TaskGroup
+        async_errors: list[BaseException] = []
+        if async_tasks:
+            try:
+                async with asyncio.TaskGroup() as tg:
+                    for async_task in async_tasks:
+                        tg.create_task(async_task())
+            except* Exception as eg:
+                async_errors.extend(eg.exceptions)
+
+        # Aggregate all errors
+        all_errors = sync_errors + list(async_errors)
+        if all_errors:
+            eg = ExceptionGroup("Scope cleanup failures", all_errors)
+            raise CleanupFailureGroup(eg)
 
     def resolve_from_context(self, token: Token[T]) -> T | None:
         """
@@ -407,25 +427,49 @@ class ScopeManager:
             yield
         finally:
             logger.info("Exiting async request scope")
+            from .exceptions import CleanupFailureGroup
+
+            cleanup_errors: list[BaseException] = []
+
             # Clean up resources using tasks queued during instance storage
-            await self._container.async_cleanup_scope(request_cleanup)
+            try:
+                await self._container.async_cleanup_scope(request_cleanup)
+            except CleanupFailureGroup as e:
+                cleanup_errors.extend(e.exceptions)
+
+            # Execute registered async cleanup functions with TaskGroup
             async_fns = _request_cleanup_async.get() or []
             if async_fns:
-                await asyncio.gather(
-                    *[fn() for fn in reversed(async_fns)], return_exceptions=True
-                )
+                try:
+                    async with asyncio.TaskGroup() as tg:
+                        for fn in reversed(async_fns):
+                            tg.create_task(
+                                fn(), name=getattr(fn, "__name__", "async_cleanup")
+                            )
+                except* Exception as eg:
+                    cleanup_errors.extend(eg.exceptions)
+
+            # Execute sync cleanup functions
             sync_fns = _request_cleanup_sync.get() or []
             for fn in reversed(sync_fns):
                 try:
                     fn()
                 except Exception as e:
+                    cleanup_errors.append(e)
                     logger.warning(
-                        f"Failed to execute async cleanup function: {e}", exc_info=True
+                        f"Failed to execute cleanup function: {e}", exc_info=True
                     )
+
+            # Reset context vars
             _request_cleanup_sync.reset(req_sync_token)
             _request_cleanup_async.reset(req_async_token)
             _request_cleanup_tasks.reset(req_tasks_token)
             _context_stack.reset(token)
+
+            # Raise aggregated errors if any occurred
+            if cleanup_errors:
+                eg = ExceptionGroup("Request scope cleanup failures", cleanup_errors)
+                raise CleanupFailureGroup(eg)
 
     @contextmanager
     def session_scope(self) -> Iterator[None]:
