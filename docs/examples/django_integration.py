@@ -27,7 +27,7 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-from injx import Container, Token, inject, Scope, Dependencies
+from injx import Container, Token, inject, Scope, Dependencies, Depends
 import json
 import logging
 

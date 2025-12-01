@@ -1,6 +1,6 @@
 """Tests for the testing utilities module."""
 
-from injx import Container, Token, mock_dependency, test_container
+from injx import Container, Scope, Token, mock_dependency, test_container
 from injx.testing import MockFactory, TestContainer, TestScope
 
 
@@ -180,34 +180,47 @@ class TestIntegrationWithContainer:
     """Integration tests with Container.test_scope()."""
 
     def test_container_test_scope_method(self):
-        """Test Container.test_scope() method - test_scope returns TestScope context manager."""
+        """Test Container.test_scope() provides scoped access with cleanup."""
         container = Container()
         SERVICE_TOKEN = Token("service", str)
         container.register(SERVICE_TOKEN, lambda: "original")
 
-        # test_scope() returns a TestScope context manager for managing scoped access
-        # TestScope provides context management for request/session scopes
-        with container.test_scope():
-            # Within the test scope, we can access registered services
+        # Verify original value outside scope
+        assert container.get(SERVICE_TOKEN) == "original"
+
+        # test_scope() returns a TestScope context manager
+        with container.test_scope() as scope:
+            # Can access registered services within scope
             result = container.get(SERVICE_TOKEN)
             assert result == "original"
+            # TestScope wraps request_scope for cleanup
+            assert scope is not None
 
-    def test_request_scope_isolation(self):
-        """Test that request_scope provides isolation."""
+        # Value accessible after scope exit
+        assert container.get(SERVICE_TOKEN) == "original"
+
+    def test_request_scope_creates_isolated_instances(self):
+        """Test that request_scope creates isolated instances per scope."""
         container = Container()
-        SERVICE_TOKEN = Token("service", str)
-        container.register(SERVICE_TOKEN, lambda: "original")
 
-        # Get original in main container
-        original = container.get(SERVICE_TOKEN)
-        assert original == "original"
+        # Use a factory that creates unique instances
+        counter = {"value": 0}
 
-        # Verify request_scope provides isolated access
+        def create_service() -> str:
+            counter["value"] += 1
+            return f"instance_{counter['value']}"
+
+        SERVICE_TOKEN = Token("service", str, scope=Scope.REQUEST)
+        container.register(SERVICE_TOKEN, create_service, scope=Scope.REQUEST)
+
+        # Each request scope gets its own instance
         with container.request_scope():
-            # Within request scope, access is isolated
-            result = container.get(SERVICE_TOKEN)
-            assert result == "original"
+            result1 = container.get(SERVICE_TOKEN)
+            # Same instance within same scope
+            result1_again = container.get(SERVICE_TOKEN)
+            assert result1 == result1_again
 
-        # After scope exit
-        after_scope = container.get(SERVICE_TOKEN)
-        assert after_scope == "original"
+        with container.request_scope():
+            result2 = container.get(SERVICE_TOKEN)
+            # Different scope gets different instance
+            assert result1 != result2
