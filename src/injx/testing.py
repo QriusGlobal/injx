@@ -53,7 +53,8 @@ class MockFactory:
         # Use unittest.mock autospec for validation if type available
         # However, for primitive types (str, int, etc), use simple mock instead
         # because autospec(str) returns NonCallableMagicMock which breaks test expectations
-        if use_autospec and not isinstance(token.type_, type(str)):
+        PRIMITIVE_TYPES = (str, int, float, bool, bytes, type(None))
+        if use_autospec and token.type_ not in PRIMITIVE_TYPES:
             from unittest.mock import create_autospec
 
             try:

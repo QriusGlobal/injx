@@ -413,7 +413,7 @@ class TestTracingStress:
                 next_token = Token(f"level_{i + 1}", str)
                 container.register(
                     token,
-                    lambda t=next_token: container.get(t) + f"_level_{i}",
+                    lambda t=next_token, idx=i: container.get(t) + f"_level_{idx}",
                 )
 
         async with container.trace_resolution() as traces:

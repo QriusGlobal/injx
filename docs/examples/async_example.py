@@ -5,8 +5,9 @@ This example demonstrates:
 - AsyncContextManager for resource cleanup
 - Mixing sync and async dependencies
 - Proper async/await patterns with dependency injection
-- Structured concurrency with TimeoutPolicy and CancellationToken (Python 3.11+)
-- Resolution tracing for debugging
+
+Note: For structured concurrency features (TimeoutPolicy, CancellationToken,
+ResolutionTrace), see the documentation at docs/advanced.md.
 
 Run this file directly:
     python async_example.py

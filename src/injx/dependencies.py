@@ -95,7 +95,9 @@ class Dependencies(Generic[*Ts]):  # type: ignore
         clearer error reporting compared to asyncio.gather.
 
         Raises:
-            ResolutionError: If any dependency resolution fails
+            ResolutionError: If a single dependency resolution fails
+            ExceptionGroup: If multiple dependency resolutions fail (TaskGroup behavior)
+            CancelledError: If resolution is cancelled via CancellationToken
         """
         from .cancellation import CancellationToken
 

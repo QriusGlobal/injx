@@ -84,6 +84,10 @@ Create a session scope context manager.
 
 Asynchronously clean up all managed resources.
 
+**`dispose() -> Awaitable[None]`**
+
+Alias for `aclose()`. Asynchronously clean up all managed resources.
+
 **`batch_register(registrations: list[tuple[Token[object], ProviderLike[object]]]) -> Container`**
 
 Register multiple dependencies at once for improved performance.
@@ -417,9 +421,9 @@ Raised when synchronous cleanup is attempted on async-only resources.
 
 ### CleanupFailureGroup
 
-**`injx.exceptions.CleanupFailureGroup`**
+**`injx.exceptions.CleanupFailureGroup`** *(Python 3.11+)*
 
-Raised when multiple cleanup operations fail during scope exit. Wraps `BaseExceptionGroup` to provide structured error reporting for cleanup failures.
+Raised when multiple cleanup operations fail during scope exit. Wraps `BaseExceptionGroup` (Python 3.11+) to provide structured error reporting for cleanup failures.
 
 #### Properties
 
