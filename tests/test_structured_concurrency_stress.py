@@ -292,8 +292,8 @@ class TestCancellationStress:
     """Stress tests for cancellation propagation."""
 
     @pytest.mark.asyncio
-    async def test_cancellation_stops_in_flight_resolutions(self):
-        """Verify cancellation token is checked during resolution."""
+    async def test_pre_cancellation_prevents_resolution(self):
+        """Verify pre-cancellation prevents resolution from starting."""
         container = Container()
         resolution_attempted = False
 
