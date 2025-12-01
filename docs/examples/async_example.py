@@ -5,6 +5,8 @@ This example demonstrates:
 - AsyncContextManager for resource cleanup
 - Mixing sync and async dependencies
 - Proper async/await patterns with dependency injection
+- Structured concurrency with TimeoutPolicy and CancellationToken (Python 3.11+)
+- Resolution tracing for debugging
 
 Run this file directly:
     python async_example.py
@@ -96,7 +98,7 @@ class AsyncPostgresDatabase:
             "id": user_id,
             "name": f"AsyncUser_{user_id}",
             "email": f"async_user{user_id}@example.com",
-            "status": "active"
+            "status": "active",
         }
 
     async def save_user(self, user: dict[str, Any]) -> None:
@@ -132,7 +134,7 @@ class AsyncAPIClient:
         await asyncio.sleep(0.1)  # Simulate network latency
         return {
             "status": "success",
-            "data": {"metrics": {"latency": 42, "throughput": 1000}}
+            "data": {"metrics": {"latency": 42, "throughput": 1000}},
         }
 
     async def post(self, url: str, data: dict[str, Any]) -> dict[str, Any]:
@@ -246,8 +248,7 @@ MESSAGE_QUEUE: Token[MessageQueue] = Token("message_queue", MessageQueue)
 # 5. Business logic with async dependency injection using Dependencies pattern
 @inject
 async def fetch_user_async(
-    user_id: int,
-    deps: Dependencies[AsyncDatabase, AsyncCache, AsyncHTTPClient]
+    user_id: int, deps: Dependencies[AsyncDatabase, AsyncCache, AsyncHTTPClient]
 ) -> dict[str, Any]:
     """
     Fetch user with async operations.
@@ -271,9 +272,7 @@ async def fetch_user_async(
     print(f"🔍 Fetching user {user_id} from multiple sources...")
 
     # Concurrent operations with proper typing
-    user_task: asyncio.Task[dict[str, Any]] = asyncio.create_task(
-        db.get_user(user_id)
-    )
+    user_task: asyncio.Task[dict[str, Any]] = asyncio.create_task(db.get_user(user_id))
     metrics_task: asyncio.Task[dict[str, Any]] = asyncio.create_task(
         http.get(f"https://api.example.com/metrics/{user_id}")
     )
@@ -294,7 +293,7 @@ async def fetch_user_async(
 async def process_user_event(
     event_type: str,
     user_id: int,
-    deps: Dependencies[AsyncDatabase, MessageQueue, AsyncHTTPClient]
+    deps: Dependencies[AsyncDatabase, MessageQueue, AsyncHTTPClient],
 ) -> None:
     """
     Process user events with message queue.
@@ -316,7 +315,7 @@ async def process_user_event(
         "type": event_type,
         "user_id": user_id,
         "user_name": user["name"],
-        "timestamp": "2024-01-01T00:00:00Z"
+        "timestamp": "2024-01-01T00:00:00Z",
     }
 
     # Publish to queue
@@ -324,8 +323,7 @@ async def process_user_event(
 
     # Notify external service
     await http.post(
-        "https://api.example.com/events",
-        {"event": event_type, "user": user_id}
+        "https://api.example.com/events", {"event": event_type, "user": user_id}
     )
 
 
@@ -381,7 +379,7 @@ async def main() -> None:
         events: list[asyncio.Task[None]] = [
             asyncio.create_task(process_user_event("view", 101)),
             asyncio.create_task(process_user_event("click", 102)),
-            asyncio.create_task(process_user_event("purchase", 103))
+            asyncio.create_task(process_user_event("purchase", 103)),
         ]
         await asyncio.gather(*events)
 
@@ -395,10 +393,7 @@ async def main() -> None:
         http: AsyncHTTPClient = await container.aget(ASYNC_HTTP)
 
         # Clean up in parallel
-        await asyncio.gather(
-            db.close(),
-            http.close()
-        )
+        await asyncio.gather(db.close(), http.close())
 
         print("✅ Async application completed successfully")
         print("=" * 50)

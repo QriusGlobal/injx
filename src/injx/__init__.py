@@ -45,6 +45,7 @@ from injx.dependencies import Dependencies
 from injx.exceptions import (
     AsyncCleanupRequiredError,
     CircularDependencyError,
+    CleanupFailureGroup,
     DependencyChainError,
     InjxError,
     ResolutionError,
@@ -93,7 +94,7 @@ __all__ = [
     "ResolutionError",
     "CircularDependencyError",
     "AsyncCleanupRequiredError",
-    "DependencyChainError",
+    "CleanupFailureGroup",
     "DependencyChainError",
     # Deprecated (will be removed in v2.0.0)
     "get_default_container",

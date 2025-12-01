@@ -75,7 +75,7 @@ class PostgresDatabase:
             "id": user_id,
             "name": f"User_{user_id}",
             "email": f"user{user_id}@example.com",
-            "created_at": "2024-01-01T00:00:00Z"
+            "created_at": "2024-01-01T00:00:00Z",
         }
 
     def save_user(self, user: dict[str, Any]) -> None:
@@ -158,8 +158,7 @@ def setup_container() -> Container:
 # 5. Business logic functions with @inject decorator and Dependencies pattern
 @inject
 def get_user_with_enrichment(
-    user_id: int,
-    deps: Dependencies[Database, HTTPClient, Cache]
+    user_id: int, deps: Dependencies[Database, HTTPClient, Cache]
 ) -> dict[str, Any]:
     """
     Fetch user data enriched with external API data.
@@ -200,9 +199,7 @@ def get_user_with_enrichment(
 
 @inject
 def create_user_account(
-    name: str,
-    email: str,
-    deps: Dependencies[Database, HTTPClient, EmailService]
+    name: str, email: str, deps: Dependencies[Database, HTTPClient, EmailService]
 ) -> dict[str, Any]:
     """
     Create a new user account with validation and notification.
@@ -221,8 +218,7 @@ def create_user_account(
 
     # Validate email with external service
     validation_result: dict[str, Any] = http.post(
-        "https://api.example.com/validate/email",
-        {"email": email}
+        "https://api.example.com/validate/email", {"email": email}
     )
 
     if validation_result["status"] != "created":
@@ -233,7 +229,7 @@ def create_user_account(
         "id": validation_result["id"],
         "name": name,
         "email": email,
-        "status": "active"
+        "status": "active",
     }
 
     # Save to database
@@ -243,7 +239,7 @@ def create_user_account(
     email_sent: bool = email_service.send(
         to=email,
         subject="Welcome to Our Platform!",
-        body=f"Hello {name},\n\nWelcome aboard! Your account is now active."
+        body=f"Hello {name},\n\nWelcome aboard! Your account is now active.",
     )
 
     if email_sent:
@@ -282,8 +278,7 @@ def main() -> None:
     print("\n📊 Example 3: Creating new user account")
     print("-" * 40)
     new_user: dict[str, Any] = create_user_account(
-        name="Alice Johnson",
-        email="alice@example.com"
+        name="Alice Johnson", email="alice@example.com"
     )
     print(f"Created user: {new_user}")
 

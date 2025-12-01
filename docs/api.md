@@ -415,6 +415,249 @@ Raised when circular dependency is detected. Inherits from `ResolutionError`.
 
 Raised when synchronous cleanup is attempted on async-only resources.
 
+### CleanupFailureGroup
+
+**`injx.exceptions.CleanupFailureGroup`**
+
+Raised when multiple cleanup operations fail during scope exit. Wraps `BaseExceptionGroup` to provide structured error reporting for cleanup failures.
+
+#### Properties
+
+**`exceptions: list[BaseException]`**
+
+List of individual cleanup exceptions.
+
+#### Usage
+
+```python
+try:
+    await container.dispose()
+except CleanupFailureGroup as eg:
+    for exc in eg.exceptions:
+        logger.error(f"Cleanup failed: {exc}")
+```
+
+## Structured Concurrency (Python 3.11+)
+
+### TimeoutPolicy
+
+**`injx.TimeoutPolicy`**
+
+Configuration for async operation timeouts. Prevents indefinite hangs and enables graceful degradation.
+
+#### Constructor
+
+**`TimeoutPolicy(provider_timeout: float | None = None, cleanup_timeout: float = 5.0, batch_timeout: float | None = None, max_concurrency: int = 10)`**
+
+- `provider_timeout`: Max seconds for single provider resolution (None = unlimited)
+- `cleanup_timeout`: Max seconds for cleanup operations (default: 5.0)
+- `batch_timeout`: Max seconds for batch operations (None = unlimited)
+- `max_concurrency`: Max parallel resolutions in batch operations (default: 10)
+
+#### Class Methods
+
+**`TimeoutPolicy.default() -> TimeoutPolicy`**
+
+Sensible defaults for production (30s provider, 60s batch, 10 concurrent).
+
+**`TimeoutPolicy.testing() -> TimeoutPolicy`**
+
+Fast timeouts for tests (1s provider, 2s batch, 5 concurrent).
+
+**`TimeoutPolicy.unlimited() -> TimeoutPolicy`**
+
+No timeouts for backward compatibility.
+
+#### Usage
+
+```python
+# Production with defaults
+container = Container(timeout_policy=TimeoutPolicy.default())
+
+# Custom configuration
+container = Container(timeout_policy=TimeoutPolicy(
+    provider_timeout=10.0,  # 10s per provider
+    cleanup_timeout=5.0,    # 5s cleanup
+    batch_timeout=60.0,     # 1 minute for batch ops
+    max_concurrency=20      # 20 parallel resolutions
+))
+
+# Test environment
+container = Container(timeout_policy=TimeoutPolicy.testing())
+```
+
+### CancellationToken
+
+**`injx.CancellationToken`**
+
+Cooperative cancellation for dependency resolution chains.
+
+#### Properties
+
+**`is_cancelled: bool`**
+
+Whether cancellation has been requested.
+
+**`reason: str | None`**
+
+The cancellation reason, if cancelled.
+
+#### Methods
+
+**`cancel(reason: str = "Operation cancelled") -> None`**
+
+Request cancellation of ongoing operations. Idempotent.
+
+**`raise_if_cancelled() -> None`**
+
+Raise `CancelledError` if cancellation was requested.
+
+**`on_cancel(callback: Callable[[], None]) -> None`**
+
+Register a callback to invoke when cancelled.
+
+**`CancellationToken.get_current() -> CancellationToken | None`**
+
+Get the cancellation token for the current context.
+
+**`CancellationToken.check_cancelled() -> None`**
+
+Check the current context for cancellation. Raises `CancelledError` if cancelled.
+
+#### Usage
+
+```python
+async with container.with_cancellation() as token:
+    task = asyncio.create_task(container.aget(SlowService))
+
+    await asyncio.sleep(0.5)
+    if should_cancel:
+        token.cancel("User requested cancellation")
+
+    try:
+        result = await task
+    except asyncio.CancelledError:
+        print("Resolution was cancelled")
+```
+
+### ResolutionTrace
+
+**`injx.ResolutionTrace`**
+
+Trace information for a single dependency resolution. Used for debugging and performance analysis.
+
+#### Properties
+
+**`token_name: str`**
+
+Name of the token being resolved.
+
+**`duration_ms: float`**
+
+Resolution duration in milliseconds.
+
+**`success: bool`**
+
+Whether resolution succeeded.
+
+**`error: str | None`**
+
+Error message if resolution failed.
+
+**`children: list[ResolutionTrace]`**
+
+Nested resolution traces for dependencies.
+
+#### Methods
+
+**`format_tree(indent: int = 0) -> str`**
+
+Format the trace as a tree for display.
+
+**`to_dict() -> dict[str, Any]`**
+
+Convert trace to dictionary for JSON serialization.
+
+#### Usage
+
+```python
+async with container.trace_resolution() as traces:
+    result = await container.aget(MyService)
+
+for trace in traces:
+    print(trace.format_tree())
+
+# Output:
+# ✓ MyService (45.2ms)
+#   ✓ Database (30.1ms)
+#     ✓ ConnectionPool (15.4ms)
+#   ✓ Logger (5.3ms)
+```
+
+### Container Structured Concurrency Methods
+
+**`Container.with_cancellation() -> AsyncContextManager[CancellationToken]`**
+
+Create a cancellation context for async operations.
+
+```python
+async with container.with_cancellation() as token:
+    # Operations can check token.is_cancelled
+    result = await container.aget(Service)
+```
+
+**`Container.trace_resolution() -> AsyncContextManager[list[ResolutionTrace]]`**
+
+Enable resolution tracing for debugging.
+
+```python
+async with container.trace_resolution() as traces:
+    await container.aget(MyService)
+print(traces[0].format_tree())
+```
+
+**`Container.aget_or_none(token: Token[T]) -> T | None`**
+
+Resolve a dependency, returning None if not found.
+
+```python
+service = await container.aget_or_none(OptionalService)
+if service:
+    service.do_work()
+```
+
+**`Container.aget_with_fallback(token: Token[T], fallback: Callable[[], T | Awaitable[T]]) -> T`**
+
+Resolve with a fallback if resolution fails.
+
+```python
+service = await container.aget_with_fallback(
+    Service,
+    lambda: DefaultService()
+)
+```
+
+**`Container.try_aget(token: Token[T]) -> tuple[T | None, Exception | None]`**
+
+Resolve returning (value, None) on success or (None, error) on failure.
+
+```python
+result, error = await container.try_aget(Service)
+if error:
+    logger.error(f"Resolution failed: {error}")
+else:
+    result.do_work()
+```
+
+**`Container.batch_resolve_async(tokens: list[Token[object]], max_concurrency: int | None = None) -> dict[Token[object], object]`**
+
+Resolve multiple dependencies with bounded concurrency and optional batch timeout.
+
+```python
+tokens = [ServiceA, ServiceB, ServiceC]
+results = await container.batch_resolve_async(tokens, max_concurrency=5)
+```
+
 ## Container Management Functions
 
 ### get_default_container

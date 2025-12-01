@@ -27,6 +27,7 @@ import asyncio
 # 1. Pydantic models for type-safe request/response
 class UserCreateRequest(BaseModel):
     """Request model for creating a user."""
+
     name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     newsletter: bool = Field(default=True)
@@ -34,6 +35,7 @@ class UserCreateRequest(BaseModel):
 
 class UserResponse(BaseModel):
     """Response model for user data."""
+
     id: int
     name: str
     email: str
@@ -44,6 +46,7 @@ class UserResponse(BaseModel):
 
 class HealthCheckResponse(BaseModel):
     """Health check response model."""
+
     status: str
     database: bool
     cache: bool
@@ -56,6 +59,7 @@ from typing import Protocol
 
 class Database(Protocol):
     """Database service protocol."""
+
     async def get_user(self, user_id: int) -> dict[str, Any]: ...
     async def create_user(self, user_data: dict[str, Any]) -> dict[str, Any]: ...
     async def list_users(self, limit: int = 10) -> list[dict[str, Any]]: ...
@@ -64,6 +68,7 @@ class Database(Protocol):
 
 class Cache(Protocol):
     """Cache service protocol."""
+
     async def get(self, key: str) -> Optional[dict[str, Any]]: ...
     async def set(self, key: str, value: dict[str, Any], ttl: int = 300) -> None: ...
     async def delete(self, key: str) -> bool: ...
@@ -72,6 +77,7 @@ class Cache(Protocol):
 
 class HTTPClient(Protocol):
     """External API client protocol."""
+
     async def get(self, url: str) -> dict[str, Any]: ...
     async def post(self, url: str, data: dict[str, Any]) -> dict[str, Any]: ...
     async def health_check(self) -> bool: ...
@@ -79,6 +85,7 @@ class HTTPClient(Protocol):
 
 class EmailService(Protocol):
     """Email service protocol."""
+
     async def send_welcome(self, email: str, name: str) -> bool: ...
     async def send_newsletter(self, email: str, content: str) -> bool: ...
 
@@ -102,11 +109,7 @@ class AsyncPostgresDB:
     async def create_user(self, user_data: dict[str, Any]) -> dict[str, Any]:
         """Create new user."""
         await asyncio.sleep(0.02)  # Simulate DB latency
-        user = {
-            "id": self._next_id,
-            **user_data,
-            "status": "active"
-        }
+        user = {"id": self._next_id, **user_data, "status": "active"}
         self._users[self._next_id] = user
         self._next_id += 1
         return user.copy()
@@ -155,11 +158,7 @@ class ExternalAPIClient:
     async def get(self, url: str) -> dict[str, Any]:
         """Make GET request."""
         await asyncio.sleep(0.05)  # Simulate network latency
-        return {
-            "score": 85,
-            "verified": True,
-            "premium": False
-        }
+        return {"score": 85, "verified": True, "premium": False}
 
     async def post(self, url: str, data: dict[str, Any]) -> dict[str, Any]:
         """Make POST request."""
@@ -240,7 +239,10 @@ async def get_services() -> Dependencies[Database, Cache, HTTPClient, EmailServi
     container = Container.get_active()
     return Dependencies(container, (Database, Cache, HTTPClient, EmailService))
 
-ServicesDep = Annotated[Dependencies[Database, Cache, HTTPClient, EmailService], Depends(get_services)]
+
+ServicesDep = Annotated[
+    Dependencies[Database, Cache, HTTPClient, EmailService], Depends(get_services)
+]
 
 
 # 7. Application lifespan management
@@ -268,15 +270,13 @@ app = FastAPI(
     title="Injx FastAPI Example",
     description="Type-safe dependency injection in FastAPI",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
 # 9. API endpoints with dependency injection
 @app.get("/health", response_model=HealthCheckResponse)
-async def health_check(
-    deps: ServicesDep
-) -> HealthCheckResponse:
+async def health_check(deps: ServicesDep) -> HealthCheckResponse:
     """Health check endpoint with service status using Dependencies pattern."""
     # Extract services from dependencies
     db = deps[Database]
@@ -285,24 +285,19 @@ async def health_check(
 
     # Check all services concurrently
     db_health, cache_health, api_health = await asyncio.gather(
-        db.health_check(),
-        cache.health_check(),
-        http_client.health_check()
+        db.health_check(), cache.health_check(), http_client.health_check()
     )
 
     return HealthCheckResponse(
         status="healthy" if all([db_health, cache_health, api_health]) else "degraded",
         database=db_health,
         cache=cache_health,
-        external_api=api_health
+        external_api=api_health,
     )
 
 
 @app.get("/users/{user_id}", response_model=UserResponse)
-async def get_user(
-    user_id: int,
-    deps: ServicesDep
-) -> UserResponse:
+async def get_user(user_id: int, deps: ServicesDep) -> UserResponse:
     """Get user by ID with caching and enrichment using Dependencies pattern."""
     # Extract services from dependencies
     db = deps[Database]
@@ -321,8 +316,7 @@ async def get_user(
         user = await db.get_user(user_id)
     except ValueError:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User {user_id} not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {user_id} not found"
         )
 
     # Enrich with external API
@@ -337,9 +331,7 @@ async def get_user(
 
 @app.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    request: UserCreateRequest,
-    background_tasks: BackgroundTasks,
-    deps: ServicesDep
+    request: UserCreateRequest, background_tasks: BackgroundTasks, deps: ServicesDep
 ) -> UserResponse:
     """Create new user with email validation and notification using Dependencies pattern."""
     # Extract services from dependencies
@@ -349,14 +341,12 @@ async def create_user(
 
     # Validate email with external service
     validation = await http_client.post(
-        "https://api.example.com/validate/email",
-        {"email": request.email}
+        "https://api.example.com/validate/email", {"email": request.email}
     )
 
     if not validation.get("status") == "success":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid email address"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email address"
         )
 
     # Create user in database
@@ -364,18 +354,12 @@ async def create_user(
     new_user = await db.create_user(user_data)
 
     # Send welcome email in background
-    background_tasks.add_task(
-        email_service.send_welcome,
-        request.email,
-        request.name
-    )
+    background_tasks.add_task(email_service.send_welcome, request.email, request.name)
 
     # Send newsletter if opted in
     if request.newsletter:
         background_tasks.add_task(
-            email_service.send_newsletter,
-            request.email,
-            "Welcome to our newsletter!"
+            email_service.send_newsletter, request.email, "Welcome to our newsletter!"
         )
 
     return UserResponse(**new_user)
@@ -383,8 +367,8 @@ async def create_user(
 
 @app.get("/users", response_model=list[UserResponse])
 async def list_users(
+    deps: ServicesDep,
     limit: int = 10,
-    deps: ServicesDep
 ) -> list[UserResponse]:
     """List users with caching using Dependencies pattern."""
     # Extract services from dependencies
@@ -408,10 +392,7 @@ async def list_users(
 
 
 @app.delete("/cache/users/{user_id}")
-async def invalidate_user_cache(
-    user_id: int,
-    deps: ServicesDep
-) -> JSONResponse:
+async def invalidate_user_cache(user_id: int, deps: ServicesDep) -> JSONResponse:
     """Invalidate user cache entry using Dependencies pattern."""
     cache = deps[Cache]
     deleted = await cache.delete(f"user:{user_id}")
@@ -423,9 +404,7 @@ async def invalidate_user_cache(
 # 10. Request-scoped dependencies example
 @app.post("/batch/users")
 async def batch_create_users(
-    users: list[UserCreateRequest],
-    deps: ServicesDep,
-    background_tasks: BackgroundTasks
+    users: list[UserCreateRequest], deps: ServicesDep, background_tasks: BackgroundTasks
 ) -> JSONResponse:
     """Batch create users with request-scoped transaction using Dependencies pattern."""
     # Extract services from dependencies
@@ -443,17 +422,15 @@ async def batch_create_users(
 
             # Queue email for each user
             background_tasks.add_task(
-                email_service.send_welcome,
-                user_request.email,
-                user_request.name
+                email_service.send_welcome, user_request.email, user_request.name
             )
 
     return JSONResponse(
         content={
             "message": f"Created {len(created_users)} users",
-            "users": created_users
+            "users": created_users,
         },
-        status_code=status.HTTP_201_CREATED
+        status_code=status.HTTP_201_CREATED,
     )
 
 
@@ -463,12 +440,12 @@ async def value_error_handler(request, exc: ValueError) -> JSONResponse:
     """Handle value errors with proper logging."""
     # In production, you'd inject a logger service here
     return JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        content={"detail": str(exc)}
+        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)}
     )
 
 
 # Run with: uvicorn fastapi_integration:app --reload
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

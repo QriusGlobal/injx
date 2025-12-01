@@ -8,6 +8,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Features
 
+- **Structured Concurrency**: Full Python 3.11+ structured concurrency support
+  - `TimeoutPolicy` for configurable per-provider, cleanup, and batch timeouts
+  - `CancellationToken` for cooperative async cancellation
+  - `ResolutionTrace` for debugging dependency resolution trees
+  - TaskGroup-based cleanup replacing `gather(return_exceptions=True)`
+  - `CleanupFailureGroup` exception for proper cleanup error aggregation
+
+- **Ergonomic Async APIs**: New convenience methods for async resolution
+  - `aget_or_none()` - Returns None if dependency not found
+  - `aget_with_fallback()` - Resolves with fallback on failure
+  - `try_aget()` - Go-style tuple return (value, error)
+  - `with_cancellation()` - Context manager for scoped cancellation
+  - `trace_resolution()` - Context manager for resolution tracing
+
+- **Bounded Concurrency**: `batch_resolve_async()` with `max_concurrency` parameter
+
 - `Dependencies` pattern for grouping multiple dependencies (#PRD-003)
 - `Container.get_active()` and `Container.set_active()` class methods (#PRD-001)
 - `ContainerProtocol` for type-safe contracts (#PRD-002)
@@ -102,6 +118,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Breaking Changes
 
+- **Cleanup Error Handling**: `Container.dispose()` and async context exit now raise `CleanupFailureGroup` when cleanup operations fail, instead of silently swallowing errors. This ensures cleanup failures are never hidden.
 - Removed `container.inject()` anti-pattern method (deprecated in favor of `@inject` decorator)
 
 ## [0.1.0] - 2025-01-15
