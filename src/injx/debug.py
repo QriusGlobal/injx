@@ -7,9 +7,11 @@ dependency graphs, and debugging resolution issues.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Dict, List, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, TypeVar
 
-from .container import Container
+if TYPE_CHECKING:
+    from .container import Container
+
 from .tokens import Token
 
 __all__ = [
@@ -63,8 +65,8 @@ class ContainerDebugger:
     def _group_by_scope(self, providers: Any) -> Dict[str, int]:
         """Group providers by scope."""
         scope_counts: Dict[str, int] = defaultdict(int)
-        for token in providers.keys():
-            scope_counts[token.scope.name] += 1
+        for _token, spec in providers.items():
+            scope_counts[spec.scope.name] += 1
         return dict(scope_counts)
 
     def _format_providers(self, providers: Any) -> List[Dict[str, Any]]:
@@ -75,7 +77,7 @@ class ContainerDebugger:
                 {
                     "name": token.name,
                     "type": getattr(token.type_, "__name__", str(token.type_)),
-                    "scope": token.scope.name,
+                    "scope": spec.scope.name,
                     "is_async": getattr(spec, "is_async", False),
                     "cleanup": getattr(getattr(spec, "cleanup", None), "name", "NONE"),
                 }
@@ -86,11 +88,12 @@ class ContainerDebugger:
         """Format singleton information for display."""
         formatted: List[Dict[str, Any]] = []
         for token, instance in singletons.items():
+            instance_type: type[Any] = type(instance)  # type: ignore[assignment]
             formatted.append(
                 {
                     "name": token.name,
-                    "type": type(instance).__name__,
-                    "module": getattr(type(instance), "__module__", "unknown"),
+                    "type": getattr(instance_type, "__name__", "unknown"),
+                    "module": getattr(instance_type, "__module__", "unknown"),
                     "id": id(instance),
                 }
             )
@@ -127,12 +130,15 @@ class ContainerDebugger:
             token if isinstance(token, Token) else Token(token.__name__, token)
         )
 
-        diagnostic = {
+        issues: List[str] = []
+        diagnostic: Dict[str, Any] = {
             "token": {
                 "name": normalized_token.name,
-                "type": normalized_token.type_.__name__
-                if hasattr(normalized_token.type_, "__name__")
-                else str(normalized_token.type_),
+                "type": (
+                    normalized_token.type_.__name__
+                    if hasattr(normalized_token.type_, "__name__")
+                    else str(normalized_token.type_)
+                ),
                 "scope": normalized_token.scope.name,
             },
             "registered": normalized_token in self.container.get_providers_view(),
@@ -142,7 +148,7 @@ class ContainerDebugger:
             is not None,
             "can_resolve": False,
             "resolution_path": [],
-            "issues": [],
+            "issues": issues,
         }
 
         # Try to resolve and capture any issues
@@ -152,7 +158,7 @@ class ContainerDebugger:
             diagnostic["instance_type"] = type(instance).__name__
             diagnostic["instance_id"] = id(instance)
         except Exception as e:
-            diagnostic["issues"].append(str(e))
+            issues.append(str(e))
 
         return diagnostic
 
@@ -209,14 +215,14 @@ class DependencyVisualizer:
         edges: List[Dict[str, Any]] = []
 
         # Build nodes
-        for token in providers.keys():
+        for token, spec in providers.items():
             nodes.append(
                 {
                     "id": token.name,
                     "type": token.type_.__name__
                     if hasattr(token.type_, "__name__")
                     else str(token.type_),
-                    "scope": token.scope.name,
+                    "scope": spec.scope.name,
                     "is_singleton": self.container.get_singleton_cached(token)
                     is not None,
                 }

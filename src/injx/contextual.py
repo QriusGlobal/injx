@@ -62,6 +62,14 @@ _session_cleanup_async: ContextVar[list[Callable[[], Awaitable[None]]] | None] =
     ContextVar("injx_session_cleanup_async", default=None)
 )
 
+# New: request/session cleanup task deques (LIFO) available during scopes
+_request_cleanup_tasks: ContextVar[deque[Callable[[], Any]] | None] = ContextVar(
+    "injx_request_cleanup_tasks", default=None
+)
+_session_cleanup_tasks: ContextVar[deque[Callable[[], Any]] | None] = ContextVar(
+    "injx_session_cleanup_tasks", default=None
+)
+
 
 def get_current_context() -> ChainMap[Token[Any], Any] | None:
     """Get current dependency context."""
@@ -103,6 +111,12 @@ class ContextualContainer:
     def set_container_bridge(self, container: Any) -> None:
         """Connect to the main Container for shared singletons when available."""
         self._container_bridge = container
+
+    def get_provider_spec(self, token: Token[Any]) -> Any:
+        """Delegate provider spec lookup to main Container if available."""
+        if self._container_bridge is not None:
+            return self._container_bridge.get_provider_spec(token)
+        return None
 
     def _singletons_mapping(
         self,
@@ -241,31 +255,51 @@ class ContextualContainer:
     async def async_cleanup_scope(
         self, cleanup_tasks: deque[Callable[[], Any]]
     ) -> None:
-        """Async cleanup of resources using cleanup tasks.
+        """Async cleanup of resources using TaskGroup for structured concurrency.
 
-        This method uses tasks created at scope exit time,
-        eliminating runtime type checking and improving performance.
+        Uses TaskGroup instead of gather(return_exceptions=True) for proper
+        exception propagation. Cleanup errors are no longer silently swallowed.
 
         Args:
             cleanup_tasks: Deque of cleanup task callables
-        """
-        tasks: list[Awaitable[Any]] = []
 
-        # Execute cleanup in LIFO order
+        Raises:
+            CleanupFailureGroup: If any cleanup operations fail
+        """
+        from .exceptions import CleanupFailureGroup
+
+        async_tasks: list[Callable[[], Awaitable[Any]]] = []
+        sync_errors: list[Exception] = []
+
+        # Execute cleanup in LIFO order, collecting async tasks
         while cleanup_tasks:
             task = cleanup_tasks.pop()
-            result = task()
+            try:
+                result = task()
+                if asyncio.iscoroutine(result):
+                    # Wrap coroutine in async function for TaskGroup
+                    async def run_coro(coro: Awaitable[Any] = result) -> Any:
+                        return await coro
 
-            if asyncio.iscoroutine(result):
-                # Execute async cleanup directly
-                tasks.append(result)
-            else:
-                # Sync cleanup already executed by calling task()
-                pass
+                    async_tasks.append(run_coro)
+            except Exception as e:
+                sync_errors.append(e)
 
-        # Execute all cleanup tasks concurrently
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+        # Execute all async cleanup tasks with TaskGroup
+        async_errors: list[BaseException] = []
+        if async_tasks:
+            try:
+                async with asyncio.TaskGroup() as tg:
+                    for async_task in async_tasks:
+                        tg.create_task(async_task())
+            except* Exception as eg:
+                async_errors.extend(eg.exceptions)
+
+        # Aggregate all errors
+        all_errors = sync_errors + list(async_errors)
+        if all_errors:
+            eg = ExceptionGroup("Scope cleanup failures", all_errors)
+            raise CleanupFailureGroup(eg)
 
     def resolve_from_context(self, token: Token[T]) -> T | None:
         """
@@ -311,6 +345,35 @@ class ScopeManager:
     def __init__(self, container: ContextualContainer) -> None:
         self._container = container
 
+    def _queue_cleanup_if_needed(
+        self, token: Token[T], instance: T, tasks: deque[Callable[[], Any]]
+    ) -> None:
+        """Analyze instance and queue cleanup task if necessary.
+
+        Avoids queueing cleanup for resources already registered with
+        context manager cleanup strategies, as those are handled separately.
+
+        Args:
+            token: The token for the resolved instance
+            instance: The resolved instance to analyze
+            tasks: The cleanup task queue for current scope
+        """
+        # Use public API to get provider spec
+        spec = self._container.get_provider_spec(token)
+
+        # If registered as context manager, its cleanup is handled elsewhere
+        if spec and spec.cleanup in (
+            CleanupStrategy.CONTEXT,
+            CleanupStrategy.ASYNC_CONTEXT,
+        ):
+            return
+
+        # For all other cases, analyze the instance
+        strategy = CleanupStrategy.analyze(instance)
+        if strategy != CleanupStrategy.NONE:
+            task = CleanupStrategy.create_task(instance, strategy)
+            tasks.append(task)
+
     @contextmanager
     def request_scope(self) -> Iterator[None]:
         request_cache: dict[Token[object], object] = {}
@@ -323,18 +386,13 @@ class ScopeManager:
         token = _context_stack.set(new_context)
         req_sync_token = _request_cleanup_sync.set([])
         req_async_token = _request_cleanup_async.set([])
+        req_tasks_token = _request_cleanup_tasks.set(request_cleanup)
         logger.info("Entering request scope")
         try:
             yield
         finally:
             logger.info("Exiting request scope")
-            # Create cleanup tasks for all cached resources
-            for resource in request_cache.values():
-                strategy = CleanupStrategy.analyze(resource)
-                if strategy != CleanupStrategy.NONE:
-                    task = CleanupStrategy.create_task(resource, strategy)
-                    request_cleanup.append(task)
-            # Clean up resources using cleanup tasks
+            # Clean up resources using tasks queued during instance storage
             self._container.cleanup_scope(request_cleanup)
             try:
                 sync_fns = _request_cleanup_sync.get() or []
@@ -348,6 +406,7 @@ class ScopeManager:
             finally:
                 _request_cleanup_sync.reset(req_sync_token)
             _request_cleanup_async.reset(req_async_token)
+            _request_cleanup_tasks.reset(req_tasks_token)
             _context_stack.reset(token)
 
     @asynccontextmanager
@@ -362,35 +421,55 @@ class ScopeManager:
         token = _context_stack.set(new_context)
         req_sync_token = _request_cleanup_sync.set([])
         req_async_token = _request_cleanup_async.set([])
+        req_tasks_token = _request_cleanup_tasks.set(request_cleanup)
         logger.info("Entering async request scope")
         try:
             yield
         finally:
             logger.info("Exiting async request scope")
-            # Create cleanup tasks for all cached resources
-            for resource in request_cache.values():
-                strategy = CleanupStrategy.analyze(resource)
-                if strategy != CleanupStrategy.NONE:
-                    task = CleanupStrategy.create_task(resource, strategy)
-                    request_cleanup.append(task)
-            # Clean up resources using cleanup tasks
-            await self._container.async_cleanup_scope(request_cleanup)
+            from .exceptions import CleanupFailureGroup
+
+            cleanup_errors: list[BaseException] = []
+
+            # Clean up resources using tasks queued during instance storage
+            try:
+                await self._container.async_cleanup_scope(request_cleanup)
+            except CleanupFailureGroup as e:
+                cleanup_errors.extend(e.exceptions)
+
+            # Execute registered async cleanup functions with TaskGroup
             async_fns = _request_cleanup_async.get() or []
             if async_fns:
-                await asyncio.gather(
-                    *[fn() for fn in reversed(async_fns)], return_exceptions=True
-                )
+                try:
+                    async with asyncio.TaskGroup() as tg:
+                        for fn in reversed(async_fns):
+                            tg.create_task(
+                                fn(), name=getattr(fn, "__name__", "async_cleanup")
+                            )
+                except* Exception as eg:
+                    cleanup_errors.extend(eg.exceptions)
+
+            # Execute sync cleanup functions
             sync_fns = _request_cleanup_sync.get() or []
             for fn in reversed(sync_fns):
                 try:
                     fn()
                 except Exception as e:
+                    cleanup_errors.append(e)
                     logger.warning(
-                        f"Failed to execute async cleanup function: {e}", exc_info=True
+                        f"Failed to execute cleanup function: {e}", exc_info=True
                     )
+
+            # Reset context vars
             _request_cleanup_sync.reset(req_sync_token)
             _request_cleanup_async.reset(req_async_token)
+            _request_cleanup_tasks.reset(req_tasks_token)
             _context_stack.reset(token)
+
+            # Raise aggregated errors if any occurred
+            if cleanup_errors:
+                eg = ExceptionGroup("Request scope cleanup failures", cleanup_errors)
+                raise CleanupFailureGroup(eg)
 
     @contextmanager
     def session_scope(self) -> Iterator[None]:
@@ -400,11 +479,15 @@ class ScopeManager:
             session_token = _session_context.set(session_cache)
             sess_sync_token = _session_cleanup_sync.set([])
             sess_async_token = _session_cleanup_async.set([])
+            session_cleanup: deque[Callable[[], Any]] = deque()
+            sess_tasks_token = _session_cleanup_tasks.set(session_cleanup)
         else:
             session_cache = existing
             session_token = None
             sess_sync_token = None
             sess_async_token = None
+            session_cleanup = None  # type: ignore[assignment]
+            sess_tasks_token = None  # type: ignore[assignment]
         current = _context_stack.get()
         if current is None:
             new_context = ChainMap(session_cache, self._container._singletons_mapping())  # type: ignore[arg-type]
@@ -422,6 +505,8 @@ class ScopeManager:
             logger.info("Exiting session scope")
             _context_stack.reset(context_token)
             if session_token:
+                # Drain queued cleanup tasks for the session
+                self._container.cleanup_scope(session_cleanup)
                 try:
                     sync_fns = _session_cleanup_sync.get() or []
                     for fn in reversed(sync_fns):
@@ -438,6 +523,8 @@ class ScopeManager:
                 if sess_async_token is not None:
                     _session_cleanup_async.reset(sess_async_token)
                 _session_context.reset(session_token)
+                if sess_tasks_token is not None:
+                    _session_cleanup_tasks.reset(sess_tasks_token)
 
     def resolve_from_context(self, token: Token[T]) -> T | None:
         context = _context_stack.get()
@@ -456,15 +543,28 @@ class ScopeManager:
         return None
 
     def store_in_context(self, token: Token[T], instance: T) -> None:
+        """Store instance in appropriate scope and queue cleanup if needed."""
         if token.scope == Scope.SINGLETON:
             self._container.set_singleton_cached(token, instance)
-        elif token.scope == Scope.REQUEST:
+            return
+
+        if token.scope == Scope.REQUEST:
             self._container.put_in_current_request_cache(token, instance)
-        elif token.scope == Scope.SESSION:
+            tasks = _request_cleanup_tasks.get()
+            if tasks is not None:
+                self._queue_cleanup_if_needed(token, instance, tasks)
+            return
+
+        if token.scope == Scope.SESSION:
             session = _session_context.get()
             if session is not None:
                 session[token] = instance
-        elif token.scope == Scope.TRANSIENT:
+            tasks = _session_cleanup_tasks.get()
+            if tasks is not None:
+                self._queue_cleanup_if_needed(token, instance, tasks)
+            return
+
+        if token.scope == Scope.TRANSIENT:
             pass
 
     def clear_request_context(self) -> None:

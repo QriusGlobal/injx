@@ -28,25 +28,42 @@ T = TypeVar("T")
 
 
 class MockFactory:
-    """Factory for creating common mock objects."""
+    """Factory for creating spec-compliant mock objects."""
 
     @staticmethod
     def create_mock(
-        token: Token[T], implementation: Callable[[], T] | None = None
+        token: Token[T],
+        implementation: Callable[[], T] | None = None,
+        *,
+        use_autospec: bool = True,
     ) -> T:
         """Create a mock instance for the given token.
 
         Args:
             token: The token to create a mock for
             implementation: Optional custom implementation
+            use_autospec: If True, use create_autospec for signature validation (default: True)
 
         Returns:
-            A mock instance
+            A mock instance with optional signature validation
         """
         if implementation:
             return implementation()
 
-        # Default mock implementation - return a simple object
+        # Use unittest.mock autospec for validation if type available
+        # However, for primitive types (str, int, etc), use simple mock instead
+        # because autospec(str) returns NonCallableMagicMock which breaks test expectations
+        PRIMITIVE_TYPES = (str, int, float, bool, bytes, type(None))
+        if use_autospec and token.type_ not in PRIMITIVE_TYPES:
+            from unittest.mock import create_autospec
+
+            try:
+                return cast(T, create_autospec(token.type_, instance=True))
+            except (TypeError, ValueError):
+                # Fall back to simple mock if autospec fails
+                pass
+
+        # Fallback to simple mock for tokens without type_
         class MockInstance:
             def __init__(self, token_name: str) -> None:
                 self._mock_token_name = token_name
@@ -184,7 +201,7 @@ class TestScope:
         """Enter test scope."""
         self._context_manager = (
             self.container.base_container.request_scope()
-            if hasattr(self.container, "base_container")
+            if isinstance(self.container, TestContainer)
             else self.container.request_scope()
         )
         self._context_manager.__enter__()
@@ -201,12 +218,12 @@ class TestScope:
             self._context_manager.__exit__(exc_type, exc_val, exc_tb)
 
         # Clear test overrides
-        if hasattr(self.container, "clear_overrides"):
+        if isinstance(self.container, TestContainer):
             self.container.clear_overrides()
 
     async def __aenter__(self) -> TestScope:
         """Enter async test scope."""
-        if hasattr(self.container, "base_container"):
+        if isinstance(self.container, TestContainer):
             self._async_context_manager = (
                 self.container.base_container.async_request_scope()
             )
@@ -226,7 +243,7 @@ class TestScope:
             await self._async_context_manager.__aexit__(exc_type, exc_val, exc_tb)
 
         # Clear test overrides
-        if hasattr(self.container, "clear_overrides"):
+        if isinstance(self.container, TestContainer):
             self.container.clear_overrides()
 
 
@@ -277,7 +294,7 @@ def override_dependency(
         token: The token or type to override
         mock: Mock instance or factory function
     """
-    if hasattr(container, "override"):
+    if isinstance(container, TestContainer):
         container.override(token, mock)
     else:
         # For regular Container, use the override method

@@ -232,7 +232,12 @@ class TestAsyncCleanup:
 
     @pytest.mark.asyncio
     async def test_dispose_with_cleanup_errors(self):
-        """Test that dispose handles cleanup errors gracefully."""
+        """Test that dispose raises CleanupFailureGroup on cleanup errors.
+
+        With structured concurrency, cleanup errors are no longer silently
+        swallowed. Instead, they are aggregated and raised as CleanupFailureGroup.
+        """
+        from injx.exceptions import CleanupFailureGroup
 
         class ProblematicResource:
             def __init__(self):
@@ -260,10 +265,16 @@ class TestAsyncCleanup:
         )
         resource: ProblematicResource = await container.aget(token)
 
-        # Dispose should not raise even if cleanup fails
-        await container.dispose()
+        # Dispose now raises CleanupFailureGroup instead of silently swallowing
+        with pytest.raises(CleanupFailureGroup) as exc_info:
+            await container.dispose()
 
-        # Resource should still be marked as closed
+        # Verify error details
+        assert len(exc_info.value.exceptions) == 1
+        assert isinstance(exc_info.value.exceptions[0], RuntimeError)
+        assert "Cleanup error!" in str(exc_info.value.exceptions[0])
+
+        # Resource should still be marked as closed (cleanup ran before error)
         assert resource.closed
 
     @pytest.mark.asyncio

@@ -8,29 +8,76 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Features
 
+- **Structured Concurrency**: Full Python 3.11+ structured concurrency support
+  - `TimeoutPolicy` for configurable per-provider, cleanup, and batch timeouts
+  - `CancellationToken` for cooperative async cancellation
+  - `ResolutionTrace` for debugging dependency resolution trees
+  - TaskGroup-based cleanup replacing `gather(return_exceptions=True)`
+  - `CleanupFailureGroup` exception for proper cleanup error aggregation
+
+- **Ergonomic Async APIs**: New convenience methods for async resolution
+  - `aget_or_none()` - Returns None if dependency not found
+  - `aget_with_fallback()` - Resolves with fallback on failure
+  - `try_aget()` - Go-style tuple return (value, error)
+  - `with_cancellation()` - Context manager for scoped cancellation
+  - `trace_resolution()` - Context manager for resolution tracing
+
+- **Bounded Concurrency**: `batch_resolve_async()` with `max_concurrency` parameter
+
 - `Dependencies` pattern for grouping multiple dependencies (#PRD-003)
 - `Container.get_active()` and `Container.set_active()` class methods (#PRD-001)
 - `ContainerProtocol` for type-safe contracts (#PRD-002)
 - `AsyncCleanupRequiredError` to exports
+- **Enhanced Testing**: Integrated `unittest.mock.create_autospec` with MockFactory for signature validation
+  - Added `use_autospec` parameter (default: True) for automatic signature checking
+  - Smart fallback for primitive types (str, int, etc.) and custom classes
+  - Full backward compatibility with existing test code
+  - Implements hybrid approach from research_unittest_mock.md
 
 ### Bug Fixes
 
-- **Critical**: Parameter resolution conflicts in `@inject` decorator causing "multiple values for argument" errors
-  - Fixed double parameter passing in sync and async injection wrappers
-  - Resolved 5 failing tests while maintaining all existing functionality
-  - No performance impact - minimal code changes required
-- **Critical**: Memory leak where async locks were never cleaned up
-- **High**: Memory leak in singleton lock cleanup for cached values
-- **Low**: Memory leak where type index was never cleared
-- **Low**: Test method name error calling non-existent `_clear_singletons()` method
-- **Low**: Remove invalid asyncio package from dev dependencies
-- Circular import between container.py and defaults.py (#PRD-001)
-- Type checking errors in injection.py (#PRD-002)
-- Thread-safety issues with global default container
-- `register_value` method now properly creates ProviderSpec
-- Singleton locks now use fast path to check cache before acquiring values (99% of cases)
-- Container `clear()` method now properly cleans all internal dictionaries
-- Container `__aexit__` now clears async locks after cleanup
+- **Critical**: Fixed deprecated `Token[T](name)` syntax across all tests - migrated to `Token(name, T)` per v1.1.0+ API
+  - Updated 50+ test instances across test_testing.py, test_debug.py, test_cycle_detection.py
+  - Improves code clarity and compliance with current API
+  - Zero breaking changes - tests continue to function correctly
+
+- **Critical**: Fixed undefined `TestScope` type errors via TYPE_CHECKING imports
+  - Resolved circular import chains between container.py and testing.py
+  - Added proper type imports in protocols/container.py
+  - Linting errors reduced from 2 to 0
+
+- **Critical**: Fixed scope reading bugs in debug module (src/injx/debug.py)
+  - After dictionary consolidation refactoring, scope information moved from Token to ProviderSpec
+  - Fixed 3 locations in debug.py that were reading `token.scope.name` instead of `spec.scope.name`
+  - Fixed scope reading in container.py:1650 (get_debug_info method)
+  - Tests: test_get_container_state, test_get_dependency_graph, test_container_debug_info_method now pass
+
+- **High**: Fixed protocol compliance in threading test
+  - Added missing `__enter__` and `__exit__` methods to CloseableResource test class
+  - Now properly matches SupportsClose protocol requirements
+  - test_resource_tracking_thread_safety now passes
+
+- **Medium**: Fixed dependency graph API field name mismatch
+  - Test was expecting `["name"]` field in graph nodes, but implementation uses `["id"]`
+  - Updated test assertion to use correct field
+  - Aligns test expectations with current implementation
+
+- **Previous Critical Issues**:
+  - Parameter resolution conflicts in `@inject` decorator causing "multiple values for argument" errors
+    - Fixed double parameter passing in sync and async injection wrappers
+    - Resolved 5 failing tests while maintaining all existing functionality
+  - Memory leak where async locks were never cleaned up
+  - Memory leak in singleton lock cleanup for cached values
+  - Memory leak where type index was never cleared
+  - Test method name error calling non-existent `_clear_singletons()` method
+  - Remove invalid asyncio package from dev dependencies
+  - Circular import between container.py and defaults.py (#PRD-001)
+  - Type checking errors in injection.py (#PRD-002)
+  - Thread-safety issues with global default container
+  - `register_value` method now properly creates ProviderSpec
+  - Singleton locks now use fast path to check cache before acquiring values (99% of cases)
+  - Container `clear()` method now properly cleans all internal dictionaries
+  - Container `__aexit__` now clears async locks after cleanup
 
 ### Performance
 
@@ -71,6 +118,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Breaking Changes
 
+- **Cleanup Error Handling**: `Container.dispose()` and async context exit now raise `CleanupFailureGroup` when cleanup operations fail, instead of silently swallowing errors. This ensures cleanup failures are never hidden.
 - Removed `container.inject()` anti-pattern method (deprecated in favor of `@inject` decorator)
 
 ## [0.1.0] - 2025-01-15

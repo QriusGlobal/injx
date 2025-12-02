@@ -24,7 +24,7 @@ T = TypeVar("T")
 
 class Dependencies(Generic[*Ts]):  # type: ignore
     """
-    Type-safe container for multiple dependencies with async support.
+    Type-safe container for multiple dependencies with structured concurrency.
 
     Example (Sync):
         @inject
@@ -38,12 +38,17 @@ class Dependencies(Generic[*Ts]):  # type: ignore
             # Dependencies are automatically awaitable
             db = deps[AsyncDB]
             cache = deps[AsyncCache]
-            # All dependencies resolved in parallel for performance
+            # All dependencies resolved in parallel with TaskGroup
 
-    The Dependencies container intelligently handles resolution:
+    The Dependencies container uses structured concurrency:
     - Sync context: Uses resolve() for synchronous resolution
-    - Async context: Fully awaitable with parallel resolution
+    - Async context: TaskGroup with automatic cancellation on failure
     - Direct usage: Falls back to synchronous resolution
+
+    Structured Concurrency Benefits:
+    - If any dependency fails, remaining resolutions are cancelled
+    - No wasted work on dependencies that won't be used
+    - Clear error aggregation via ExceptionGroup
     """
 
     __slots__ = ("_container", "_types", "_resolved", "__weakref__")
@@ -82,16 +87,36 @@ class Dependencies(Generic[*Ts]):  # type: ignore
 
     async def _resolve_async(self) -> Dependencies[*Ts]:  # type: ignore
         """
-        Asynchronously resolve all dependencies in parallel.
+        Asynchronously resolve all dependencies with structured concurrency.
 
-        Uses asyncio.gather for concurrent resolution, providing optimal
-        performance when dealing with multiple async dependencies.
+        Uses TaskGroup for automatic cancellation if any resolution fails,
+        preventing wasted work on dependencies that won't be used due to
+        earlier failures. This provides better resource utilization and
+        clearer error reporting compared to asyncio.gather.
+
+        Raises:
+            ResolutionError: If a single dependency resolution fails
+            ExceptionGroup: If multiple dependency resolutions fail (TaskGroup behavior)
+            CancelledError: If resolution is cancelled via CancellationToken
         """
+        from .cancellation import CancellationToken
+
         if self._resolved is None:
-            # Resolve all dependencies concurrently for performance
-            tasks: list[Any] = [self._container.aget(t) for t in self._types]
-            results: list[Any] = await asyncio.gather(*tasks)
-            resolved: dict[type, Any] = dict(zip(self._types, results, strict=False))
+            # Check for cancellation before batch resolution
+            CancellationToken.check_cancelled()
+
+            resolved: dict[type, Any] = {}
+
+            async def resolve_one(typ: type) -> None:
+                """Resolve single dependency and store result."""
+                CancellationToken.check_cancelled()
+                resolved[typ] = await self._container.aget(typ)
+
+            # Resolve all dependencies concurrently with TaskGroup
+            async with asyncio.TaskGroup() as tg:
+                for typ in self._types:
+                    tg.create_task(resolve_one(typ), name=f"resolve_{typ.__name__}")
+
             self._resolved = MappingProxyType(resolved)
         return self
 

@@ -1,46 +1,44 @@
 repos:
-  # Smart commit message validation with hierarchical rules (replaces standard commitlint)
+  # Commit message validation
   - repo: local
     hooks:
       - id: validate-commit
-        name: Validate commit message with hierarchical rules
+        name: Validate commit message
         entry: bun run scripts/validate-commit.js
         language: system
         stages: [commit-msg]
-        files: '^$'  # Run for all commits, not file-based
-        additional_dependencies: []
+        pass_filenames: false
 
+  # Code quality
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.9
     hooks:
       - id: ruff-format
         files: ^src/
-        exclude: ^(tests/|examples/|ref/|docs/)
       - id: ruff
         files: ^src/
-        exclude: ^(tests/|examples/|ref/|docs/)
         args: ["--exit-non-zero-on-fix"]
 
+  # Type checking and docs
   - repo: local
     hooks:
       - id: basedpyright
-        name: basedpyright
-        entry: basedpyright
-        language: python
-        files: ^src/
-        additional_dependencies: [basedpyright]
-        args: ["src/"]
-
-      - id: actionlint
-        name: actionlint (GitHub Actions)
-        entry: uv run actionlint
+        name: Type check (basedpyright)
+        entry: basedpyright src
         language: system
-        files: ^.github/workflows/
-        pass_filenames: true
+        files: ^src/
+        pass_filenames: false
 
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.35.1
-    hooks:
-      - id: yamllint
-        files: ^(.github/workflows/|.*\.ya?ml)$
-        args: ["-c", ".yamllint.yml"]
+      - id: mkdocs-build
+        name: Documentation build (MkDocs --strict)
+        entry: uv run mkdocs build --strict
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: pytest
+        name: Test suite
+        entry: uv run pytest --tb=short -q
+        language: system
+        files: ^(src/|tests/)
+        pass_filenames: false

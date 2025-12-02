@@ -362,7 +362,7 @@ class TestCycleDetection:
         # Error message should be informative
         error_str = str(error)
         assert "ServiceB" in error_str, "Error should mention the problematic service"
-        assert "Resolution chain" in error_str, "Error should show resolution chain"
+        assert "Dependency cycle" in error_str, "Error should show dependency cycle"
 
     def test_resolution_guard_cleanup_on_exception(self):
         """Test that resolution guard properly cleans up on non-cycle exceptions."""

@@ -20,47 +20,37 @@ from injx import Container, Token, inject, Scope, Dependencies
 class Database(Protocol):
     """Database service protocol."""
 
-    def get_user(self, user_id: int) -> dict[str, Any]:
-        ...
+    def get_user(self, user_id: int) -> dict[str, Any]: ...
 
-    def save_user(self, user: dict[str, Any]) -> None:
-        ...
+    def save_user(self, user: dict[str, Any]) -> None: ...
 
-    def delete_user(self, user_id: int) -> bool:
-        ...
+    def delete_user(self, user_id: int) -> bool: ...
 
 
 class HTTPClient(Protocol):
     """HTTP client protocol."""
 
-    def get(self, url: str) -> dict[str, Any]:
-        ...
+    def get(self, url: str) -> dict[str, Any]: ...
 
-    def post(self, url: str, data: dict[str, Any]) -> dict[str, Any]:
-        ...
+    def post(self, url: str, data: dict[str, Any]) -> dict[str, Any]: ...
 
 
 class Cache(Protocol):
     """Cache service protocol."""
 
-    def get(self, key: str) -> Optional[dict[str, Any]]:
-        ...
+    def get(self, key: str) -> Optional[dict[str, Any]]: ...
 
-    def set(self, key: str, value: dict[str, Any], ttl: int = 3600) -> None:
-        ...
+    def set(self, key: str, value: dict[str, Any], ttl: int = 3600) -> None: ...
 
-    def delete(self, key: str) -> bool:
-        ...
+    def delete(self, key: str) -> bool: ...
 
 
 class EmailService(Protocol):
     """Email service protocol."""
 
-    def send(self, to: str, subject: str, body: str) -> bool:
-        ...
+    def send(self, to: str, subject: str, body: str) -> bool: ...
 
-    def send_batch(self, recipients: list[str], subject: str, body: str) -> int:
-        ...
+    def send_batch(self, recipients: list[str], subject: str, body: str) -> int: ...
 
 
 # 2. Service tokens
@@ -73,8 +63,7 @@ EMAIL_TOKEN: Token[EmailService] = Token("email", EmailService)
 # 3. Business logic to test with Dependencies pattern
 @inject
 def get_user_profile(
-    user_id: int,
-    deps: Dependencies[Database, HTTPClient, Cache]
+    user_id: int, deps: Dependencies[Database, HTTPClient, Cache]
 ) -> dict[str, Any]:
     """Fetch user profile with caching and external enrichment."""
     # Extract services from dependencies
@@ -105,9 +94,7 @@ def get_user_profile(
 
 @inject
 def register_user(
-    name: str,
-    email: str,
-    deps: Dependencies[Database, HTTPClient, EmailService]
+    name: str, email: str, deps: Dependencies[Database, HTTPClient, EmailService]
 ) -> dict[str, Any]:
     """Register a new user with email validation and notification."""
     # Extract services from dependencies
@@ -117,8 +104,7 @@ def register_user(
 
     # Validate email
     validation: dict[str, Any] = http.post(
-        "https://api.example.com/validate",
-        {"email": email}
+        "https://api.example.com/validate", {"email": email}
     )
 
     if not validation.get("valid", False):
@@ -129,7 +115,7 @@ def register_user(
         "id": validation.get("user_id", 999),
         "name": name,
         "email": email,
-        "status": "pending"
+        "status": "pending",
     }
 
     # Save to database
@@ -137,9 +123,7 @@ def register_user(
 
     # Send welcome email
     email_sent: bool = email_service.send(
-        to=email,
-        subject="Welcome!",
-        body=f"Welcome {name}!"
+        to=email, subject="Welcome!", body=f"Welcome {name}!"
     )
 
     if email_sent:
@@ -151,8 +135,7 @@ def register_user(
 
 @inject
 def delete_user_account(
-    user_id: int,
-    deps: Dependencies[Database, Cache, EmailService]
+    user_id: int, deps: Dependencies[Database, Cache, EmailService]
 ) -> bool:
     """Delete user account with cleanup."""
     # Extract services from dependencies
@@ -174,7 +157,7 @@ def delete_user_account(
         email_service.send(
             to=user["email"],
             subject="Account Deleted",
-            body="Your account has been deleted."
+            body="Your account has been deleted.",
         )
 
     return deleted
@@ -196,7 +179,7 @@ def mock_database() -> Mock:
     mock_db.get_user.return_value = {
         "id": 1,
         "name": "Test User",
-        "email": "test@example.com"
+        "email": "test@example.com",
     }
     mock_db.save_user.return_value = None
     mock_db.delete_user.return_value = True
@@ -210,14 +193,8 @@ def mock_http_client() -> Mock:
     mock_http: Mock = Mock(spec=HTTPClient, autospec=True)
 
     # Setup default behaviors
-    mock_http.get.return_value = {
-        "premium": True,
-        "score": 100
-    }
-    mock_http.post.return_value = {
-        "valid": True,
-        "user_id": 123
-    }
+    mock_http.get.return_value = {"premium": True, "score": 100}
+    mock_http.post.return_value = {"valid": True, "user_id": 123}
 
     return mock_http
 
@@ -253,7 +230,7 @@ def configured_container(
     mock_database: Mock,
     mock_http_client: Mock,
     mock_cache: Mock,
-    mock_email_service: Mock
+    mock_email_service: Mock,
 ) -> Generator[Container, None, None]:
     """
     Configure container with all mock services.
@@ -285,7 +262,7 @@ class TestUserProfile:
         configured_container: Container,
         mock_database: Mock,
         mock_http_client: Mock,
-        mock_cache: Mock
+        mock_cache: Mock,
     ) -> None:
         """Test fetching user profile when cache is empty."""
         # Arrange
@@ -314,7 +291,7 @@ class TestUserProfile:
         configured_container: Container,
         mock_database: Mock,
         mock_http_client: Mock,
-        mock_cache: Mock
+        mock_cache: Mock,
     ) -> None:
         """Test fetching user profile when data is cached."""
         # Arrange
@@ -322,7 +299,7 @@ class TestUserProfile:
             "id": 42,
             "name": "Cached User",
             "premium": False,
-            "score": 50
+            "score": 50,
         }
         mock_cache.get.return_value = cached_data
 
@@ -346,7 +323,7 @@ class TestUserRegistration:
         configured_container: Container,
         mock_database: Mock,
         mock_http_client: Mock,
-        mock_email_service: Mock
+        mock_email_service: Mock,
     ) -> None:
         """Test successful user registration."""
         # Arrange
@@ -363,17 +340,18 @@ class TestUserRegistration:
 
         # Verify calls
         mock_http_client.post.assert_called_once_with(
-            "https://api.example.com/validate",
-            {"email": email}
+            "https://api.example.com/validate", {"email": email}
         )
-        assert mock_database.save_user.call_count == 2  # Once for pending, once for active
+        assert (
+            mock_database.save_user.call_count == 2
+        )  # Once for pending, once for active
         mock_email_service.send.assert_called_once()
 
     def test_register_user_invalid_email(
         self,
         configured_container: Container,
         mock_http_client: Mock,
-        mock_database: Mock
+        mock_database: Mock,
     ) -> None:
         """Test registration with invalid email."""
         # Arrange
@@ -390,7 +368,7 @@ class TestUserRegistration:
         self,
         configured_container: Container,
         mock_database: Mock,
-        mock_email_service: Mock
+        mock_email_service: Mock,
     ) -> None:
         """Test registration when email sending fails."""
         # Arrange
@@ -412,7 +390,7 @@ class TestUserDeletion:
         configured_container: Container,
         mock_database: Mock,
         mock_cache: Mock,
-        mock_email_service: Mock
+        mock_email_service: Mock,
     ) -> None:
         """Test successful user deletion with cleanup."""
         # Act
@@ -432,7 +410,7 @@ class TestUserDeletion:
         configured_container: Container,
         mock_database: Mock,
         mock_cache: Mock,
-        mock_email_service: Mock
+        mock_email_service: Mock,
     ) -> None:
         """Test deletion when database operation fails."""
         # Arrange
@@ -455,10 +433,7 @@ class TestIntegration:
 
     @pytest.fixture
     def partial_container(
-        self,
-        container: Container,
-        mock_http_client: Mock,
-        mock_email_service: Mock
+        self, container: Container, mock_http_client: Mock, mock_email_service: Mock
     ) -> Generator[Container, None, None]:
         """Container with only external services mocked."""
         # Use real implementations for DB and Cache
@@ -480,7 +455,7 @@ class TestIntegration:
         self,
         partial_container: Container,
         mock_http_client: Mock,
-        mock_email_service: Mock
+        mock_email_service: Mock,
     ) -> None:
         """Test complete flow with real DB/Cache but mocked external services."""
         # Register user
@@ -503,35 +478,41 @@ class TestIntegration:
 class TestParametrized:
     """Parametrized tests for comprehensive coverage."""
 
-    @pytest.mark.parametrize("user_id,expected_cache_key", [
-        (1, "profile:1"),
-        (999, "profile:999"),
-        (0, "profile:0"),
-        (-1, "profile:-1"),
-    ])
+    @pytest.mark.parametrize(
+        "user_id,expected_cache_key",
+        [
+            (1, "profile:1"),
+            (999, "profile:999"),
+            (0, "profile:0"),
+            (-1, "profile:-1"),
+        ],
+    )
     def test_cache_key_generation(
         self,
         configured_container: Container,
         mock_cache: Mock,
         user_id: int,
-        expected_cache_key: str
+        expected_cache_key: str,
     ) -> None:
         """Test cache key generation for different user IDs."""
         get_user_profile(user_id)
         mock_cache.get.assert_called_with(expected_cache_key)
 
-    @pytest.mark.parametrize("email,is_valid", [
-        ("valid@example.com", True),
-        ("invalid@test.com", False),
-        ("", False),
-        ("no-at-sign.com", False),
-    ])
+    @pytest.mark.parametrize(
+        "email,is_valid",
+        [
+            ("valid@example.com", True),
+            ("invalid@test.com", False),
+            ("", False),
+            ("no-at-sign.com", False),
+        ],
+    )
     def test_email_validation_scenarios(
         self,
         configured_container: Container,
         mock_http_client: Mock,
         email: str,
-        is_valid: bool
+        is_valid: bool,
     ) -> None:
         """Test various email validation scenarios."""
         mock_http_client.post.return_value = {"valid": is_valid}

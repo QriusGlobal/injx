@@ -27,7 +27,7 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
-from injx import Container, Token, inject, Scope, Dependencies
+from injx import Container, Token, inject, Scope, Dependencies, Depends
 import json
 import logging
 
@@ -38,7 +38,9 @@ class UserService(Protocol):
 
     def get_user(self, user_id: int) -> dict[str, Any]: ...
     def create_user(self, user_data: dict[str, Any]) -> dict[str, Any]: ...
-    def update_user(self, user_id: int, user_data: dict[str, Any]) -> dict[str, Any]: ...
+    def update_user(
+        self, user_id: int, user_data: dict[str, Any]
+    ) -> dict[str, Any]: ...
     def delete_user(self, user_id: int) -> bool: ...
 
 
@@ -67,7 +69,9 @@ class AnalyticsService(Protocol):
 class AuthService(Protocol):
     """Authentication service protocol."""
 
-    def authenticate(self, username: str, password: str) -> Optional[dict[str, Any]]: ...
+    def authenticate(
+        self, username: str, password: str
+    ) -> Optional[dict[str, Any]]: ...
     def create_session(self, user_id: int) -> str: ...
     def validate_token(self, token: str) -> Optional[int]: ...
 
@@ -83,7 +87,7 @@ class User(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'users'
+        db_table = "users"
 
 
 # 3. Service implementations for Django
@@ -98,7 +102,7 @@ class DjangoUserService:
                 "id": user.id,
                 "name": user.name,
                 "email": user.email,
-                "is_active": user.is_active
+                "is_active": user.is_active,
             }
         except User.DoesNotExist:
             raise ValueError(f"User {user_id} not found")
@@ -110,7 +114,7 @@ class DjangoUserService:
             "id": user.id,
             "name": user.name,
             "email": user.email,
-            "is_active": user.is_active
+            "is_active": user.is_active,
         }
 
     def update_user(self, user_id: int, user_data: dict[str, Any]) -> dict[str, Any]:
@@ -147,6 +151,7 @@ class DjangoEmailService:
     def send_welcome(self, email: str, name: str) -> bool:
         """Send welcome email using Django."""
         from django.core.mail import send_mail
+
         try:
             send_mail(
                 subject=f"Welcome {name}!",
@@ -162,6 +167,7 @@ class DjangoEmailService:
     def send_notification(self, email: str, message: str) -> bool:
         """Send notification email."""
         from django.core.mail import send_mail
+
         try:
             send_mail(
                 subject="Notification",
@@ -198,18 +204,16 @@ class DjangoAuthService:
     def authenticate(self, username: str, password: str) -> Optional[dict[str, Any]]:
         """Authenticate user with Django."""
         from django.contrib.auth import authenticate
+
         user = authenticate(username=username, password=password)
         if user:
-            return {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email
-            }
+            return {"id": user.id, "username": user.username, "email": user.email}
         return None
 
     def create_session(self, user_id: int) -> str:
         """Create session token."""
         from django.contrib.sessions.models import Session
+
         # Simplified - in production use proper session management
         return f"session_{user_id}_{hash(user_id)}"
 
@@ -227,7 +231,9 @@ class DjangoAuthService:
 USER_SERVICE: Token[UserService] = Token("user_service", UserService)
 EMAIL_SERVICE: Token[EmailService] = Token("email_service", EmailService)
 CACHE_SERVICE: Token[CacheService] = Token("cache_service", CacheService)
-ANALYTICS_SERVICE: Token[AnalyticsService] = Token("analytics_service", AnalyticsService)
+ANALYTICS_SERVICE: Token[AnalyticsService] = Token(
+    "analytics_service", AnalyticsService
+)
 AUTH_SERVICE: Token[AuthService] = Token("auth_service", AuthService)
 
 
@@ -247,17 +253,18 @@ def setup_django_container() -> Container:
 
 
 # 6. Django view decorator for dependency injection
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def inject_services(view_func):
     """Decorator to inject services into Django views using Dependencies pattern."""
+
     @inject
     def wrapper(
         request: HttpRequest,
         *args,
         deps: Dependencies[UserService, CacheService, AnalyticsService],
-        **kwargs
+        **kwargs,
     ):
         # Add services to request for access in view
         request.user_service = deps[UserService]  # type: ignore
@@ -266,8 +273,7 @@ def inject_services(view_func):
 
         # Track page view
         deps[AnalyticsService].track_page_view(
-            request.path,
-            getattr(request.user, 'id', None)
+            request.path, getattr(request.user, "id", None)
         )
 
         return view_func(request, *args, **kwargs)
@@ -316,15 +322,14 @@ def create_user_view(request: HttpRequest) -> JsonResponse:
         user = user_service.create_user(data)
 
         # Track event
-        analytics_service.track_event("user_created", {
-            "user_id": user["id"],
-            "source": "web"
-        })
+        analytics_service.track_event(
+            "user_created", {"user_id": user["id"], "source": "web"}
+        )
 
     # Send welcome email asynchronously
     @inject
     def send_welcome_email(
-        email_service: EmailService = Depends(EMAIL_SERVICE)
+        email_service: EmailService = Depends(EMAIL_SERVICE),
     ) -> None:
         email_service.send_welcome(user["email"], user["name"])
 
@@ -343,7 +348,7 @@ class UserAPIView(View):
         request: HttpRequest,
         *args,
         deps: Dependencies[UserService, CacheService, EmailService],
-        **kwargs
+        **kwargs,
     ) -> None:
         """Setup method with injected dependencies using Dependencies pattern."""
         super().setup(request, *args, **kwargs)
@@ -386,7 +391,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'name', 'email', 'is_active', 'created_at']
+        fields = ["id", "name", "email", "is_active", "created_at"]
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -400,7 +405,7 @@ class UserViewSet(viewsets.ModelViewSet):
         self,
         *args,
         deps: Dependencies[CacheService, AnalyticsService, EmailService],
-        **kwargs
+        **kwargs,
     ):
         """Initialize with injected services using Dependencies pattern."""
         super().__init__(*args, **kwargs)
@@ -428,19 +433,18 @@ class UserViewSet(viewsets.ModelViewSet):
             return response
         return super().retrieve(request, pk)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def send_notification(self, request: Request, pk: Optional[int] = None) -> Response:
         """Custom action to send notification."""
         user = self.get_object()
-        message = request.data.get('message', 'Hello!')
+        message = request.data.get("message", "Hello!")
 
         success = self.email_service.send_notification(user.email, message)
 
         if success:
-            self.analytics_service.track_event("notification_sent", {
-                "user_id": user.id,
-                "type": "manual"
-            })
+            self.analytics_service.track_event(
+                "notification_sent", {"user_id": user.id, "type": "manual"}
+            )
             return Response({"status": "sent"})
         return Response({"status": "failed"}, status=500)
 
@@ -451,9 +455,7 @@ class DIMiddleware:
 
     @inject
     def __init__(
-        self,
-        get_response,
-        deps: Dependencies[AnalyticsService, CacheService]
+        self, get_response, deps: Dependencies[AnalyticsService, CacheService]
     ):
         """Initialize middleware with services using Dependencies pattern."""
         self.get_response = get_response
