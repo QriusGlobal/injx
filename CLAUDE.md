@@ -475,9 +475,29 @@ The command intelligently categorizes changes:
 ## Technical Constraints
 
 ### Runtime Requirements
-- **Python 3.13+**: Required for latest typing features
+- **Python 3.13 only**: Required for latest typing features
 - **No GIL support**: Designed for Python's no-GIL future
 - **Zero dependencies**: No external packages in production
+
+### Known Limitations
+
+#### Python 3.14 Not Supported (Upstream Blocker)
+
+Python 3.14 compatibility is blocked by upstream dependencies in the Rust-Python FFI ecosystem:
+
+| Dependency | Status |
+|------------|--------|
+| `pyo3-ffi` | v0.24.1 explicitly blocks Python 3.14 |
+| `pydantic-core` | Depends on `pyo3` via `maturin` build |
+
+**Error when attempting Python 3.14**:
+```
+error: the configured Python interpreter version (3.14) is newer than supported
+```
+
+**Tracking**: [GitHub Issue #30](https://github.com/QriusGlobal/injx/issues/30)
+
+**Resolution**: Awaiting `pyo3` ecosystem support for Python 3.14. CI is pinned to Python 3.13.x.
 
 ### Type Safety Invariants
 - Tokens must be `Token[T]` instances or types
