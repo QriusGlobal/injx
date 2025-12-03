@@ -1,12 +1,67 @@
 """Pytest configuration and shared fixtures for injx tests."""
 
 import asyncio
+import sys
+import sysconfig
 from typing import AsyncGenerator, Generator
 
 import pytest
 
 from injx.container import Container
 from injx.tokens import Token
+
+
+# =============================================================================
+# Free-Threading Detection Fixtures
+# =============================================================================
+
+
+def _is_freethreaded_build() -> bool:
+    """Check if this is a free-threaded Python build (compiled with --disable-gil)."""
+    return bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
+
+
+def _is_gil_enabled() -> bool:
+    """Check if the GIL is currently enabled at runtime."""
+    if hasattr(sys, "_is_gil_enabled"):
+        return sys._is_gil_enabled()
+    return True  # Standard builds always have GIL enabled
+
+
+@pytest.fixture
+def is_freethreaded_build() -> bool:
+    """Check if this is a free-threaded Python build.
+
+    Returns True if Python was compiled with --disable-gil (python3.13t).
+    """
+    return _is_freethreaded_build()
+
+
+@pytest.fixture
+def is_gil_disabled() -> bool:
+    """Check if running with GIL disabled.
+
+    Returns True only on free-threaded builds when PYTHON_GIL=0 or -Xgil=0.
+    """
+    return _is_freethreaded_build() and not _is_gil_enabled()
+
+
+@pytest.fixture
+def gil_status() -> dict[str, bool]:
+    """Get comprehensive GIL status information.
+
+    Returns dict with:
+        - freethreaded_build: True if compiled with --disable-gil
+        - gil_enabled: True if GIL is active at runtime
+        - gil_disabled: True if running without GIL (free-threaded mode)
+    """
+    freethreaded = _is_freethreaded_build()
+    gil_enabled = _is_gil_enabled()
+    return {
+        "freethreaded_build": freethreaded,
+        "gil_enabled": gil_enabled,
+        "gil_disabled": freethreaded and not gil_enabled,
+    }
 
 
 @pytest.fixture
@@ -78,6 +133,16 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "unit: mark test as unit test")
     config.addinivalue_line("markers", "integration: mark test as integration test")
     config.addinivalue_line("markers", "slow: mark test as slow running")
+    config.addinivalue_line(
+        "markers", "freethreading: tests specifically for free-threading validation"
+    )
+
+    # Log GIL status at test session start
+    freethreaded = _is_freethreaded_build()
+    gil_enabled = _is_gil_enabled()
+    status = "DISABLED" if (freethreaded and not gil_enabled) else "ENABLED"
+    build_type = "free-threaded" if freethreaded else "standard"
+    print(f"\n[pytest] Python build: {build_type}, GIL: {status}")
 
 
 # Async event loop fixture for pytest-asyncio

@@ -138,8 +138,11 @@ markers = [
     "complex: Complex scenarios and edge cases",
     "performance: Performance-related tests",
     "thread_safety: Concurrency and thread safety tests",
+    "freethreading: tests specifically for free-threading validation",
 ]
 asyncio_mode = "auto"
+# Faulthandler timeout for free-threaded testing (prevents hanging on deadlocks)
+faulthandler_timeout = 300
 
 [tool.hatch.build]
 include = [

@@ -117,6 +117,55 @@ jobs:
         if: steps.test-config.outputs.mode == 'full'
         run: uv run mkdocs build --strict
 
+  # Free-threaded Python testing (advisory - doesn't block CI)
+  # Tests thread safety without the GIL on Python 3.13t
+  ci-freethreaded:
+    name: Free-Threaded Python (Advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true  # Advisory: failures don't block CI
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791  # v4.1.0
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Python 3.13t (Free-Threaded)
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c  # v6.0.0
+        with:
+          python-version: "3.13t"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@b75a909f75acd358c2196fb9a5f1299a9a8868a4  # v6.7.0
+        with:
+          version: "0.8.19"
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Install dependencies (test-only, no C extensions)
+        run: |
+          # Use --extra test to avoid asyncpg/pydantic which don't compile on 3.13t
+          uv sync --extra test
+
+      - name: Verify free-threaded build
+        run: |
+          python -VV
+          python -c "import sys; print(f'GIL enabled: {sys._is_gil_enabled()}')"
+          python -c "import sysconfig; print(f'Free-threaded build: {bool(sysconfig.get_config_var(\"Py_GIL_DISABLED\"))}')"
+
+      - name: Run tests (GIL disabled)
+        env:
+          PYTHON_GIL: "0"
+          PYTHONPATH: src
+        run: |
+          # Exclude tests requiring httpx/asyncpg which aren't installed
+          uv run pytest -q -n auto --tb=short \
+            --ignore=tests/integration/test_realistic_usage.py \
+            --ignore=tests/test_async_httpx_asyncpg.py
+
   # Distribution testing for main branch pushes - validate wheel/sdist build and installation
   distribution-test:
     name: Distribution Test (Build, Install, Validate)
